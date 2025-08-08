@@ -65,11 +65,14 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
               delegate: _SliverAppBarDelegate(
                 TabBar(
                   controller: _tabController,
+                  isScrollable: true,
+                  tabAlignment: TabAlignment.start,
                   labelColor: AppColors.primaryRed,
                   unselectedLabelColor: AppColors.textSecondary,
                   indicatorColor: AppColors.primaryRed,
                   indicatorSize: TabBarIndicatorSize.label,
                   dividerColor: Colors.transparent,
+                  labelPadding: const EdgeInsets.symmetric(horizontal: 16.0),
                   labelStyle: textTheme.labelLarge?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
@@ -188,9 +191,9 @@ class _FeedTab extends StatelessWidget {
       'time': '17 July at 08:02 AM',
       'community': 'Reiki Healing',
       'image':
-          'https://images.unsplash.com/photo-1593113598332-cd288d649433?w=500&q=80',
+      'https://images.unsplash.com/photo-1593113598332-cd288d649433?w=500&q=80',
       'caption':
-          'My daughter just got diagnosed with ANOREXIA. Feeling overwhelmed. Any advice?',
+      'My daughter just got diagnosed with ANOREXIA. Feeling overwhelmed. Any advice?',
       'likes': 45,
       'comments': 12,
       'shares': 2,
@@ -202,7 +205,7 @@ class _FeedTab extends StatelessWidget {
       'community': 'Reiki Healing',
       'title': 'This is what I learned in my recent course',
       'quote':
-          '"The whole secret of existence lies in the pursuit of meaning, purpose, and connection. It is a delicate dance between self-discovery, compassion for others, and embracing the ever-unfolding mysteries of life. Finding harmony in the ebb and flow of experiences, we unlock the profound beauty that resides within our shared journey."',
+      '"The whole secret of existence lies in the pursuit of meaning, purpose, and connection. It is a delicate dance between self-discovery, compassion for others, and embracing the ever-unfolding mysteries of life. Finding harmony in the ebb and flow of experiences, we unlock the profound beauty that resides within our shared journey."',
       'likes': 45,
       'comments': 12,
       'shares': 2,
@@ -212,122 +215,12 @@ class _FeedTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView.separated(
-      padding: const EdgeInsets.only(top: 0, left: 12, right: 12, bottom: 16),
-      itemCount: _posts.length + 1,
+      padding: const EdgeInsets.only(top: 16, left: 12, right: 12, bottom: 16),
+      itemCount: _posts.length,
       itemBuilder: (context, index) {
-        if (index == 0) {
-          return Container();
-          // return _buildCreatePostSection(context);
-        }
-        return _PostCard(post: _posts[index - 1]);
+        return _PostCard(post: _posts[index]);
       },
       separatorBuilder: (context, index) => const SizedBox(height: 16),
-    );
-  }
-
-  Widget _buildCreatePostSection(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          '👋 Good to see you again!',
-          style: textTheme.titleLarge?.copyWith(fontSize: 16),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          "Here's a real-time view of what needs your attention today.",
-          style: textTheme.bodySmall,
-        ),
-        const SizedBox(height: 16),
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey.shade200),
-          ),
-          child: Row(
-            children: [
-              const CircleAvatar(
-                radius: 20,
-                backgroundImage: NetworkImage(
-                  'https://randomuser.me/api/portraits/men/75.jpg',
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  "What's on your mind? Ask a question or share your story..",
-                  style: textTheme.bodySmall?.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              const Icon(
-                IconlyLight.camera,
-                color: AppColors.textSecondary,
-                size: 22,
-              ),
-              const SizedBox(width: 12),
-              const Icon(
-                Icons.attach_file_outlined,
-                color: AppColors.textSecondary,
-                size: 22,
-              ),
-              const SizedBox(width: 12),
-              const Icon(
-                Icons.emoji_emotions_outlined,
-                color: AppColors.textSecondary,
-                size: 22,
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-        Padding(
-          padding: const EdgeInsets.only(bottom: 16),
-          child: Row(
-            children: [
-              const Icon(
-                Iconsax.global_copy,
-                color: AppColors.textSecondary,
-                size: 20,
-              ),
-              const SizedBox(width: 4),
-              Text('Add your post in', style: textTheme.labelLarge),
-              const Icon(Icons.arrow_drop_down, color: AppColors.textSecondary),
-              const Spacer(),
-              ElevatedButton.icon(
-                onPressed: () {
-                  if (context.mounted) {
-                    PersistentNavBarNavigator.pushNewScreen(
-                      context,
-                      screen:
-                          CreateEventScreen(), // Assuming this is the correct screen
-                      withNavBar: false,
-                    );
-                  }
-                },
-                icon: const Icon(IconlyLight.send, size: 18),
-                label: const Text('Post Now'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primaryRed,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 12,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
     );
   }
 }
@@ -531,11 +424,11 @@ class _PostCard extends StatelessWidget {
   }
 
   Widget _buildFooterIcon(
-    IconData icon,
-    String count,
-    Color iconColor,
-    Color color,
-  ) {
+      IconData icon,
+      String count,
+      Color iconColor,
+      Color color,
+      ) {
     return Row(
       children: [
         Icon(icon, color: iconColor, size: 20),
@@ -593,13 +486,13 @@ class _AboutTab extends StatelessWidget {
           _buildExpansionTile(
             title: 'What is this community for?',
             content:
-                'The expression or application of human creative skill and imagination, typically in a visual form such as painting or sculpture, producing works to be appreciated primarily for their beauty or emotional power.',
+            'The expression or application of human creative skill and imagination, typically in a visual form such as painting or sculpture, producing works to be appreciated primarily for their beauty or emotional power.',
           ),
           const SizedBox(height: 8),
           _buildExpansionTile(
             title: 'What will you gain from this community?',
             content:
-                'The expression or application of human creative skill and imagination, typically in a visual form such as painting or sculpture, producing works to be appreciated primarily for their beauty or emotional power.',
+            'The expression or application of human creative skill and imagination, typically in a visual form such as painting or sculpture, producing works to be appreciated primarily for their beauty or emotional power.',
           ),
           const SizedBox(height: 8),
           _buildExpansionTile(
@@ -673,7 +566,7 @@ class _UpcomingEventsTab extends StatelessWidget {
       "date": "8 December, 2025",
       "location": "Spice Garden Kitchen",
       "description":
-          "Soothing audio and gentle vibrations to ease discomfort. Soothing audio and gentle vibrations to.",
+      "Soothing audio and gentle vibrations to ease discomfort. Soothing audio and gentle vibrations to.",
       "attendees": 31,
       "isInterested": true,
     },
@@ -683,7 +576,7 @@ class _UpcomingEventsTab extends StatelessWidget {
       "date": "15 December, 2025",
       "location": "The Grand Hall",
       "description":
-          "Experience the rich musical traditions from around the world. A night of melody and harmony.",
+      "Experience the rich musical traditions from around the world. A night of melody and harmony.",
       "attendees": 85,
       "isInterested": false,
     },
@@ -691,31 +584,12 @@ class _UpcomingEventsTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    return ListView(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
-      children: [
-        // Row(
-        //   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        //   children: [
-        //     Text('Upcoming Events', style: textTheme.titleLarge),
-        //     IconButton(
-        //       onPressed: () {},
-        //       icon:
-        //       const Icon(IconlyLight.search, color: AppColors.textSecondary),
-        //     ),
-        //   ],
-        // ),
-        // const SizedBox(height: 12),
-        ListView.separated(
-          physics: const NeverScrollableScrollPhysics(),
-          shrinkWrap: true,
-          itemCount: _events.length,
-          itemBuilder: (context, index) =>
-              EventCard(event: _events[index], copied: true),
-          separatorBuilder: (context, index) => const SizedBox(height: 12),
-        ),
-      ],
+    return ListView.separated(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+      itemCount: _events.length,
+      itemBuilder: (context, index) =>
+          EventCard(event: _events[index], copied: true),
+      separatorBuilder: (context, index) => const SizedBox(height: 12),
     );
   }
 }
@@ -734,10 +608,10 @@ class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
 
   @override
   Widget build(
-    BuildContext context,
-    double shrinkOffset,
-    bool overlapsContent,
-  ) {
+      BuildContext context,
+      double shrinkOffset,
+      bool overlapsContent,
+      ) {
     return Container(color: AppColors.primaryBackground, child: _tabBar);
   }
 
