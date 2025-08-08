@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firstgenapp/constants/appColors.dart';
+import 'package:iconly/iconly.dart';
 
 // A model to represent a chat message
 class ChatMessage {
@@ -112,7 +113,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFEF6F6),
+      backgroundColor: AppColors.secondaryBackground,
       appBar: _buildAppBar(),
       body: Column(
         children: [
@@ -140,11 +141,11 @@ class _ConversationScreenState extends State<ConversationScreen> {
 
   AppBar _buildAppBar() {
     return AppBar(
-      backgroundColor: const Color(0xFFFEF6F6),
+      backgroundColor: AppColors.primaryBackground,
       elevation: 0,
       scrolledUnderElevation: 0,
       leading: IconButton(
-        icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
+        icon: const Icon(Icons.arrow_back, color: AppColors.textSecondary),
         onPressed: () => Navigator.of(context).pop(),
       ),
       title: const Text(
@@ -159,15 +160,26 @@ class _ConversationScreenState extends State<ConversationScreen> {
       actions: [
         IconButton(
           onPressed: () {},
-          icon: const Icon(Icons.videocam_outlined, color: AppColors.textPrimary),
+          icon: const Icon(
+              // Icons.videocam_outlined,
+              // size: 20,
+            IconlyLight.video,
+              color: AppColors.textSecondary),
         ),
         IconButton(
           onPressed: () {},
-          icon: const Icon(Icons.call_outlined, color: AppColors.textPrimary),
+          icon: const Icon(
+            // size: 20,
+              // Icons.call_outlined,
+            IconlyLight.calling,
+              color: AppColors.textSecondary),
         ),
         IconButton(
           onPressed: () {},
-          icon: const Icon(Icons.more_vert, color: AppColors.textPrimary),
+          icon: const Icon(
+              // size: 20,
+              Icons.more_vert,
+              color: AppColors.textSecondary),
         ),
       ],
     );
@@ -324,7 +336,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
 
   Widget _buildMessageComposer() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+      padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 12.0),
       color: Colors.white,
       child: SafeArea(
         child: Row(

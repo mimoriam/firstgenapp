@@ -4,6 +4,7 @@ import 'package:firstgenapp/screens/recent_activities/recent_activities_screen.d
 import 'package:firstgenapp/screens/your_matches/your_matches_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firstgenapp/constants/appColors.dart';
+import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:intl/intl.dart';
 import 'dart:ui';
 
@@ -25,7 +26,8 @@ class _HomeScreenState extends State<HomeScreen> {
       "interests": "MUSIC, COFFEE",
       "country": "Indian",
       "isOnline": true,
-      "image": "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=500&q=80",
+      "image":
+          "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=500&q=80",
     },
     {
       "name": "Jessica",
@@ -34,7 +36,8 @@ class _HomeScreenState extends State<HomeScreen> {
       "interests": "ART, MOVIES",
       "country": "German",
       "isOnline": false,
-      "image": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=500&q=80",
+      "image":
+          "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=500&q=80",
     },
     {
       "name": "Carlos",
@@ -43,7 +46,8 @@ class _HomeScreenState extends State<HomeScreen> {
       "interests": "DANCE, FOOD",
       "country": "Spanish",
       "isOnline": true,
-      "image": "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=500&q=80",
+      "image":
+          "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=500&q=80",
     },
     {
       "name": "Priya",
@@ -52,7 +56,8 @@ class _HomeScreenState extends State<HomeScreen> {
       "interests": "TRAVEL, BOOKS",
       "country": "Indian",
       "isOnline": false,
-      "image": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=500&q=80",
+      "image":
+          "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=500&q=80",
     },
   ];
 
@@ -63,7 +68,7 @@ class _HomeScreenState extends State<HomeScreen> {
       "date": "8 December, 2025",
       "location": "Spice Garden Kitchen",
       "description":
-      "Soothing audio and gentle vibrations to ease discomfort. Soothing audio and gentle vibrations to.",
+          "Soothing audio and gentle vibrations to ease discomfort. Soothing audio and gentle vibrations to.",
       "attendees": 31,
       "isInterested": true,
     },
@@ -73,7 +78,7 @@ class _HomeScreenState extends State<HomeScreen> {
       "date": "15 December, 2025",
       "location": "The Grand Hall",
       "description":
-      "Experience the rich musical traditions from around the world. A night of melody and harmony.",
+          "Experience the rich musical traditions from around the world. A night of melody and harmony.",
       "attendees": 85,
       "isInterested": false,
     },
@@ -81,12 +86,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
   final List<Map<String, dynamic>> _activities = [
     {
-      "avatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&q=80",
+      "avatar":
+          "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&q=80",
       "text": "Maria Santos liked your profile",
       "time": "2 hours ago",
     },
     {
-      "avatar": "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=100&q=80",
+      "avatar":
+          "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=100&q=80",
       "text": "You matched with Leila Okafor",
       "time": "2 hours ago",
     },
@@ -172,7 +179,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildStatsSection() {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      mainAxisAlignment: MainAxisAlignment.spaceAround,
       children: [
         _buildStatItem(
           "12",
@@ -203,16 +210,16 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildStatItem(
-      String count,
-      String label,
-      Color bgColor,
-      Color textColor,
-      ) {
+    String count,
+    String label,
+    Color bgColor,
+    Color textColor,
+  ) {
     return Column(
       children: [
         Container(
           // UPDATED: Reduced size for compactness
-          width: 75,
+          width: 80,
           height: 60,
           decoration: BoxDecoration(
             color: bgColor,
@@ -234,9 +241,9 @@ class _HomeScreenState extends State<HomeScreen> {
         Text(
           label,
           // UPDATED: Inherited from theme
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            fontWeight: FontWeight.w500,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w500),
         ),
       ],
     );
@@ -261,6 +268,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   withNavBar: false,
                 );
               } else if (title == "Recent Events") {
+                PersistentNavBarNavigator.pushNewScreen(
+                  context,
+                  screen: RecentActivitiesScreen(),
+                  withNavBar: false,
+                );
               } else {
                 PersistentNavBarNavigator.pushNewScreen(
                   context,
@@ -322,8 +334,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 fit: BoxFit.cover,
                 errorBuilder: (context, error, stackTrace) {
                   return Container(
-                      color: Colors.grey[300],
-                      child: const Center(child: Icon(Icons.broken_image, color: Colors.grey)));
+                    color: Colors.grey[300],
+                    child: const Center(
+                      child: Icon(Icons.broken_image, color: Colors.grey),
+                    ),
+                  );
                 },
               ),
               Container(
@@ -529,7 +544,7 @@ class _EventCardState extends State<EventCard> {
           // UPDATED: Inherited from theme
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
             fontSize: 11,
-            color: color,
+            // color: color,
             fontWeight: FontWeight.w500,
           ),
         ),
@@ -544,7 +559,10 @@ class _EventCardState extends State<EventCard> {
     final buttonStyle = TextButton.styleFrom(
       padding: const EdgeInsets.symmetric(vertical: 10),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      textStyle: textTheme.labelLarge?.copyWith(fontSize: 13, fontWeight: FontWeight.w600),
+      textStyle: textTheme.labelLarge?.copyWith(
+        fontSize: 13,
+        fontWeight: FontWeight.w600,
+      ),
     );
 
     return Container(
@@ -575,23 +593,27 @@ class _EventCardState extends State<EventCard> {
             ),
             const SizedBox(height: 8),
             Wrap(
-              spacing: 12.0,
-              runSpacing: 6.0,
+              spacing: 8.0,
+              runSpacing: 4.0,
               children: [
                 _buildInfoItem(
-                  Icons.calendar_today,
+                  // Icons.calendar_today,
+                  Iconsax.calendar,
                   widget.event['date'],
-                  Colors.green.shade700,
+                  // Colors.green.shade700,
+                  Color(0xFF009E60),
                 ),
                 _buildInfoItem(
-                  Icons.group_work,
+                  Iconsax.location,
                   widget.event['location'],
-                  Colors.blue.shade700,
+                  // Colors.yellow.shade700,
+                  Color(0xFFF7C108),
                 ),
                 _buildInfoItem(
-                  Icons.people,
+                  Iconsax.profile_2user,
                   "${widget.event['attendees']} Attending",
-                  Colors.orange.shade800,
+                  // Colors.blue.shade700,
+                  Color(0xFF0A75BA),
                 ),
               ],
             ),
@@ -610,31 +632,33 @@ class _EventCardState extends State<EventCard> {
                 Expanded(
                   child: _isInterested
                       ? GradientButton(
-                    text: "I'm Interested",
-                    onPressed: () {
-                      setState(() {
-                        _isInterested = false;
-                      });
-                    },
-                    // UPDATED: Matched font size and padding
-                    fontSize: 13,
-                    insets: 10,
-                  )
+                          text: "I'm Interested",
+                          onPressed: () {
+                            setState(() {
+                              _isInterested = false;
+                            });
+                          },
+                          // UPDATED: Matched font size and padding
+                          fontSize: 13,
+                          insets: 10,
+                        )
                       : OutlinedButton(
-                    onPressed: () {
-                      setState(() {
-                        _isInterested = true;
-                      });
-                    },
-                    // UPDATED: Matched style
-                    style: buttonStyle.copyWith(
-                      side: MaterialStateProperty.all(
-                        const BorderSide(color: AppColors.primaryRed),
-                      ),
-                      foregroundColor: MaterialStateProperty.all(AppColors.primaryRed),
-                    ),
-                    child: const Text("I'm Interested"),
-                  ),
+                          onPressed: () {
+                            setState(() {
+                              _isInterested = true;
+                            });
+                          },
+                          // UPDATED: Matched style
+                          style: buttonStyle.copyWith(
+                            side: MaterialStateProperty.all(
+                              const BorderSide(color: AppColors.primaryRed),
+                            ),
+                            foregroundColor: MaterialStateProperty.all(
+                              AppColors.primaryRed,
+                            ),
+                          ),
+                          child: const Text("I'm Interested"),
+                        ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -642,8 +666,12 @@ class _EventCardState extends State<EventCard> {
                     onPressed: () {},
                     // UPDATED: Matched style
                     style: buttonStyle.copyWith(
-                      backgroundColor: MaterialStateProperty.all(AppColors.secondaryBackground),
-                      foregroundColor: MaterialStateProperty.all(AppColors.primaryRed),
+                      backgroundColor: MaterialStateProperty.all(
+                        AppColors.secondaryBackground,
+                      ),
+                      foregroundColor: MaterialStateProperty.all(
+                        AppColors.primaryRed,
+                      ),
                     ),
                     child: const Text("View Community"),
                   ),

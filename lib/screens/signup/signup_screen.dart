@@ -4,6 +4,8 @@ import 'package:firstgenapp/constants/appColors.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_keyboard_visibility/flutter_keyboard_visibility.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
+import 'package:iconly/iconly.dart';
+import 'package:iconsax_flutter/iconsax_flutter.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -70,10 +72,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                             style: textTheme.bodySmall,
                           ),
                           const SizedBox(height: 20),
-                          Text(
-                            'Basic Info',
-                            style: textTheme.titleLarge,
-                          ),
+                          Text('Basic Info', style: textTheme.titleLarge),
                           const SizedBox(height: 16),
                           Text('Full name', style: textTheme.titleMedium),
                           const SizedBox(height: 6),
@@ -82,10 +81,17 @@ class _SignUpScreenState extends State<SignUpScreen> {
                             decoration: const InputDecoration(
                               hintText: 'Enter your full name',
                               // UPDATED: Made field more compact
-                              hintStyle: TextStyle(fontSize: 14, color: AppColors.textSecondary),
-                              contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                              hintStyle: TextStyle(
+                                fontSize: 14,
+                                color: AppColors.textSecondary,
+                              ),
+                              contentPadding: EdgeInsets.symmetric(
+                                horizontal: 20,
+                                vertical: 14,
+                              ),
                               prefixIcon: Icon(
-                                Icons.person_outline,
+                                // Icons.person_outline,
+                                IconlyLight.profile,
                                 color: AppColors.textSecondary,
                               ),
                             ),
@@ -99,10 +105,17 @@ class _SignUpScreenState extends State<SignUpScreen> {
                             decoration: const InputDecoration(
                               hintText: 'Enter your email',
                               // UPDATED: Made field more compact
-                              hintStyle: TextStyle(fontSize: 14, color: AppColors.textSecondary),
-                              contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                              hintStyle: TextStyle(
+                                fontSize: 14,
+                                color: AppColors.textSecondary,
+                              ),
+                              contentPadding: EdgeInsets.symmetric(
+                                horizontal: 20,
+                                vertical: 14,
+                              ),
                               prefixIcon: Icon(
-                                Icons.email_outlined,
+                                // Icons.email_outlined,
+                                IconlyLight.message,
                                 color: AppColors.textSecondary,
                               ),
                             ),
@@ -121,17 +134,26 @@ class _SignUpScreenState extends State<SignUpScreen> {
                             decoration: InputDecoration(
                               hintText: 'Enter your password',
                               // UPDATED: Made field more compact
-                              hintStyle: const TextStyle(fontSize: 14, color: AppColors.textSecondary),
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                              hintStyle: const TextStyle(
+                                fontSize: 14,
+                                color: AppColors.textSecondary,
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                                vertical: 14,
+                              ),
                               prefixIcon: const Icon(
-                                Icons.lock_outline,
+                                IconlyLight.unlock,
+                                // Icons.lock_outline,
                                 color: AppColors.textSecondary,
                               ),
                               suffixIcon: IconButton(
                                 icon: Icon(
                                   _isPasswordObscured
-                                      ? Icons.visibility_off_outlined
-                                      : Icons.visibility_outlined,
+                                      ? IconlyLight.hide
+                                      : IconlyLight.show,
+                                  // ? Icons.visibility_off_outlined
+                                  // : Icons.visibility_outlined,
                                   color: AppColors.textSecondary,
                                 ),
                                 onPressed: () {
@@ -155,22 +177,32 @@ class _SignUpScreenState extends State<SignUpScreen> {
                             decoration: InputDecoration(
                               hintText: 'Confirm your password',
                               // UPDATED: Made field more compact
-                              hintStyle: const TextStyle(fontSize: 14, color: AppColors.textSecondary),
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                              hintStyle: const TextStyle(
+                                fontSize: 14,
+                                color: AppColors.textSecondary,
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                                vertical: 14,
+                              ),
                               prefixIcon: const Icon(
-                                Icons.lock_outline,
+                                // Icons.lock_outline,
+                                IconlyLight.unlock,
                                 color: AppColors.textSecondary,
                               ),
                               suffixIcon: IconButton(
                                 icon: Icon(
                                   _isConfirmPasswordObscured
-                                      ? Icons.visibility_off_outlined
-                                      : Icons.visibility_outlined,
+                                      ? IconlyLight.hide
+                                      : IconlyLight.show,
+                                  // ? Icons.visibility_off_outlined
+                                  // : Icons.visibility_outlined,
                                   color: AppColors.textSecondary,
                                 ),
                                 onPressed: () {
                                   setState(() {
-                                    _isConfirmPasswordObscured = !_isConfirmPasswordObscured;
+                                    _isConfirmPasswordObscured =
+                                        !_isConfirmPasswordObscured;
                                   });
                                 },
                               ),
@@ -194,17 +226,16 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   ),
                 ),
                 Padding(
-                  // UPDATED: Reduced bottom padding
-                  padding: const EdgeInsets.only(bottom: 16.0, top: 8.0),
+                  padding: const EdgeInsets.only(bottom: 24.0, top: 10.0),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       RichText(
                         text: TextSpan(
-                          style: textTheme.bodyMedium?.copyWith(
+                          style: textTheme.bodyLarge?.copyWith(
                             fontWeight: FontWeight.bold,
-                            fontSize: 14,
+                            // fontSize: 14,
                           ),
                           children: const <TextSpan>[
                             TextSpan(

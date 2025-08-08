@@ -6,6 +6,8 @@ import 'package:firstgenapp/screens/create_community/create_community_screen.dar
 import 'package:firstgenapp/screens/create_event_screen/create_event_screen.dart';
 import 'package:firstgenapp/screens/dashboard/navbar_content/home_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:iconly/iconly.dart';
+import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 
 class CommunityScreen extends StatefulWidget {
@@ -117,12 +119,9 @@ class _CommunityScreenState extends State<CommunityScreen>
             },
             child: Container(
               margin: const EdgeInsets.only(right: 16),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: AppColors.primaryRed, width: 1.5),
-              ),
               child: const Icon(
-                Icons.add,
+                // Icons.add,
+                Iconsax.add_square_copy,
                 color: AppColors.primaryRed,
                 size: 24,
               ),
@@ -277,13 +276,18 @@ class _CommunityScreenState extends State<CommunityScreen>
                     ),
                     const SizedBox(width: 8),
                     const Icon(
-                      Icons.photo_library_outlined,
-                      color: AppColors.textPrimary,
+                      IconlyLight.camera,
+                      color: AppColors.textSecondary,
+                    ),
+                    const SizedBox(width: 8),
+                    const Icon(
+                      Icons.attach_file_outlined,
+                      color: AppColors.textSecondary,
                     ),
                     const SizedBox(width: 8),
                     const Icon(
                       Icons.emoji_emotions_outlined,
-                      color: AppColors.textPrimary,
+                      color: AppColors.textSecondary,
                     ),
                   ],
                 ),
@@ -562,7 +566,7 @@ class _UpcomingEventsTab extends StatelessWidget {
             Text('Upcoming Events', style: textTheme.titleLarge),
             IconButton(
               onPressed: () {},
-              icon: const Icon(Icons.search, color: AppColors.textSecondary),
+              icon: const Icon(IconlyLight.search, color: AppColors.textSecondary),
             ),
           ],
         ),
@@ -651,7 +655,7 @@ class _PostCard extends StatelessWidget {
                 ),
               ),
             ),
-            const Icon(Icons.more_horiz, color: AppColors.textSecondary),
+            const Icon(Icons.more_vert_outlined, color: AppColors.textSecondary),
           ],
         ),
         const SizedBox(height: 8),
@@ -733,17 +737,21 @@ class _PostCard extends StatelessWidget {
               Icons.favorite,
               post['likes'].toString(),
               AppColors.primaryRed,
+              AppColors.textSecondary,
             ),
             const SizedBox(width: 20),
             _buildFooterIcon(
-              Icons.chat_bubble_outline,
+              // Icons.chat_bubble_outline,
+              Iconsax.messages_2_copy,
               post['comments'].toString(),
+              Color(0xFF0A75BA),
               AppColors.textSecondary,
             ),
             const SizedBox(width: 20),
             _buildFooterIcon(
               Icons.share_outlined,
               post['shares'].toString(),
+              Color(0xFF009E60),
               AppColors.textSecondary,
             ),
           ],
@@ -751,7 +759,9 @@ class _PostCard extends StatelessWidget {
         TextButton.icon(
           onPressed: () {},
           icon: const Icon(
-            Icons.mode_comment_outlined,
+            // Icons.mode_comment_outlined,
+            // Iconsax.send_2_copy,
+            IconlyLight.send,
             color: AppColors.textSecondary,
             size: 20,
           ),
@@ -768,10 +778,10 @@ class _PostCard extends StatelessWidget {
     );
   }
 
-  Widget _buildFooterIcon(IconData icon, String count, Color color) {
+  Widget _buildFooterIcon(IconData icon, String count, Color iconColor, Color color) {
     return Row(
       children: [
-        Icon(icon, color: color, size: 20),
+        Icon(icon, color: iconColor, size: 20),
         const SizedBox(width: 4),
         Text(
           count,

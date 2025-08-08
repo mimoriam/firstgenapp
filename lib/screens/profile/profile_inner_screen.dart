@@ -5,6 +5,7 @@ import 'package:firstgenapp/constants/appColors.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_keyboard_visibility/flutter_keyboard_visibility.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
+import 'package:iconly/iconly.dart';
 import 'package:intl/intl.dart';
 
 class ProfileInnerScreen extends StatefulWidget {
@@ -88,10 +89,17 @@ class _ProfileInnerScreenState extends State<ProfileInnerScreen> {
                   decoration: const InputDecoration(
                     hintText: 'Enter your full name',
                     // UPDATED: Compacted field
-                    hintStyle: TextStyle(fontSize: 14, color: AppColors.textSecondary),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                    hintStyle: TextStyle(
+                      fontSize: 14,
+                      color: AppColors.textSecondary,
+                    ),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 14,
+                    ),
                     prefixIcon: Icon(
-                      Icons.person_outline,
+                      // Icons.person_outline,
+                      IconlyLight.profile,
                       color: AppColors.textSecondary,
                     ),
                   ),
@@ -105,10 +113,17 @@ class _ProfileInnerScreenState extends State<ProfileInnerScreen> {
                   decoration: const InputDecoration(
                     hintText: 'Enter your email',
                     // UPDATED: Compacted field
-                    hintStyle: TextStyle(fontSize: 14, color: AppColors.textSecondary),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                    hintStyle: TextStyle(
+                      fontSize: 14,
+                      color: AppColors.textSecondary,
+                    ),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 14,
+                    ),
                     prefixIcon: Icon(
-                      Icons.email_outlined,
+                      // Icons.email_outlined,
+                      IconlyLight.message,
                       color: AppColors.textSecondary,
                     ),
                   ),
@@ -131,10 +146,17 @@ class _ProfileInnerScreenState extends State<ProfileInnerScreen> {
                   decoration: const InputDecoration(
                     hintText: 'Select your date of birth',
                     // UPDATED: Compacted field
-                    hintStyle: TextStyle(fontSize: 14, color: AppColors.textSecondary),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                    hintStyle: TextStyle(
+                      fontSize: 14,
+                      color: AppColors.textSecondary,
+                    ),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 14,
+                    ),
                     suffixIcon: Icon(
-                      Icons.calendar_today_outlined,
+                      // Icons.calendar_today_outlined,
+                      IconlyLight.calendar,
                       color: AppColors.textSecondary,
                     ),
                   ),
@@ -147,10 +169,17 @@ class _ProfileInnerScreenState extends State<ProfileInnerScreen> {
                   decoration: const InputDecoration(
                     hintText: 'Enter your profession',
                     // UPDATED: Compacted field
-                    hintStyle: TextStyle(fontSize: 14, color: AppColors.textSecondary),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                    hintStyle: TextStyle(
+                      fontSize: 14,
+                      color: AppColors.textSecondary,
+                    ),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 14,
+                    ),
                     prefixIcon: Icon(
-                      Icons.work_outline,
+                      // Icons.work_outline,
+                      IconlyLight.work,
                       color: AppColors.textSecondary,
                     ),
                   ),
@@ -170,18 +199,29 @@ class _ProfileInnerScreenState extends State<ProfileInnerScreen> {
                 FormBuilderTextField(
                   name: 'bio',
                   initialValue:
-                  'Lorem ipsum dolor sit amet consectetur. Leo nec risus laoreet egestas mauris nulla sagittis odio. Tempor nec congue posuere quam dictum nam mi pulvinar. Sit adipiscing sem et lacus sed eros ac augue.',
+                      'Lorem ipsum dolor sit amet consectetur. Leo nec risus laoreet egestas mauris nulla sagittis odio. Tempor nec congue posuere quam dictum nam mi pulvinar. Sit adipiscing sem et lacus sed eros ac augue.',
                   decoration: const InputDecoration(
                     hintText: 'Tell us about yourself...',
                     // UPDATED: Compacted field
-                    hintStyle: TextStyle(fontSize: 14, color: AppColors.textSecondary),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                    hintStyle: TextStyle(
+                      fontSize: 14,
+                      color: AppColors.textSecondary,
+                    ),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 14,
+                    ),
                   ),
                   maxLines: 5,
                   validator: FormBuilderValidators.required(),
                 ),
                 const SizedBox(height: 32),
-                GradientButton(text: 'Save', onPressed: _onSavePressed, fontSize: 15, insets: 14),
+                GradientButton(
+                  text: 'Save',
+                  onPressed: _onSavePressed,
+                  fontSize: 15,
+                  insets: 14,
+                ),
                 const SizedBox(height: 16),
               ],
             ),
@@ -217,13 +257,18 @@ class _ProfileInnerScreenState extends State<ProfileInnerScreen> {
             right: 0,
             child: Container(
               decoration: BoxDecoration(
-                color: AppColors.primaryRed,
+                color: AppColors.tertiaryBackground,
                 shape: BoxShape.circle,
                 border: Border.all(color: Colors.white, width: 2),
               ),
               child: const Padding(
                 padding: EdgeInsets.all(6.0),
-                child: Icon(Icons.edit, color: Colors.white, size: 16),
+                child: Icon(
+                  // Icons.edit,
+                  IconlyBold.edit,
+                  color: AppColors.primaryOrange,
+                  size: 18,
+                ),
               ),
             ),
           ),
@@ -255,14 +300,18 @@ class _ProfileInnerScreenState extends State<ProfileInnerScreen> {
               // UPDATED: Compacted chip style
               labelStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
                 fontWeight: FontWeight.w600,
-                color: isSelected ? AppColors.primaryRed : AppColors.textSecondary,
+                color: isSelected
+                    ? AppColors.primaryRed
+                    : AppColors.textSecondary,
               ),
               selectedColor: AppColors.secondaryBackground,
               backgroundColor: Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20.0),
                 side: BorderSide(
-                  color: isSelected ? AppColors.primaryRed : AppColors.inputBorder,
+                  color: isSelected
+                      ? AppColors.primaryRed
+                      : AppColors.inputBorder,
                   width: 1.5,
                 ),
               ),
@@ -358,13 +407,20 @@ class _ProfileInnerScreenState extends State<ProfileInnerScreen> {
         TextField(
           controller: _languageController,
           decoration: InputDecoration(
-            hintText: 'Type language and press enter',
+            hintText: 'Type a language and press enter',
             // UPDATED: Compacted field
-            hintStyle: const TextStyle(fontSize: 14, color: AppColors.textSecondary),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-            suffixIcon: IconButton(
-              icon: const Icon(Icons.add, color: AppColors.primaryRed),
-              onPressed: _addLanguage,
+            hintStyle: const TextStyle(
+              fontSize: 14,
+              color: AppColors.textSecondary,
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 20,
+              vertical: 14,
+            ),
+            prefixIcon: const Icon(
+              Icons.translate,
+              color: AppColors.textSecondary,
+              size: 20,
             ),
           ),
           onSubmitted: (_) => _addLanguage(),
@@ -397,7 +453,10 @@ class _ProfileInnerScreenState extends State<ProfileInnerScreen> {
                     color: AppColors.primaryRed,
                     fontWeight: FontWeight.w600,
                   ),
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   deleteIcon: const Icon(Icons.close, size: 16),
                 );
               }).toList(),

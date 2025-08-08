@@ -5,6 +5,7 @@ import 'package:firstgenapp/screens/dashboard/navbar_content/home_screen.dart';
 import 'package:firstgenapp/screens/dashboard/navbar_content/profile_screen.dart';
 import 'package:firstgenapp/screens/dashboard/navbar_content/search_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:iconly/iconly.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -38,39 +39,40 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     return [
       PersistentBottomNavBarItem(
-        icon: const Icon(Icons.home),
-        inactiveIcon: const Icon(Icons.home_outlined),
+        icon: const Icon(IconlyBold.home),
+        inactiveIcon: const Icon(IconlyLight.home),
         title: ("Home"),
         activeColorPrimary: AppColors.primaryRed,
         inactiveColorPrimary: AppColors.textSecondary,
         textStyle: textStyle,
       ),
       PersistentBottomNavBarItem(
-        icon: const Icon(Icons.search),
+        icon: const Icon(IconlyBold.search),
+        inactiveIcon: const Icon(IconlyLight.search),
         title: ("Search"),
         activeColorPrimary: AppColors.primaryRed,
         inactiveColorPrimary: AppColors.textSecondary,
         textStyle: textStyle,
       ),
       PersistentBottomNavBarItem(
-        icon: const Icon(Icons.mail),
-        inactiveIcon: const Icon(Icons.mail_outline),
+        icon: const Icon(IconlyBold.message),
+        inactiveIcon: const Icon(IconlyLight.message),
         title: ("Chats"),
         activeColorPrimary: AppColors.primaryRed,
         inactiveColorPrimary: AppColors.textSecondary,
         textStyle: textStyle,
       ),
       PersistentBottomNavBarItem(
-        icon: const Icon(Icons.people),
-        inactiveIcon: const Icon(Icons.people_alt_outlined),
+        icon: const Icon(IconlyBold.user_3),
+        inactiveIcon: const Icon(IconlyBold.user_3),
         title: ("Community"),
         activeColorPrimary: AppColors.primaryRed,
         inactiveColorPrimary: AppColors.textSecondary,
         textStyle: textStyle,
       ),
       PersistentBottomNavBarItem(
-        icon: const Icon(Icons.person),
-        inactiveIcon: const Icon(Icons.person_outline),
+        icon: const Icon(IconlyBold.profile),
+        inactiveIcon: const Icon(IconlyLight.profile),
         title: ("Me"),
         activeColorPrimary: AppColors.primaryRed,
         inactiveColorPrimary: AppColors.textSecondary,

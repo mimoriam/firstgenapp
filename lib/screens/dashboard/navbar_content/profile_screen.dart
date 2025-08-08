@@ -2,6 +2,7 @@ import 'package:firstgenapp/screens/profile/profile_inner_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firstgenapp/constants/appColors.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
+import 'package:flutter/cupertino.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -84,7 +85,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
         title: Text(
           'Rana Utban',
           // UPDATED: Inherited from theme
-          style: textTheme.labelLarge?.copyWith(fontWeight: FontWeight.bold),
+          style: textTheme.labelLarge?.copyWith(
+            fontWeight: FontWeight.bold,
+            color: AppColors.textPrimary,
+          ),
         ),
         subtitle: Text(
           'ranautban007@gmail.com',
@@ -94,7 +98,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         trailing: const Icon(
           Icons.arrow_forward_ios,
           size: 16,
-          color: AppColors.textSecondary,
+          color: AppColors.primaryOrange,
         ),
         onTap: () {
           if (context.mounted) {
@@ -124,28 +128,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
             'Who can see your profile?',
             ['Everyone', 'Only Communities I\'m In'],
             _seeProfileSelection,
-                (newValue) => setState(() => _seeProfileSelection = newValue!),
+            (newValue) => setState(() => _seeProfileSelection = newValue!),
           ),
           const SizedBox(height: 16),
           _buildTitledChipGroup(
             '', // No title for this group
             ['People', 'Connect With'],
             _connectWithSelection,
-                (newValue) => setState(() => _connectWithSelection = newValue!),
+            (newValue) => setState(() => _connectWithSelection = newValue!),
           ),
           const SizedBox(height: 16),
           _buildTitledChipGroup(
             'Looking to connect with',
             ['First Generation', 'Culture Enthusiasts', 'Both'],
             _lookingForSelection,
-                (newValue) => setState(() => _lookingForSelection = newValue!),
+            (newValue) => setState(() => _lookingForSelection = newValue!),
           ),
           const SizedBox(height: 16),
           _buildTitledChipGroup(
             'Region Focus',
             ['Africa', 'Asia', 'Europe', 'Global'],
             _regionFocusSelection,
-                (newValue) => setState(() => _regionFocusSelection = newValue!),
+            (newValue) => setState(() => _regionFocusSelection = newValue!),
           ),
         ],
       ),
@@ -166,17 +170,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _buildSwitchTile(
             'App Notifications',
             _appNotifications,
-                (value) => setState(() => _appNotifications = value),
+            (value) => setState(() => _appNotifications = value),
           ),
           _buildSwitchTile(
             'Email Updates',
             _emailUpdates,
-                (value) => setState(() => _emailUpdates = value),
+            (value) => setState(() => _emailUpdates = value),
           ),
           _buildSwitchTile(
             'Event Reminders',
             _eventReminders,
-                (value) => setState(() => _eventReminders = value),
+            (value) => setState(() => _eventReminders = value),
           ),
         ],
       ),
@@ -197,12 +201,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _buildSwitchTile(
             'Show online status',
             _showOnlineStatus,
-                (value) => setState(() => _showOnlineStatus = value),
+            (value) => setState(() => _showOnlineStatus = value),
           ),
           _buildSwitchTile(
             'Show joined communities on profile',
             _showJoinedCommunities,
-                (value) => setState(() => _showJoinedCommunities = value),
+            (value) => setState(() => _showJoinedCommunities = value),
           ),
         ],
       ),
@@ -223,8 +227,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _buildInfoRow('Terms of Use', onTap: () {}),
           _buildInfoRow('Privacy Policy', onTap: () {}),
           _buildInfoRow('Contact Support', onTap: () {}),
-          _buildInfoRow('Log Out', onTap: () {}),
-          _buildInfoRow('Delete My Account', onTap: () {}),
+          _buildInfoRow('Log Out'),
+          _buildInfoRow('Delete My Account'),
           _buildInfoRow(
             'App Version',
             trailing: Text(
@@ -255,17 +259,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildTitledChipGroup(
-      String title,
-      List<String> options,
-      String selectedValue,
-      ValueChanged<String?> onChanged,
-      ) {
+    String title,
+    List<String> options,
+    String selectedValue,
+    ValueChanged<String?> onChanged,
+  ) {
     final textTheme = Theme.of(context).textTheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (title.isNotEmpty)
-          Text(title, style: textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600)),
+          Text(
+            title,
+            style: textTheme.labelLarge?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary,
+            ),
+          ),
         if (title.isNotEmpty) const SizedBox(height: 12),
         Wrap(
           spacing: 8.0,
@@ -278,15 +288,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
               onSelected: (selected) => onChanged(selected ? option : null),
               // UPDATED: Compacted chip style
               labelStyle: textTheme.bodySmall?.copyWith(
-                color: isSelected ? AppColors.primaryRed : AppColors.textSecondary,
+                color: isSelected
+                    ? AppColors.primaryRed
+                    : AppColors.textSecondary,
                 fontWeight: FontWeight.w600,
               ),
               selectedColor: AppColors.secondaryBackground,
               backgroundColor: Colors.white,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20.0),
+                borderRadius: BorderRadius.circular(10.0),
                 side: BorderSide(
-                  color: isSelected ? AppColors.primaryRed : AppColors.inputBorder,
+                  color: isSelected
+                      ? AppColors.primaryRed
+                      : AppColors.inputBorder,
                   width: 1.5,
                 ),
               ),
@@ -304,20 +318,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildSwitchTile(
-      String title,
-      bool value,
-      ValueChanged<bool> onChanged,
-      ) {
-    return SwitchListTile(
+    String title,
+    bool value,
+    ValueChanged<bool> onChanged,
+  ) {
+    return ListTile(
       title: Text(
         title,
-        // UPDATED: Inherited from theme
-        style: Theme.of(context).textTheme.labelLarge,
+        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+          color: AppColors.textPrimary,
+        ),
       ),
-      value: value,
-      onChanged: onChanged,
-      activeColor: AppColors.primaryRed,
-      // UPDATED: Made tile more compact
+      trailing: CupertinoSwitch(
+        value: value,
+        onChanged: onChanged,
+        activeTrackColor: AppColors.primaryRed,
+      ),
       dense: true,
       contentPadding: EdgeInsets.zero,
     );
@@ -325,17 +341,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Widget _buildInfoRow(String title, {Widget? trailing, VoidCallback? onTap}) {
     return ListTile(
-      title: Text(title, style: Theme.of(context).textTheme.labelLarge),
-      trailing: trailing ??
+      title: Text(
+        title,
+        style: Theme.of(
+          context,
+        ).textTheme.labelLarge?.copyWith(color: AppColors.textPrimary),
+      ),
+      trailing:
+          trailing ??
           (onTap != null
               ? const Icon(
-            Icons.arrow_forward_ios,
-            size: 14,
-            color: AppColors.textSecondary,
-          )
+                  Icons.arrow_forward_ios,
+                  size: 14,
+                  color: AppColors.primaryOrange,
+                )
               : null),
       onTap: onTap,
-      // UPDATED: Made tile more compact
       dense: true,
       contentPadding: EdgeInsets.zero,
     );

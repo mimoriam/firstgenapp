@@ -252,7 +252,7 @@ class _Signup9ScreenState extends State<Signup9Screen> {
 
   Widget _buildBottomNav(TextTheme textTheme) {
     return Padding(
-      padding: const EdgeInsets.only(top: 10.0, bottom: 24.0),
+      padding: const EdgeInsets.only(top: 10.0, bottom: 24.0, left: 10),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         crossAxisAlignment: CrossAxisAlignment.center,

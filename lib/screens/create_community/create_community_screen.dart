@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firstgenapp/constants/appColors.dart';
 import 'package:firstgenapp/common/gradient_btn.dart';
+import 'package:iconly/iconly.dart';
 
 class CreateCommunityScreen extends StatefulWidget {
   const CreateCommunityScreen({super.key});
@@ -23,7 +24,7 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
         elevation: 0,
         scrolledUnderElevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
+          icon: const Icon(Icons.arrow_back, color: AppColors.textSecondary),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
@@ -146,9 +147,10 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
   Widget _buildImagePlaceholder({bool isUploaded = false}) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.primaryBackground,
+        // color: AppColors.primaryBackground,
+        color: Color(0xFFEEEEEE),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.inputBorder),
+        // border: Border.all(color: AppColors.inputBorder),
         image: isUploaded
             ? const DecorationImage(
                 image: NetworkImage(
@@ -164,7 +166,8 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 const Icon(
-                  Icons.camera_alt_outlined,
+                  // Icons.camera_alt_outlined,
+                  IconlyLight.camera,
                   color: AppColors.textSecondary,
                 ),
                 const SizedBox(height: 4),

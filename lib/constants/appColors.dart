@@ -8,6 +8,7 @@ class AppColors {
   // Background Colors
   static const Color primaryBackground = Color(0xFFFFFFFF);
   static const Color secondaryBackground = Color(0xFFFDF1F1);
+  static const Color tertiaryBackground = Color(0xFFFDF2EE);
   static const Color inputFill = Color(0xFFFFFFFF);
 
 // Text Colors

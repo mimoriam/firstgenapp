@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:firstgenapp/constants/appColors.dart';
 import 'package:firstgenapp/common/gradient_btn.dart';
 import 'package:flutter_keyboard_visibility/flutter_keyboard_visibility.dart';
+import 'package:iconly/iconly.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
@@ -85,7 +86,7 @@ class _Signup10ScreenState extends State<Signup10Screen> {
     if (context.mounted) {
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (context) => const SigninIndirectScreen()),
-            (Route<dynamic> route) => false,
+        (Route<dynamic> route) => false,
       );
     }
   }
@@ -194,15 +195,19 @@ class _Signup10ScreenState extends State<Signup10Screen> {
       child: CircleAvatar(
         // UPDATED: Increased radius for a larger profile image area
         radius: 70,
-        backgroundColor: AppColors.secondaryBackground,
-        backgroundImage: _profileImage != null ? FileImage(_profileImage!) : null,
+        // backgroundColor: AppColors.secondaryBackground,
+        backgroundColor: Color(0xFFEEEEEE),
+        backgroundImage: _profileImage != null
+            ? FileImage(_profileImage!)
+            : null,
         child: _profileImage == null
             ? const Icon(
-          Icons.camera_alt_outlined,
-          color: AppColors.textSecondary,
-          // UPDATED: Increased icon size to match new avatar size
-          size: 24,
-        )
+                // Icons.camera_alt_outlined,
+                IconlyLight.camera,
+                color: AppColors.textSecondary,
+                // UPDATED: Increased icon size to match new avatar size
+                size: 24,
+              )
             : null,
       ),
     );
@@ -268,7 +273,8 @@ class _Signup10ScreenState extends State<Signup10Screen> {
         hintStyle: TextStyle(fontSize: 14, color: AppColors.textSecondary),
         contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 14),
         suffixIcon: Icon(
-          Icons.calendar_today_outlined,
+          // Icons.calendar_today_outlined,
+          IconlyLight.calendar,
           color: AppColors.textSecondary,
         ),
       ),
@@ -283,13 +289,19 @@ class _Signup10ScreenState extends State<Signup10Screen> {
         // UPDATED: Made field more compact
         hintStyle: TextStyle(fontSize: 14, color: AppColors.textSecondary),
         contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-        prefixIcon: Icon(Icons.work_outline, color: AppColors.textSecondary),
+        prefixIcon: Icon(
+          // Icons.work_outline,
+          IconlyLight.work,
+          color: AppColors.textSecondary,
+        ),
       ),
     );
   }
 
   Widget _buildTermsAndConditions() {
-    final baseStyle = Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary);
+    final baseStyle = Theme.of(
+      context,
+    ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary);
     final linkStyle = baseStyle?.copyWith(
       color: AppColors.primaryRed,
       fontWeight: FontWeight.bold,
@@ -298,7 +310,7 @@ class _Signup10ScreenState extends State<Signup10Screen> {
 
     // UPDATED: Wrapped in Transform.translate to align checkbox to the left
     return Transform.translate(
-      offset: const Offset(-11, 0),
+      offset: const Offset(-11, -10),
       child: Row(
         children: [
           Checkbox(

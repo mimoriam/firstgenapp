@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firstgenapp/constants/appColors.dart';
+import 'package:iconly/iconly.dart';
 
 class YourMatchesScreen extends StatefulWidget {
   const YourMatchesScreen({super.key});
@@ -66,7 +67,9 @@ class _YourMatchesScreenState extends State<YourMatchesScreen> {
               TextSpan(
                 text: _matches.length.toString(),
                 // UPDATED: Inherited from theme
-                style: textTheme.headlineSmall?.copyWith(color: AppColors.primaryRed),
+                style: textTheme.headlineSmall?.copyWith(
+                  color: AppColors.primaryRed,
+                ),
               ),
             ],
           ),
@@ -75,9 +78,10 @@ class _YourMatchesScreenState extends State<YourMatchesScreen> {
           IconButton(
             onPressed: () {},
             icon: const Icon(
-              Icons.search,
+              // Icons.search,
+              IconlyLight.search,
               color: AppColors.textSecondary,
-              size: 28,
+              size: 22,
             ),
           ),
         ],
@@ -118,18 +122,10 @@ class _YourMatchesScreenState extends State<YourMatchesScreen> {
         // UPDATED: Inherited from theme
         style: textTheme.bodySmall,
       ),
-      trailing: Container(
-        // UPDATED: Reduced padding and size
-        padding: const EdgeInsets.all(2),
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          border: Border.all(color: AppColors.primaryRed, width: 1.5),
-        ),
-        child: const Icon(
-          Icons.keyboard_arrow_down,
-          color: AppColors.primaryRed,
-          size: 18,
-        ),
+      trailing: const Icon(
+        IconlyLight.message,
+        color: AppColors.primaryRed,
+        size: 20,
       ),
       onTap: () {
         // Handle tap on match item

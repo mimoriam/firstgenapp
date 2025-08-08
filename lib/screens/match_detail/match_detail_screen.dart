@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firstgenapp/constants/appColors.dart';
-import 'dart:ui'; // Required for ImageFilter
+import 'package:iconly/iconly.dart';
+import 'dart:ui';
+
+import 'package:iconsax_flutter/iconsax_flutter.dart'; // Required for ImageFilter
 
 class MatchDetailScreen extends StatefulWidget {
   const MatchDetailScreen({super.key});
@@ -54,14 +57,17 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
               onPressed: () => Navigator.of(context).pop(),
             ),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.3),
+                color: Colors.white.withOpacity(0.2),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.location_on, color: Colors.white, size: 14),
+                  Icon(
+                      // Icons.location_on,
+                    Iconsax.send_2_copy,
+                      color: Colors.white, size: 14),
                   const SizedBox(width: 4),
                   Text(
                     '${userProfile['distance']} km',
@@ -159,9 +165,9 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            '${userProfile['profession']} | ${userProfile['flag']} ${userProfile['nationality']}',
+            '${userProfile['profession']}  |  ${userProfile['flag']} ${userProfile['nationality']}',
             // UPDATED: Reduced font size
-            style: textTheme.bodyMedium?.copyWith(color: Colors.white.withOpacity(0.9)),
+            style: textTheme.bodyMedium?.copyWith(color: Colors.white.withOpacity(0.8)),
           ),
           // UPDATED: Reduced spacing
           const SizedBox(height: 16),
@@ -236,7 +242,8 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
               // UPDATED: Reduced padding
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
+                color: Colors.grey.withOpacity(0.1),
+                // color: Colors.white.withOpacity(0.9),
                 borderRadius: BorderRadius.circular(35),
                 border: Border.all(color: Colors.white.withOpacity(0.3)),
               ),
@@ -252,7 +259,8 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
                   ),
                   const SizedBox(width: 12),
                   _buildCircleButton(
-                    icon: Icons.mail_outline,
+                    // icon: Icons.mail_outline,
+                    icon: IconlyBold.message,
                     bgColor: AppColors.textPrimary,
                     iconColor: AppColors.primaryBackground,
                     // UPDATED: Reduced size
@@ -325,7 +333,6 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
       label: Text(label),
       backgroundColor: AppColors.primaryBackground,
       side: const BorderSide(color: AppColors.inputBorder),
-      // UPDATED: Compacted chip style
       labelStyle: Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
     );

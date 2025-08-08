@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firstgenapp/constants/appColors.dart';
 import 'package:firstgenapp/common/gradient_btn.dart';
+import 'package:iconly/iconly.dart';
 
 class CreateEventScreen extends StatefulWidget {
   const CreateEventScreen({super.key});
@@ -21,7 +22,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
         elevation: 0,
         scrolledUnderElevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
+          icon: const Icon(Icons.arrow_back, color: AppColors.textSecondary),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
@@ -44,12 +45,14 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
             _buildTextField(
               label: 'Date',
               hint: '12-25-1995',
-              trailingIcon: Icons.calendar_today_outlined,
+              // trailingIcon: Icons.calendar_today_outlined,
+              trailingIcon: IconlyLight.calendar,
             ),
             _buildTextField(
               label: 'Location',
               hint: 'Spice Garden Kitchen',
-              trailingIcon: Icons.location_on_outlined,
+              // trailingIcon: Icons.location_on_outlined,
+              trailingIcon: IconlyLight.location,
             ),
             _buildImageUploadSection(),
             const SizedBox(height: 24),
@@ -124,17 +127,19 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
           height: 180,
           width: double.infinity,
           decoration: BoxDecoration(
-            color: AppColors.primaryBackground,
+            // color: AppColors.primaryBackground,
+            color: Color(0xFFEEEEEE),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.inputBorder),
+            // border: Border.all(color: AppColors.inputBorder),
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const Icon(
-                Icons.camera_alt_outlined,
+                // Icons.camera_alt_outlined,
+                IconlyLight.camera,
                 color: AppColors.textSecondary,
-                size: 40,
+                size: 30,
               ),
               const SizedBox(height: 8),
               Text(

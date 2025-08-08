@@ -167,7 +167,7 @@ class _SigninScreenState extends State<SigninScreen> {
           children: [
             Align(
               alignment: Alignment.centerLeft,
-              child: SvgPicture.asset(iconPath, height: 22, width: 22),
+              child: SvgPicture.asset(iconPath, height: 18, width: 18),
             ),
             Text(
               text,

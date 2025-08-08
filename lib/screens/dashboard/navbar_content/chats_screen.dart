@@ -1,6 +1,8 @@
 import 'package:firstgenapp/screens/conversation/conversation_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firstgenapp/constants/appColors.dart';
+import 'package:iconly/iconly.dart';
+import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 
 class ChatsScreen extends StatefulWidget {
@@ -69,7 +71,8 @@ class _ChatsScreenState extends State<ChatsScreen> {
     {
       'name': 'Jenny',
       'avatar': 'https://randomuser.me/api/portraits/women/2.jpg',
-      'lastMessage': 'Yesterday I went to the most amazing concert, you would have loved it!',
+      'lastMessage':
+          'Yesterday I went to the most amazing concert, you would have loved it!',
       'time': '8:00 pm',
       'status': 'unread',
       'unreadCount': 8,
@@ -114,9 +117,10 @@ class _ChatsScreenState extends State<ChatsScreen> {
           IconButton(
             onPressed: () {},
             icon: const Icon(
-              Icons.search,
-              color: AppColors.textPrimary,
-              size: 28,
+              // Icons.search,
+              IconlyLight.search,
+              color: AppColors.textSecondary,
+              size: 24,
             ),
           ),
         ],
@@ -134,7 +138,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
           _buildSectionHeader('Today Message', textTheme),
           const SizedBox(height: 12),
           ..._todayMessages.map(
-                (msg) => Padding(
+            (msg) => Padding(
               // UPDATED: Reduced padding
               padding: const EdgeInsets.only(bottom: 12.0),
               child: _buildChatItem(msg),
@@ -143,7 +147,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
           _buildSectionHeader('Yesterday', textTheme),
           const SizedBox(height: 12),
           ..._yesterdayMessages.map(
-                (msg) => Padding(
+            (msg) => Padding(
               // UPDATED: Reduced padding
               padding: const EdgeInsets.only(bottom: 12.0),
               child: _buildChatItem(msg),
@@ -223,7 +227,9 @@ class _ChatsScreenState extends State<ChatsScreen> {
                 Text(
                   message['name'],
                   // UPDATED: Inherited from theme
-                  style: textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
+                  style: textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -231,7 +237,8 @@ class _ChatsScreenState extends State<ChatsScreen> {
                 Row(
                   children: [
                     const Icon(
-                      Icons.history,
+                      // Icons.history,
+                      Iconsax.export_2_copy,
                       size: 14,
                       color: AppColors.textSecondary,
                     ),
@@ -261,7 +268,11 @@ class _ChatsScreenState extends State<ChatsScreen> {
                 style: textTheme.bodySmall,
               ),
               const SizedBox(height: 6),
-              _buildStatusIndicator(message['status'], message['unreadCount'], textTheme),
+              _buildStatusIndicator(
+                message['status'],
+                message['unreadCount'],
+                textTheme,
+              ),
             ],
           ),
         ],
@@ -269,7 +280,11 @@ class _ChatsScreenState extends State<ChatsScreen> {
     );
   }
 
-  Widget _buildStatusIndicator(String status, int unreadCount, TextTheme textTheme) {
+  Widget _buildStatusIndicator(
+    String status,
+    int unreadCount,
+    TextTheme textTheme,
+  ) {
     if (status == 'unread' && unreadCount > 0) {
       return Container(
         width: 20,
@@ -290,7 +305,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
         ),
       );
     } else {
-      return const Icon(Icons.check, color: AppColors.primaryRed, size: 18);
+      return const Icon(Iconsax.tick_circle_copy, color: AppColors.primaryRed, size: 18);
     }
   }
 }

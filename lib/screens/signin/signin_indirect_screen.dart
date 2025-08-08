@@ -7,6 +7,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:flutter_keyboard_visibility/flutter_keyboard_visibility.dart';
+import 'package:iconly/iconly.dart';
 
 class SigninIndirectScreen extends StatefulWidget {
   const SigninIndirectScreen({super.key});
@@ -81,12 +82,13 @@ class _SigninIndirectScreenState extends State<SigninIndirectScreen> {
                           const SizedBox(height: 8),
                           FormBuilderTextField(
                             name: 'email',
-                            decoration: const InputDecoration(
+                            decoration: InputDecoration(
                               hintText: 'Email',
-                              hintStyle: TextStyle(fontSize: 14, color: AppColors.textSecondary),
-                              contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                              hintStyle: const TextStyle(fontSize: 14, color: AppColors.textSecondary),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                               prefixIcon: Icon(
-                                Icons.email_outlined,
+                                // Icons.email_outlined,
+                                IconlyLight.message,
                                 color: AppColors.textSecondary,
                               ),
                             ),
@@ -107,14 +109,17 @@ class _SigninIndirectScreenState extends State<SigninIndirectScreen> {
                               hintStyle: const TextStyle(fontSize: 14, color: AppColors.textSecondary),
                               contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                               prefixIcon: const Icon(
-                                Icons.lock_outline,
+                                // Icons.lock_outline,
+                                IconlyLight.unlock,
                                 color: AppColors.textSecondary,
                               ),
                               suffixIcon: IconButton(
                                 icon: Icon(
                                   _isPasswordObscured
-                                      ? Icons.visibility_off_outlined
-                                      : Icons.visibility_outlined,
+                                  ? IconlyLight.hide :
+                                      IconlyLight.show,
+                                      // ? Icons.visibility_off_outlined
+                                      // : Icons.visibility_outlined,
                                   color: AppColors.textSecondary,
                                 ),
                                 onPressed: () {
@@ -128,11 +133,11 @@ class _SigninIndirectScreenState extends State<SigninIndirectScreen> {
                           ),
                           const SizedBox(height: 6),
                           _buildRememberAndForgotRow(context),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 24),
                           _buildSignUpRedirect(context),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 32),
                           _buildDivider(context),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 32),
                           _buildSocialLoginRow(),
                           const SizedBox(height: 24),
                         ],
@@ -290,9 +295,9 @@ class _SigninIndirectScreenState extends State<SigninIndirectScreen> {
       style: OutlinedButton.styleFrom(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         side: const BorderSide(color: AppColors.inputBorder, width: 1.5),
-        padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 34, vertical: 17),
       ),
-      child: SvgPicture.asset(iconPath, height: 24, width: 24),
+      child: SvgPicture.asset(iconPath, height: 20, width: 20),
     );
   }
 }
