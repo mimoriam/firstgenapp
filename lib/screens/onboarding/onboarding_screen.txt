@@ -1,0 +1,497 @@
+import 'package:firstgenapp/screens/signin/signin_screen.dart';
+import 'package:flutter/material.dart';
+import 'package:firstgenapp/common/gradient_btn.dart';
+import 'package:firstgenapp/constants/appColors.dart';
+import 'package:firstgenapp/screens/onboarding/onboarding_widget.dart';
+import 'package:flutter_svg/flutter_svg.dart' hide Svg;
+import 'package:flutter_svg_provider/flutter_svg_provider.dart';
+
+class OnboardingScreen extends StatefulWidget {
+  const OnboardingScreen({super.key});
+
+  @override
+  State<OnboardingScreen> createState() => _OnboardingScreenState();
+}
+
+class _OnboardingScreenState extends State<OnboardingScreen> {
+  final PageController _pageController = PageController();
+  int _currentPage = 0;
+  final List<Map<String, String>> _pageData = [
+    {
+      "backgroundImage": "images/backgrounds/woman_with_phone.png",
+      "title": "Celebrate Your Culture",
+      "description":
+          "Share your heritage and connect with people who appreciate where you come from.",
+    },
+    {
+      "backgroundImage": "images/backgrounds/women_watch_phone.png",
+      "title": "Find Shared Stories",
+      "description":
+          "Meet people who understand your\n journey and embrace cultural connections.",
+    },
+    {
+      "backgroundImage": "images/backgrounds/ratings_bg.svg",
+      "foregroundImage": "images/backgrounds/people_bg.png",
+      "title": "Join Real Community",
+      "description":
+          "Thousands of people building\n friendships and celebrating identity-together.",
+    },
+  ];
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  void _onPageChanged(int page) {
+    setState(() {
+      _currentPage = page;
+    });
+  }
+
+  void _onContinuePressed() {
+    _pageController.nextPage(
+      duration: const Duration(milliseconds: 400),
+      curve: Curves.easeInOut,
+    );
+  }
+
+  void _onSkipPressed() {
+    _pageController.jumpToPage(2);
+  }
+
+  void _onLetsGetStartedPressed() {
+    if (context.mounted) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (context) => const SigninScreen()),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.secondaryBackground,
+      body: Stack(
+        children: [
+          Positioned(
+            top: 130, // This positions the top of the image container
+            left: 0,
+            right: 0,
+            child: SizedBox(
+              height: 435, // This is the fixed height for the image area
+              child: PageView.builder(
+                controller: _pageController,
+                onPageChanged: _onPageChanged,
+                itemCount: _pageData.length,
+                itemBuilder: (context, index) {
+                  // If it's the third page (index 2), build the custom layout.
+                  if (index == 2) {
+                    return Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Positioned(
+                          top: 0,
+                          child: SvgPicture.asset(
+                            _pageData[index]['backgroundImage']!,
+                            fit: BoxFit.contain,
+                          ),
+                        ),
+                        Positioned(
+                          bottom: -40,
+                          width: MediaQuery.of(context).size.width,
+                          height: 200,
+                          // child: RepaintBoundary(
+                          //   child: SvgPicture.asset(
+                          //     _pageData[index]['foregroundImage']!,
+                          //     fit: BoxFit.contain,
+                          //   ),
+                          // ),
+                          // child: Image(
+                          //   image: Svg(_pageData[index]['foregroundImage']!),
+                          // ),
+                          child: Image.asset(
+                            _pageData[index]['foregroundImage']!,
+                            fit: BoxFit.contain,
+                          ),
+                        ),
+                      ],
+                    );
+                  } else {
+                    return OnboardingPage(
+                      imagePath: _pageData[index]['backgroundImage']!,
+                    );
+                  }
+                },
+              ),
+            ),
+          ),
+
+          // Position the content card at the bottom.
+          Positioned(left: 0, right: 0, bottom: 0, child: _buildBottomCard()),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBottomCard() {
+    return Container(
+      height: 330,
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(28),
+          topRight: Radius.circular(28),
+        ),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 20, 24, 20),
+          child: Column(
+            children: [
+              const SizedBox(height: 30),
+              Text(
+                _pageData[_currentPage]['title']!,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.headlineMedium,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                _pageData[_currentPage]['description']!,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(
+                  _pageData.length,
+                  (index) => _buildDot(index: index),
+                ),
+              ),
+              const Spacer(),
+              const Divider(color: AppColors.divider, thickness: 0.4),
+              const SizedBox(height: 20),
+              _buildButtons(),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildButtons() {
+    if (_currentPage == _pageData.length - 1) {
+      return GradientButton(
+        text: "Let's Get Started",
+        onPressed: _onLetsGetStartedPressed,
+      );
+    } else {
+      return Row(
+        children: [
+          Expanded(
+            child: TextButton(
+              onPressed: _onSkipPressed,
+              style: TextButton.styleFrom(
+                backgroundColor: AppColors.secondaryBackground,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: Text(
+                'Skip',
+                style: TextStyle(
+                  color: AppColors.textTertiary.withOpacity(0.8),
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: GradientButton(
+              text: 'Continue',
+              onPressed: _onContinuePressed,
+            ),
+          ),
+        ],
+      );
+    }
+  }
+
+  Widget _buildDot({required int index}) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      margin: const EdgeInsets.only(right: 8),
+      height: 8,
+      width: _currentPage == index ? 24 : 8,
+      decoration: BoxDecoration(
+        color: _currentPage == index
+            ? AppColors.primaryRed
+            : AppColors.dotInactive,
+        borderRadius: BorderRadius.circular(5),
+      ),
+    );
+  }
+}
+
+
+
+////////////
+
+
+import 'package:firstgenapp/screens/signin/signin_screen.dart';
+import 'package:flutter/material.dart';
+import 'package:firstgenapp/common/gradient_btn.dart';
+import 'package:firstgenapp/constants/appColors.dart';
+import 'package:firstgenapp/screens/onboarding/onboarding_widget.dart';
+import 'package:flutter_svg/flutter_svg.dart' hide Svg;
+import 'package:flutter_svg_provider/flutter_svg_provider.dart';
+
+class OnboardingScreen extends StatefulWidget {
+  const OnboardingScreen({super.key});
+
+  @override
+  State<OnboardingScreen> createState() => _OnboardingScreenState();
+}
+
+class _OnboardingScreenState extends State<OnboardingScreen> {
+  final PageController _pageController = PageController();
+  int _currentPage = 0;
+  final List<Map<String, String>> _pageData = [
+    {
+      "backgroundImage": "images/backgrounds/woman_with_phone.png",
+      "title": "Celebrate Your Culture",
+      "description":
+      "Share your heritage and connect with people who appreciate where you come from.",
+    },
+    {
+      "backgroundImage": "images/backgrounds/women_watch_phone.png",
+      "title": "Find Shared Stories",
+      "description":
+      "Meet people who understand your\n journey and embrace cultural connections.",
+    },
+    {
+      "backgroundImage": "images/backgrounds/ratings_bg.svg",
+      "foregroundImage": "images/backgrounds/people_bg.png",
+      "title": "Join Real Community",
+      "description":
+      "Thousands of people building\n friendships and celebrating identity-together.",
+    },
+  ];
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  void _onPageChanged(int page) {
+    setState(() {
+      _currentPage = page;
+    });
+  }
+
+  void _onContinuePressed() {
+    _pageController.nextPage(
+      duration: const Duration(milliseconds: 400),
+      curve: Curves.easeInOut,
+    );
+  }
+
+  void _onSkipPressed() {
+    _pageController.jumpToPage(2);
+  }
+
+  void _onLetsGetStartedPressed() {
+    if (context.mounted) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (context) => const SigninScreen()),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.secondaryBackground,
+      body: LayoutBuilder(
+          builder: (BuildContext context, BoxConstraints constraints) {
+          return Stack(
+            children: [
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                // bottom: 200,
+                // bottom: 0,
+                // bottom: MediaQuery.of(context).size.height / 5,
+                bottom: constraints.maxHeight * 0.17,
+                child: SizedBox(
+                  child: PageView.builder(
+                    controller: _pageController,
+                    onPageChanged: _onPageChanged,
+                    itemCount: _pageData.length,
+                    itemBuilder: (context, index) {
+                      // If it's the third page (index 2), build the custom layout.
+                      if (index == 2) {
+                        return Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            Positioned(
+                              // top: MediaQuery.of(context).size.height / 7.2,
+                              top: constraints.maxHeight * 0.12,
+                              child: SvgPicture.asset(
+                                _pageData[index]['backgroundImage']!,
+                                fit: BoxFit.contain,
+                              ),
+                            ),
+                            Positioned(
+                              // bottom: MediaQuery.of(context).size.height / 7.2,
+                              bottom: constraints.maxHeight * 0.13,
+                              // bottom: -40,
+                              // width: MediaQuery.of(context).size.width,
+                              width: constraints.maxWidth,
+                              height: 200,
+                              // child: RepaintBoundary(
+                              //   child: SvgPicture.asset(
+                              //     _pageData[index]['foregroundImage']!,
+                              //     fit: BoxFit.contain,
+                              //   ),
+                              // ),
+                              // child: Image(
+                              //   image: Svg(_pageData[index]['foregroundImage']!),
+                              // ),
+                              child: Image.asset(
+                                _pageData[index]['foregroundImage']!,
+                                fit: BoxFit.contain,
+                              ),
+                            ),
+                          ],
+                        );
+                      } else {
+                        return OnboardingPage(
+                          imagePath: _pageData[index]['backgroundImage']!,
+                        );
+                      }
+                    },
+                  ),
+                ),
+              ),
+
+              // Position the content card at the bottom.
+              Positioned(left: 0, right: 0, bottom: 0, child: _buildBottomCard()),
+            ],
+          );
+        }
+      ),
+    );
+  }
+
+  Widget _buildBottomCard() {
+    return Container(
+      height: 330,
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(28),
+          topRight: Radius.circular(28),
+        ),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 20, 24, 20),
+          child: Column(
+            children: [
+              const SizedBox(height: 30),
+              Text(
+                _pageData[_currentPage]['title']!,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.headlineMedium,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                _pageData[_currentPage]['description']!,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(
+                  _pageData.length,
+                      (index) => _buildDot(index: index),
+                ),
+              ),
+              const Spacer(),
+              const Divider(color: AppColors.divider, thickness: 0.4),
+              const SizedBox(height: 20),
+              _buildButtons(),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildButtons() {
+    if (_currentPage == _pageData.length - 1) {
+      return GradientButton(
+        text: "Let's Get Started",
+        onPressed: _onLetsGetStartedPressed,
+      );
+    } else {
+      return Row(
+        children: [
+          Expanded(
+            child: TextButton(
+              onPressed: _onSkipPressed,
+              style: TextButton.styleFrom(
+                backgroundColor: AppColors.secondaryBackground,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: Text(
+                'Skip',
+                style: TextStyle(
+                  color: AppColors.textTertiary.withOpacity(0.8),
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: GradientButton(
+              text: 'Continue',
+              onPressed: _onContinuePressed,
+            ),
+          ),
+        ],
+      );
+    }
+  }
+
+  Widget _buildDot({required int index}) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      margin: const EdgeInsets.only(right: 8),
+      height: 8,
+      width: _currentPage == index ? 24 : 8,
+      decoration: BoxDecoration(
+        color: _currentPage == index
+            ? AppColors.primaryRed
+            : AppColors.dotInactive,
+        borderRadius: BorderRadius.circular(5),
+      ),
+    );
+  }
+}
