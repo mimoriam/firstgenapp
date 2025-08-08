@@ -41,7 +41,10 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
             SliverAppBar(
               backgroundColor: AppColors.primaryBackground,
               leading: IconButton(
-                icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
+                icon: const Icon(
+                  Icons.arrow_back,
+                  color: AppColors.textPrimary,
+                ),
                 onPressed: () => Navigator.of(context).pop(),
               ),
               title: Text(
@@ -67,8 +70,9 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
                   indicatorColor: AppColors.primaryRed,
                   indicatorSize: TabBarIndicatorSize.label,
                   dividerColor: Colors.transparent,
-                  labelStyle: textTheme.labelLarge
-                      ?.copyWith(fontWeight: FontWeight.bold),
+                  labelStyle: textTheme.labelLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
                   unselectedLabelStyle: textTheme.labelLarge,
                   tabs: const [
                     Tab(text: 'About Community'),
@@ -83,11 +87,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
         },
         body: TabBarView(
           controller: _tabController,
-          children: [
-            _AboutTab(),
-            _FeedTab(),
-            _UpcomingEventsTab(),
-          ],
+          children: [_AboutTab(), _FeedTab(), _UpcomingEventsTab()],
         ),
       ),
     );
@@ -101,7 +101,8 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
         borderRadius: BorderRadius.circular(16),
         image: const DecorationImage(
           image: NetworkImage(
-              'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=500&q=80'),
+            'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=500&q=80',
+          ),
           fit: BoxFit.cover,
         ),
       ),
@@ -144,8 +145,9 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
               const SizedBox(height: 8),
               Text(
                 '"Reiki healing channels universal energy, restoring balance and promoting holistic well-being."',
-                style: textTheme.bodySmall
-                    ?.copyWith(color: Colors.white.withOpacity(0.9)),
+                style: textTheme.bodySmall?.copyWith(
+                  color: Colors.white.withOpacity(0.9),
+                ),
               ),
               const Spacer(),
               ElevatedButton(
@@ -156,12 +158,17 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(30),
                   ),
-                  padding:
-                  const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 12,
+                  ),
                 ),
-                child: Text('Join Community',
-                    style: textTheme.labelLarge
-                        ?.copyWith(fontWeight: FontWeight.bold)),
+                child: Text(
+                  'Join Community',
+                  style: textTheme.labelLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ],
           ),
@@ -181,9 +188,9 @@ class _FeedTab extends StatelessWidget {
       'time': '17 July at 08:02 AM',
       'community': 'Reiki Healing',
       'image':
-      'https://images.unsplash.com/photo-1593113598332-cd288d649433?w=500&q=80',
+          'https://images.unsplash.com/photo-1593113598332-cd288d649433?w=500&q=80',
       'caption':
-      'My daughter just got diagnosed with ANOREXIA. Feeling overwhelmed. Any advice?',
+          'My daughter just got diagnosed with ANOREXIA. Feeling overwhelmed. Any advice?',
       'likes': 45,
       'comments': 12,
       'shares': 2,
@@ -195,11 +202,11 @@ class _FeedTab extends StatelessWidget {
       'community': 'Reiki Healing',
       'title': 'This is what I learned in my recent course',
       'quote':
-      '"The whole secret of existence lies in the pursuit of meaning, purpose, and connection. It is a delicate dance between self-discovery, compassion for others, and embracing the ever-unfolding mysteries of life. Finding harmony in the ebb and flow of experiences, we unlock the profound beauty that resides within our shared journey."',
+          '"The whole secret of existence lies in the pursuit of meaning, purpose, and connection. It is a delicate dance between self-discovery, compassion for others, and embracing the ever-unfolding mysteries of life. Finding harmony in the ebb and flow of experiences, we unlock the profound beauty that resides within our shared journey."',
       'likes': 45,
       'comments': 12,
       'shares': 2,
-    }
+    },
   ];
 
   @override
@@ -252,19 +259,29 @@ class _FeedTab extends StatelessWidget {
               Expanded(
                 child: Text(
                   "What's on your mind? Ask a question or share your story..",
-                  style: textTheme.bodySmall
-                      ?.copyWith(color: AppColors.textSecondary),
+                  style: textTheme.bodySmall?.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
                 ),
               ),
               const SizedBox(width: 8),
-              const Icon(IconlyLight.camera,
-                  color: AppColors.textSecondary, size: 22),
+              const Icon(
+                IconlyLight.camera,
+                color: AppColors.textSecondary,
+                size: 22,
+              ),
               const SizedBox(width: 12),
-              const Icon(Icons.attach_file_outlined,
-                  color: AppColors.textSecondary, size: 22),
+              const Icon(
+                Icons.attach_file_outlined,
+                color: AppColors.textSecondary,
+                size: 22,
+              ),
               const SizedBox(width: 12),
-              const Icon(Icons.emoji_emotions_outlined,
-                  color: AppColors.textSecondary, size: 22),
+              const Icon(
+                Icons.emoji_emotions_outlined,
+                color: AppColors.textSecondary,
+                size: 22,
+              ),
             ],
           ),
         ),
@@ -273,8 +290,11 @@ class _FeedTab extends StatelessWidget {
           padding: const EdgeInsets.only(bottom: 16),
           child: Row(
             children: [
-              const Icon(Iconsax.global_copy,
-                  color: AppColors.textSecondary, size: 20),
+              const Icon(
+                Iconsax.global_copy,
+                color: AppColors.textSecondary,
+                size: 20,
+              ),
               const SizedBox(width: 4),
               Text('Add your post in', style: textTheme.labelLarge),
               const Icon(Icons.arrow_drop_down, color: AppColors.textSecondary),
@@ -285,7 +305,7 @@ class _FeedTab extends StatelessWidget {
                     PersistentNavBarNavigator.pushNewScreen(
                       context,
                       screen:
-                      CreateEventScreen(), // Assuming this is the correct screen
+                          CreateEventScreen(), // Assuming this is the correct screen
                       withNavBar: false,
                     );
                   }
@@ -298,10 +318,12 @@ class _FeedTab extends StatelessWidget {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  padding:
-                  const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 12,
+                  ),
                 ),
-              )
+              ),
             ],
           ),
         ),
@@ -509,7 +531,11 @@ class _PostCard extends StatelessWidget {
   }
 
   Widget _buildFooterIcon(
-      IconData icon, String count, Color iconColor, Color color) {
+    IconData icon,
+    String count,
+    Color iconColor,
+    Color color,
+  ) {
     return Row(
       children: [
         Icon(icon, color: iconColor, size: 20),
@@ -567,13 +593,13 @@ class _AboutTab extends StatelessWidget {
           _buildExpansionTile(
             title: 'What is this community for?',
             content:
-            'The expression or application of human creative skill and imagination, typically in a visual form such as painting or sculpture, producing works to be appreciated primarily for their beauty or emotional power.',
+                'The expression or application of human creative skill and imagination, typically in a visual form such as painting or sculpture, producing works to be appreciated primarily for their beauty or emotional power.',
           ),
           const SizedBox(height: 8),
           _buildExpansionTile(
             title: 'What will you gain from this community?',
             content:
-            'The expression or application of human creative skill and imagination, typically in a visual form such as painting or sculpture, producing works to be appreciated primarily for their beauty or emotional power.',
+                'The expression or application of human creative skill and imagination, typically in a visual form such as painting or sculpture, producing works to be appreciated primarily for their beauty or emotional power.',
           ),
           const SizedBox(height: 8),
           _buildExpansionTile(
@@ -621,8 +647,10 @@ class _AboutTab extends StatelessWidget {
       child: ExpansionTile(
         initiallyExpanded: isInitiallyExpanded,
         title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-        childrenPadding:
-        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        childrenPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 8,
+        ),
         tilePadding: EdgeInsets.zero,
         children: [
           Text(
@@ -645,7 +673,7 @@ class _UpcomingEventsTab extends StatelessWidget {
       "date": "8 December, 2025",
       "location": "Spice Garden Kitchen",
       "description":
-      "Soothing audio and gentle vibrations to ease discomfort. Soothing audio and gentle vibrations to.",
+          "Soothing audio and gentle vibrations to ease discomfort. Soothing audio and gentle vibrations to.",
       "attendees": 31,
       "isInterested": true,
     },
@@ -655,7 +683,7 @@ class _UpcomingEventsTab extends StatelessWidget {
       "date": "15 December, 2025",
       "location": "The Grand Hall",
       "description":
-      "Experience the rich musical traditions from around the world. A night of melody and harmony.",
+          "Experience the rich musical traditions from around the world. A night of melody and harmony.",
       "attendees": 85,
       "isInterested": false,
     },
@@ -665,7 +693,7 @@ class _UpcomingEventsTab extends StatelessWidget {
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     return ListView(
-      padding: const EdgeInsets.symmetric(horizontal: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
       children: [
         // Row(
         //   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -683,7 +711,8 @@ class _UpcomingEventsTab extends StatelessWidget {
           physics: const NeverScrollableScrollPhysics(),
           shrinkWrap: true,
           itemCount: _events.length,
-          itemBuilder: (context, index) => EventCard(event: _events[index]),
+          itemBuilder: (context, index) =>
+              EventCard(event: _events[index], copied: true),
           separatorBuilder: (context, index) => const SizedBox(height: 12),
         ),
       ],
@@ -705,14 +734,11 @@ class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
 
   @override
   Widget build(
-      BuildContext context,
-      double shrinkOffset,
-      bool overlapsContent,
-      ) {
-    return Container(
-      color: AppColors.primaryBackground,
-      child: _tabBar,
-    );
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    return Container(color: AppColors.primaryBackground, child: _tabBar);
   }
 
   @override
