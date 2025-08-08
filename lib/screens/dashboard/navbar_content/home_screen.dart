@@ -1,4 +1,5 @@
 import 'package:firstgenapp/common/gradient_btn.dart';
+import 'package:firstgenapp/screens/community_detail/community_detail_screen.dart';
 import 'package:firstgenapp/screens/match_detail/match_detail_screen.dart';
 import 'package:firstgenapp/screens/recent_activities/recent_activities_screen.dart';
 import 'package:firstgenapp/screens/your_matches/your_matches_screen.dart';
@@ -517,8 +518,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
 class EventCard extends StatefulWidget {
   final Map<String, dynamic> event;
+  final bool? copied;
 
-  const EventCard({super.key, required this.event});
+  const EventCard({super.key, required this.event, this.copied});
 
   @override
   _EventCardState createState() => _EventCardState();
@@ -663,7 +665,13 @@ class _EventCardState extends State<EventCard> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: TextButton(
-                    onPressed: () {},
+                    onPressed: () {
+                      PersistentNavBarNavigator.pushNewScreen(
+                        context,
+                        screen: CommunityDetailScreen(),
+                        withNavBar: false,
+                      );
+                    },
                     // UPDATED: Matched style
                     style: buttonStyle.copyWith(
                       backgroundColor: MaterialStateProperty.all(

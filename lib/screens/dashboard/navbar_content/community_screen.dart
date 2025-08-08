@@ -68,9 +68,9 @@ class _CommunityScreenState extends State<CommunityScreen>
       'time': '17 July at 08:02 AM',
       'community': 'Reiki Healing',
       'image':
-          'https://images.unsplash.com/photo-1593113598332-cd288d649433?w=500&q=80',
+      'https://images.unsplash.com/photo-1593113598332-cd288d649433?w=500&q=80',
       'caption':
-          'My daughter just got diagnosed with ANOREXIA. Feeling overwhelmed. Any advice?',
+      'My daughter just got diagnosed with ANOREXIA. Feeling overwhelmed. Any advice?',
       'likes': 45,
       'comments': 12,
       'shares': 2,
@@ -82,7 +82,7 @@ class _CommunityScreenState extends State<CommunityScreen>
       'community': 'Reiki Healing',
       'title': 'This is what I learned in my recent course',
       'quote':
-          '"The whole secret of existence lies in the pursuit of meaning, purpose, and connection. It is a delicate dance between self-discovery, compassion for others, and embracing the ever-unfolding mysteries of life. Finding harmony in the ebb and flow of experiences, we unlock the profound beauty that resides within our shared journey."',
+      '"The whole secret of existence lies in the pursuit of meaning, purpose, and connection. It is a delicate dance between self-discovery, compassion for others, and embracing the ever-unfolding mysteries of life. Finding harmony in the ebb and flow of experiences, we unlock the profound beauty that resides within our shared journey."',
       'likes': 45,
       'comments': 12,
       'shares': 2,
@@ -120,7 +120,6 @@ class _CommunityScreenState extends State<CommunityScreen>
             child: Container(
               margin: const EdgeInsets.only(right: 16),
               child: const Icon(
-                // Icons.add,
                 Iconsax.add_square_copy,
                 color: AppColors.primaryRed,
                 size: 24,
@@ -233,100 +232,92 @@ class _CommunityScreenState extends State<CommunityScreen>
     );
   }
 
+  // UPDATED: To match the new design in the screenshot
   Widget _buildCreatePostSection() {
     final textTheme = Theme.of(context).textTheme;
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8.0),
-          child: Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey.shade200),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Good to see you again!',
-                  style: textTheme.titleLarge?.copyWith(fontSize: 16),
+        // UPDATED: Header is now outside the card
+        Text(
+          '👋 Good to see you again!',
+          style: textTheme.titleLarge?.copyWith(fontSize: 16),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          "Here's a real-time view of what needs your attention today.",
+          style: textTheme.bodySmall,
+        ),
+        const SizedBox(height: 16),
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey.shade200),
+          ),
+          child: Row(
+            children: [
+              const CircleAvatar(
+                radius: 20,
+                backgroundImage: NetworkImage(
+                  'https://randomuser.me/api/portraits/men/75.jpg',
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  "Here's a real-time view of what needs your attention today.",
-                  style: textTheme.bodySmall,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  "What's on your mind? Ask a question or share your story..",
+                  style: textTheme.bodySmall
+                      ?.copyWith(color: AppColors.textSecondary),
                 ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    const CircleAvatar(
-                      radius: 20,
-                      backgroundImage: NetworkImage(
-                        'https://randomuser.me/api/portraits/men/75.jpg',
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        "What's on your mind? Ask a question or share your story.",
-                        style: textTheme.bodySmall,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    const Icon(
-                      IconlyLight.camera,
-                      color: AppColors.textSecondary,
-                    ),
-                    const SizedBox(width: 8),
-                    const Icon(
-                      Icons.attach_file_outlined,
-                      color: AppColors.textSecondary,
-                    ),
-                    const SizedBox(width: 8),
-                    const Icon(
-                      Icons.emoji_emotions_outlined,
-                      color: AppColors.textSecondary,
-                    ),
-                  ],
-                ),
-              ],
-            ),
+              ),
+              const SizedBox(width: 8),
+              const Icon(IconlyLight.camera,
+                  color: AppColors.textSecondary, size: 22),
+              const SizedBox(width: 12),
+              const Icon(Icons.attach_file_outlined,
+                  color: AppColors.textSecondary, size: 22),
+              const SizedBox(width: 12),
+              const Icon(Icons.emoji_emotions_outlined,
+                  color: AppColors.textSecondary, size: 22),
+            ],
           ),
         ),
+        const SizedBox(height: 16),
         Padding(
           padding: const EdgeInsets.only(bottom: 16),
           child: Row(
             children: [
-              Expanded(
-                child: TextButton.icon(
-                  onPressed: () {},
-                  icon: const Text('Add your post in'),
-                  label: const Icon(Icons.arrow_drop_down),
-                  style: TextButton.styleFrom(
-                    foregroundColor: AppColors.textSecondary,
-                    alignment: Alignment.centerLeft,
+              const Icon(Iconsax.global_copy,
+                  color: AppColors.textSecondary, size: 20),
+              const SizedBox(width: 4),
+              Text('Add your post in', style: textTheme.labelLarge),
+              const Icon(Icons.arrow_drop_down, color: AppColors.textSecondary),
+              const Spacer(),
+              ElevatedButton.icon(
+                onPressed: () {
+                  if (context.mounted) {
+                    PersistentNavBarNavigator.pushNewScreen(
+                      context,
+                      screen:
+                      CreateEventScreen(), // Assuming this is the correct screen
+                      withNavBar: false,
+                    );
+                  }
+                },
+                icon: const Icon(IconlyLight.send, size: 18),
+                label: const Text('Post Now'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primaryRed,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
+                  padding:
+                  const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                 ),
-              ),
-              SizedBox(
-                width: 120,
-                child: GradientButton(
-                  text: 'Post Now',
-                  onPressed: () {
-                    if (context.mounted) {
-                      PersistentNavBarNavigator.pushNewScreen(
-                        context,
-                        screen: CreateEventScreen(),
-                        withNavBar: false,
-                      );
-                    }
-                  },
-                  fontSize: 14,
-                  insets: 10,
-                ),
-              ),
+              )
             ],
           ),
         ),
@@ -356,14 +347,14 @@ class _MyCommunitiesTab extends StatelessWidget {
       'rating': 4.3,
       'members': '10K+',
       'image':
-          'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=500&q=80',
+      'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=500&q=80',
     },
     {
       'name': 'Yoga & Meditation',
       'rating': 4.8,
       'members': '25K+',
       'image':
-          'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=500&q=80',
+      'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=500&q=80',
     },
   ];
 
@@ -373,21 +364,21 @@ class _MyCommunitiesTab extends StatelessWidget {
       'rating': 4.5,
       'members': '15K+',
       'image':
-          'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=500&q=80',
+      'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=500&q=80',
     },
     {
       'name': 'Holistic Health',
       'rating': 4.6,
       'members': '18K+',
       'image':
-          'https://images.unsplash.com/photo-1475924156734-496f6cac6ec1?w=500&q=80',
+      'https://images.unsplash.com/photo-1475924156734-496f6cac6ec1?w=500&q=80',
     },
     {
       'name': 'Mindfulness Practices',
       'rating': 4.7,
       'members': '22K+',
       'image':
-          'https://images.unsplash.com/photo-1552083375-1447ce886485?w=500&q=80',
+      'https://images.unsplash.com/photo-1552083375-1447ce886485?w=500&q=80',
     },
   ];
 
@@ -505,7 +496,7 @@ class _CommunityListCard extends StatelessWidget {
                       foregroundColor: AppColors.primaryRed,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),
-                        side: BorderSide(color: Colors.red),
+                        side: const BorderSide(color: Colors.red),
                       ),
                       padding: const EdgeInsets.symmetric(
                         horizontal: 20,
@@ -536,7 +527,7 @@ class _UpcomingEventsTab extends StatelessWidget {
       "date": "8 December, 2025",
       "location": "Spice Garden Kitchen",
       "description":
-          "Soothing audio and gentle vibrations to ease discomfort. Soothing audio and gentle vibrations to.",
+      "Soothing audio and gentle vibrations to ease discomfort. Soothing audio and gentle vibrations to.",
       "attendees": 31,
       "isInterested": true,
       "hasVideo": false,
@@ -547,7 +538,7 @@ class _UpcomingEventsTab extends StatelessWidget {
       "date": "8 December, 2025",
       "location": "Spice Garden Kitchen",
       "description":
-          "Soothing audio and gentle vibrations to ease discomfort. Soothing audio and gentle vibrations to.",
+      "Soothing audio and gentle vibrations to ease discomfort. Soothing audio and gentle vibrations to.",
       "attendees": 31,
       "isInterested": false,
       "hasVideo": true,
@@ -566,7 +557,8 @@ class _UpcomingEventsTab extends StatelessWidget {
             Text('Upcoming Events', style: textTheme.titleLarge),
             IconButton(
               onPressed: () {},
-              icon: const Icon(IconlyLight.search, color: AppColors.textSecondary),
+              icon:
+              const Icon(IconlyLight.search, color: AppColors.textSecondary),
             ),
           ],
         ),
@@ -590,7 +582,7 @@ class _PostCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -604,7 +596,7 @@ class _PostCard extends StatelessWidget {
           _buildPostBody(context),
           const SizedBox(height: 16),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            padding: const EdgeInsets.symmetric(horizontal: 0.0),
             child: Divider(height: 1, color: Colors.grey.shade200),
           ),
           const SizedBox(height: 8),
@@ -620,20 +612,20 @@ class _PostCard extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            CircleAvatar(backgroundImage: NetworkImage(post['avatar'])),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            RichText(
+              text: TextSpan(
+                style: textTheme.bodySmall,
                 children: [
-                  Text(
-                    post['name'],
-                    style: textTheme.labelLarge?.copyWith(
+                  const TextSpan(text: 'Posted in '),
+                  TextSpan(
+                    text: post['community'],
+                    style: const TextStyle(
+                      color: AppColors.primaryRed,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  Text(post['time'], style: textTheme.bodySmall),
                 ],
               ),
             ),
@@ -655,24 +647,34 @@ class _PostCard extends StatelessWidget {
                 ),
               ),
             ),
-            const Icon(Icons.more_vert_outlined, color: AppColors.textSecondary),
           ],
         ),
-        const SizedBox(height: 8),
-        RichText(
-          text: TextSpan(
-            style: textTheme.bodySmall,
-            children: [
-              const TextSpan(text: 'Posted in '),
-              TextSpan(
-                text: post['community'],
-                style: const TextStyle(
-                  color: AppColors.primaryRed,
-                  fontWeight: FontWeight.bold,
-                ),
+        // UPDATED: Divider color to match the lower one
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8.0),
+          child: Divider(height: 1, color: Colors.grey.shade200),
+        ),
+        Row(
+          children: [
+            CircleAvatar(backgroundImage: NetworkImage(post['avatar'])),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    post['name'],
+                    style: textTheme.labelLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  Text(post['time'], style: textTheme.bodySmall),
+                ],
               ),
-            ],
-          ),
+            ),
+            const Icon(Icons.more_vert, color: AppColors.textSecondary),
+          ],
         ),
       ],
     );
@@ -690,35 +692,37 @@ class _PostCard extends StatelessWidget {
               post['title'],
               style: textTheme.labelLarge?.copyWith(
                 fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary,
               ),
             ),
           ),
         if (post['image'] != null)
           ClipRRect(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(12),
             child: Image.network(post['image']),
           ),
         if (post['caption'] != null)
           Padding(
-            padding: const EdgeInsets.only(top: 8.0),
-            child: Text(post['caption'], style: textTheme.bodySmall),
-          ),
-        if (post['quote'] != null)
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              border: Border(
-                left: BorderSide(
-                  color: AppColors.primaryRed.withOpacity(0.5),
-                  width: 3,
-                ),
+            padding: const EdgeInsets.only(top: 12.0),
+            child: Text(
+              post['caption'],
+              style: textTheme.bodyMedium?.copyWith(
+                color: AppColors.textPrimary,
+                fontSize: 14,
               ),
             ),
+          ),
+        // UPDATED: Removed the border from the quote
+        if (post['quote'] != null)
+          Container(
+            margin: const EdgeInsets.only(top: 8.0),
+            padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
             child: Text(
               post['quote'],
-              style: textTheme.bodySmall?.copyWith(
+              style: textTheme.bodyMedium?.copyWith(
                 fontStyle: FontStyle.italic,
-                color: AppColors.textPrimary,
+                color: AppColors.textPrimary.withOpacity(0.8),
+                fontWeight: FontWeight.normal,
               ),
             ),
           ),
@@ -739,19 +743,18 @@ class _PostCard extends StatelessWidget {
               AppColors.primaryRed,
               AppColors.textSecondary,
             ),
-            const SizedBox(width: 20),
+            const SizedBox(width: 24),
             _buildFooterIcon(
-              // Icons.chat_bubble_outline,
               Iconsax.messages_2_copy,
               post['comments'].toString(),
-              Color(0xFF0A75BA),
+              const Color(0xFF0A75BA),
               AppColors.textSecondary,
             ),
-            const SizedBox(width: 20),
+            const SizedBox(width: 24),
             _buildFooterIcon(
               Icons.share_outlined,
               post['shares'].toString(),
-              Color(0xFF009E60),
+              const Color(0xFF009E60),
               AppColors.textSecondary,
             ),
           ],
@@ -759,8 +762,6 @@ class _PostCard extends StatelessWidget {
         TextButton.icon(
           onPressed: () {},
           icon: const Icon(
-            // Icons.mode_comment_outlined,
-            // Iconsax.send_2_copy,
             IconlyLight.send,
             color: AppColors.textSecondary,
             size: 20,
@@ -770,15 +771,18 @@ class _PostCard extends StatelessWidget {
             style: textTheme.labelLarge?.copyWith(
               color: AppColors.textSecondary,
               fontWeight: FontWeight.bold,
-              fontSize: 13,
             ),
+          ),
+          style: TextButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildFooterIcon(IconData icon, String count, Color iconColor, Color color) {
+  Widget _buildFooterIcon(
+      IconData icon, String count, Color iconColor, Color color) {
     return Row(
       children: [
         Icon(icon, color: iconColor, size: 20),
@@ -808,10 +812,10 @@ class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
 
   @override
   Widget build(
-    BuildContext context,
-    double shrinkOffset,
-    bool overlapsContent,
-  ) {
+      BuildContext context,
+      double shrinkOffset,
+      bool overlapsContent,
+      ) {
     return Container(color: AppColors.primaryBackground, child: _tabBar);
   }
 
