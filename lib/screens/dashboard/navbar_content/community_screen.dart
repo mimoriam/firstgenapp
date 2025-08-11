@@ -1,4 +1,3 @@
-import 'package:firstgenapp/common/gradient_btn.dart';
 import 'package:firstgenapp/constants/appColors.dart';
 import 'package:firstgenapp/screens/all_communities/all_communities_screen.dart';
 import 'package:firstgenapp/screens/community_detail/community_detail_screen.dart';

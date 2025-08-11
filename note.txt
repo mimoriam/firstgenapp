@@ -3,3 +3,9 @@ cd /Users/hum/Library/Android/sdk/platform-tools
 ./adb connect 192.168.1.7:5555
 
 dart run flutter_native_splash:create
+
+
+Splash > Onboard (x3)
+
+SigninIndirect > Signin ↓  > Forgot Password > OTP > New Pass
+			> Sign up > Signup (x10) > Pop back to Signin

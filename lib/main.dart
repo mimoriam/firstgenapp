@@ -1,8 +1,6 @@
-import 'package:firstgenapp/utils/image_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:firstgenapp/screens/onboarding/onboarding_screen.dart';
 import 'package:firstgenapp/utils/appTheme.dart';
-import 'package:flutter/services.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
