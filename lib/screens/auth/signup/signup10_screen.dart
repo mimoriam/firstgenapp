@@ -1,5 +1,5 @@
 import 'dart:io';
-import 'package:firstgenapp/screens/signin/signin_indirect_screen.dart';
+import 'package:firstgenapp/screens/auth/signin/signin_screen.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:firstgenapp/constants/appColors.dart';
@@ -85,7 +85,7 @@ class _Signup10ScreenState extends State<Signup10Screen> {
 
     if (context.mounted) {
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (context) => const SigninIndirectScreen()),
+        MaterialPageRoute(builder: (context) => const SigninScreen()),
         (Route<dynamic> route) => false,
       );
     }

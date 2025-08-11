@@ -1,9 +1,10 @@
+import 'package:firstgenapp/common/exit_dialog.dart';
 import 'package:firstgenapp/constants/appColors.dart';
-import 'package:firstgenapp/screens/dashboard/navbar_content/chats_screen.dart';
-import 'package:firstgenapp/screens/dashboard/navbar_content/community_screen.dart';
-import 'package:firstgenapp/screens/dashboard/navbar_content/home_screen.dart';
-import 'package:firstgenapp/screens/dashboard/navbar_content/profile_screen.dart';
-import 'package:firstgenapp/screens/dashboard/navbar_content/search_screen.dart';
+import 'package:firstgenapp/screens/dashboard/navbar_content/chats/chats_screen.dart';
+import 'package:firstgenapp/screens/dashboard/navbar_content/communities/community_screen.dart';
+import 'package:firstgenapp/screens/dashboard/navbar_content/home/home_screen.dart';
+import 'package:firstgenapp/screens/dashboard/navbar_content/profile/profile_screen.dart';
+import 'package:firstgenapp/screens/dashboard/navbar_content/search/search_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:iconly/iconly.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
@@ -26,11 +27,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   List<Widget> _buildScreens() {
     return [
-      HomeScreen(),
-      SearchScreen(),
-      ChatsScreen(),
-      CommunityScreen(),
-      ProfileScreen(),
+      const HomeScreen(),
+      const SearchScreen(),
+      const ChatsScreen(),
+      const CommunityScreen(),
+      const ProfileScreen(),
     ];
   }
 
@@ -83,23 +84,34 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return PersistentTabView(
-      context,
-      controller: _controller,
-      screens: _buildScreens(),
-      items: _navBarsItems(),
-      confineToSafeArea: true,
-      backgroundColor: AppColors.primaryBackground,
-      handleAndroidBackButtonPress: true,
-      resizeToAvoidBottomInset: true,
-      stateManagement: false,
-      hideNavigationBarWhenKeyboardAppears: true,
-      popBehaviorOnSelectedNavBarItemPress: PopBehavior.all,
-      padding: const EdgeInsets.only(bottom: 12, top: 3),
-      decoration: const NavBarDecoration(
-        colorBehindNavBar: AppColors.primaryBackground,
+    // UPDATED: Wrapped with PopScope to handle back button press
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (bool didPop) {
+        if (didPop) {
+          return;
+        }
+        showExitConfirmationDialogForHome(context);
+      },
+      child: PersistentTabView(
+        context,
+        controller: _controller,
+        screens: _buildScreens(),
+        items: _navBarsItems(),
+        confineToSafeArea: true,
+        backgroundColor: AppColors.primaryBackground,
+        handleAndroidBackButtonPress:
+        true, // Note: PopScope is now the primary handler
+        resizeToAvoidBottomInset: true,
+        stateManagement: false,
+        hideNavigationBarWhenKeyboardAppears: true,
+        popBehaviorOnSelectedNavBarItemPress: PopBehavior.all,
+        padding: const EdgeInsets.only(bottom: 12, top: 3),
+        decoration: const NavBarDecoration(
+          colorBehindNavBar: AppColors.primaryBackground,
+        ),
+        navBarStyle: NavBarStyle.style6,
       ),
-      navBarStyle: NavBarStyle.style6,
     );
   }
 }

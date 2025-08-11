@@ -1,39 +1,36 @@
-import 'package:firstgenapp/screens/signup/signup4_screen.dart';
+import 'package:firstgenapp/screens/auth/signup/signup5_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firstgenapp/constants/appColors.dart';
 
-class Signup3Screen extends StatefulWidget {
-  const Signup3Screen({super.key});
+class Signup4Screen extends StatefulWidget {
+  const Signup4Screen({super.key});
 
   @override
-  State<Signup3Screen> createState() => _Signup3ScreenState();
+  State<Signup4Screen> createState() => _Signup4ScreenState();
 }
 
-class _Signup3ScreenState extends State<Signup3Screen> {
-  // UPDATED: Changed from Set to nullable String for single selection
-  String? _selectedReligion;
-  double _importanceValue = 0.5;
+class _Signup4ScreenState extends State<Signup4Screen> {
+  double _familyImportanceValue = 0.4;
+  final Set<String> _selectedTraditions = {
+    'Cultural holiday',
+    'Food traditions',
+  };
 
-  final List<String> _religionOptions = [
-    'Christianity',
-    'Islam',
-    'Hinduism',
-    'Buddhism',
-    'Judaism',
-    'Spiritual',
-    'Agnostic',
-    'Atheist',
-    'Other',
+  final List<String> _traditionOptions = [
+    'Cultural holiday',
+    'Food traditions',
+    'Religious practice',
+    'Music & dance',
   ];
 
   void _onNextPressed() {
-    debugPrint("Selected Religion: $_selectedReligion");
-    debugPrint("Importance Level: $_importanceValue");
+    debugPrint("Family Importance: $_familyImportanceValue");
+    debugPrint("Selected Traditions: $_selectedTraditions");
 
     if (context.mounted) {
       Navigator.of(
         context,
-      ).push(MaterialPageRoute(builder: (context) => const Signup4Screen()));
+      ).push(MaterialPageRoute(builder: (context) => const Signup5Screen()));
     }
   }
 
@@ -77,24 +74,24 @@ class _Signup3ScreenState extends State<Signup3Screen> {
                       // UPDATED: Reduced spacing
                       const SizedBox(height: 20),
                       Text(
-                        'Religion & Spirituality',
+                        'Family & Traditions',
                         // UPDATED: Used new title style
                         style: textTheme.titleLarge,
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        'What is your religion or spiritual background?',
+                        'How important is family in your life?',
                         style: textTheme.titleMedium,
                       ),
                       const SizedBox(height: 12),
-                      _buildReligionChips(),
+                      _buildFamilySlider(),
                       const SizedBox(height: 20),
                       Text(
-                        'How important is sharing similar spiritual beliefs with a partner?',
+                        'Which traditions are important to you?',
                         style: textTheme.titleMedium,
                       ),
                       const SizedBox(height: 12),
-                      _buildImportanceSlider(),
+                      _buildTraditionChips(),
                       const SizedBox(height: 20),
                     ],
                   ),
@@ -108,47 +105,7 @@ class _Signup3ScreenState extends State<Signup3Screen> {
     );
   }
 
-  Widget _buildReligionChips() {
-    return Wrap(
-      spacing: 8.0,
-      runSpacing: 8.0,
-      children: _religionOptions.map((religion) {
-        // UPDATED: Logic for single selection
-        final isSelected = _selectedReligion == religion;
-        return ChoiceChip(
-          label: Text(religion),
-          selected: isSelected,
-          onSelected: (selected) {
-            setState(() {
-              // UPDATED: Set state for single selection
-              if (selected) {
-                _selectedReligion = religion;
-              }
-            });
-          },
-          // UPDATED: Reduced font size for compact chip
-          labelStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: isSelected ? AppColors.primaryRed : AppColors.textSecondary,
-            fontWeight: FontWeight.w600,
-          ),
-          selectedColor: AppColors.secondaryBackground,
-          backgroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15.0),
-            side: BorderSide(
-              color: isSelected ? AppColors.primaryRed : AppColors.inputBorder,
-              width: 1.5,
-            ),
-          ),
-          showCheckmark: false,
-          // UPDATED: Reduced padding for compact chip
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
-        );
-      }).toList(),
-    );
-  }
-
-  Widget _buildImportanceSlider() {
+  Widget _buildFamilySlider() {
     return Column(
       children: [
         SliderTheme(
@@ -161,10 +118,10 @@ class _Signup3ScreenState extends State<Signup3Screen> {
             overlayShape: const RoundSliderOverlayShape(overlayRadius: 15.0),
           ),
           child: Slider(
-            value: _importanceValue,
+            value: _familyImportanceValue,
             onChanged: (newValue) {
               setState(() {
-                _importanceValue = newValue;
+                _familyImportanceValue = newValue;
               });
             },
           ),
@@ -198,6 +155,45 @@ class _Signup3ScreenState extends State<Signup3Screen> {
     );
   }
 
+  Widget _buildTraditionChips() {
+    return Wrap(
+      spacing: 8.0,
+      runSpacing: 8.0,
+      children: _traditionOptions.map((tradition) {
+        final isSelected = _selectedTraditions.contains(tradition);
+        return ChoiceChip(
+          label: Text(tradition),
+          selected: isSelected,
+          onSelected: (selected) {
+            setState(() {
+              if (selected) {
+                _selectedTraditions.add(tradition);
+              } else {
+                _selectedTraditions.remove(tradition);
+              }
+            });
+          },
+          // UPDATED: Reduced font size for compact chip
+          labelStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: isSelected ? AppColors.primaryRed : AppColors.textSecondary,
+          ),
+          selectedColor: Colors.white,
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15.0),
+            side: BorderSide(
+              color: isSelected ? AppColors.primaryRed : AppColors.inputBorder,
+              width: 1.5,
+            ),
+          ),
+          showCheckmark: false,
+          // UPDATED: Reduced padding for compact chip
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
+        );
+      }).toList(),
+    );
+  }
+
   Widget _buildBottomNav(TextTheme textTheme) {
     return Padding(
       padding: const EdgeInsets.only(top: 10.0, bottom: 24.0),
@@ -212,7 +208,7 @@ class _Signup3ScreenState extends State<Signup3Screen> {
               ),
               children: const <TextSpan>[
                 TextSpan(
-                  text: '3',
+                  text: '4',
                   style: TextStyle(color: AppColors.primaryOrange),
                 ),
                 TextSpan(

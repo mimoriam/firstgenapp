@@ -1,42 +1,41 @@
-import 'package:firstgenapp/screens/signup/signup9_screen.dart';
+import 'package:firstgenapp/screens/auth/signup/signup6_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firstgenapp/constants/appColors.dart';
 import 'package:flutter_keyboard_visibility/flutter_keyboard_visibility.dart';
 
-class Signup8Screen extends StatefulWidget {
-  const Signup8Screen({super.key});
+class Signup5Screen extends StatefulWidget {
+  const Signup5Screen({super.key});
 
   @override
-  State<Signup8Screen> createState() => _Signup8ScreenState();
+  State<Signup5Screen> createState() => _Signup5ScreenState();
 }
 
-class _Signup8ScreenState extends State<Signup8Screen> {
-  final TextEditingController _hobbiesController = TextEditingController();
-  final Set<String> _selectedSports = {'Soccer/football', 'Tennis'};
+class _Signup5ScreenState extends State<Signup5Screen> {
+  final TextEditingController _cuisineController = TextEditingController();
+  final Set<String> _selectedDiets = {'Vegetarian', 'Halal'};
 
-  final List<String> _sportOptions = [
-    'Soccer/football',
-    'Cricket',
-    'Basketball',
-    'Tennis',
-    'Martial arts',
-    'Other',
+  final List<String> _dietOptions = [
+    'Vegetarian',
+    'Vegan',
+    'Kosher',
+    'Halal',
+    'No restrictions',
   ];
 
   @override
   void dispose() {
-    _hobbiesController.dispose();
+    _cuisineController.dispose();
     super.dispose();
   }
 
   void _onNextPressed() {
-    debugPrint("Hobbies: ${_hobbiesController.text}");
-    debugPrint("Selected Sports: $_selectedSports");
+    debugPrint("Cuisines: ${_cuisineController.text}");
+    debugPrint("Selected Diets: $_selectedDiets");
 
     if (context.mounted) {
       Navigator.of(
         context,
-      ).push(MaterialPageRoute(builder: (context) => const Signup9Screen()));
+      ).push(MaterialPageRoute(builder: (context) => const Signup6Screen()));
     }
   }
 
@@ -82,24 +81,24 @@ class _Signup8ScreenState extends State<Signup8Screen> {
                         // UPDATED: Reduced spacing
                         const SizedBox(height: 20),
                         Text(
-                          'Hobbies & Interest',
+                          'Food & Lifestyle',
                           // UPDATED: Used new title style
                           style: textTheme.titleLarge,
                         ),
                         const SizedBox(height: 12),
                         Text(
-                          'What do you love to do in your free time?',
+                          'What cuisines do you love?',
                           style: textTheme.titleMedium,
                         ),
                         const SizedBox(height: 12),
-                        _buildHobbiesInput(),
+                        _buildCuisineInput(),
                         const SizedBox(height: 20),
                         Text(
-                          'Sports & activates you enjoy',
+                          'Dietary preferences/restrictions',
                           style: textTheme.titleMedium,
                         ),
                         const SizedBox(height: 12),
-                        _buildSportChips(),
+                        _buildDietChips(),
                         const SizedBox(height: 20),
                       ],
                     ),
@@ -114,12 +113,12 @@ class _Signup8ScreenState extends State<Signup8Screen> {
     );
   }
 
-  Widget _buildHobbiesInput() {
+  Widget _buildCuisineInput() {
     return TextField(
-      controller: _hobbiesController,
+      controller: _cuisineController,
       maxLines: 5,
       decoration: InputDecoration(
-        hintText: 'Tell us about your passions, hobbies, and interest...',
+        hintText: 'e.g., authentic Mexican food, Korean BBQ etc....',
         // UPDATED: Reduced hint text size
         hintStyle: const TextStyle(fontSize: 14, color: AppColors.textSecondary),
         alignLabelWithHint: true,
@@ -153,21 +152,21 @@ class _Signup8ScreenState extends State<Signup8Screen> {
     );
   }
 
-  Widget _buildSportChips() {
+  Widget _buildDietChips() {
     return Wrap(
       spacing: 8.0,
       runSpacing: 8.0,
-      children: _sportOptions.map((sport) {
-        final isSelected = _selectedSports.contains(sport);
+      children: _dietOptions.map((diet) {
+        final isSelected = _selectedDiets.contains(diet);
         return ChoiceChip(
-          label: Text(sport),
+          label: Text(diet),
           selected: isSelected,
           onSelected: (selected) {
             setState(() {
               if (selected) {
-                _selectedSports.add(sport);
+                _selectedDiets.add(diet);
               } else {
-                _selectedSports.remove(sport);
+                _selectedDiets.remove(diet);
               }
             });
           },
@@ -206,7 +205,7 @@ class _Signup8ScreenState extends State<Signup8Screen> {
               ),
               children: const <TextSpan>[
                 TextSpan(
-                  text: '8',
+                  text: '5',
                   style: TextStyle(color: AppColors.primaryOrange),
                 ),
                 TextSpan(
@@ -216,27 +215,28 @@ class _Signup8ScreenState extends State<Signup8Screen> {
               ],
             ),
           ),
-          GestureDetector(
-            onTap: _onNextPressed,
-            child: Container(
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: const LinearGradient(
-                  colors: [AppColors.primaryRed, AppColors.primaryOrange],
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.primaryRed.withOpacity(0.3),
-                    spreadRadius: 2,
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
+          Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: const LinearGradient(
+                colors: [AppColors.primaryRed, AppColors.primaryOrange],
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
               ),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primaryRed.withOpacity(0.3),
+                  spreadRadius: 2,
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: FloatingActionButton(
+              onPressed: _onNextPressed,
+              elevation: 0,
+              enableFeedback: false,
+              backgroundColor: Colors.transparent,
               child: const Icon(Icons.arrow_forward, color: Colors.white),
             ),
           ),

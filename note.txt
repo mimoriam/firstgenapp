@@ -4,8 +4,16 @@ cd /Users/hum/Library/Android/sdk/platform-tools
 
 dart run flutter_native_splash:create
 
-
 Splash > Onboard (x3)
-
-SigninIndirect > Signin ↓  > Forgot Password > OTP > New Pass
+Signin > SigninIndirect ↓  > Forgot Password > OTP > New Pass
 			> Sign up > Signup (x10) > Pop back to Signin
+
+Dashboard 	> Home 	> Match Detail
+					> Recent Activities			> Recent Matches
+			> Search
+			> Chats 	> Messages
+			> Community > Community Details 	> Create Event
+											    > Comments
+						> All communities
+						> Create Community
+			> Me 	> Profile

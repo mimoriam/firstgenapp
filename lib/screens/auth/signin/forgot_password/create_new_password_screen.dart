@@ -1,6 +1,6 @@
 import 'package:firstgenapp/common/gradient_btn.dart';
 import 'package:firstgenapp/constants/appColors.dart';
-import 'package:firstgenapp/screens/signin/signin_screen.dart';
+import 'package:firstgenapp/screens/auth/signin/signin_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';

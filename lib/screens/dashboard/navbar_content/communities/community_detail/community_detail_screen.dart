@@ -1,5 +1,5 @@
 import 'package:firstgenapp/constants/appColors.dart';
-import 'package:firstgenapp/screens/dashboard/navbar_content/home_screen.dart';
+import 'package:firstgenapp/screens/dashboard/navbar_content/home/home_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:iconly/iconly.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';

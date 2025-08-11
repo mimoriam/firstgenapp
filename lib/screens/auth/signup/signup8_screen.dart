@@ -1,44 +1,42 @@
-import 'package:firstgenapp/screens/signup/signup10_screen.dart';
+import 'package:firstgenapp/screens/auth/signup/signup9_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firstgenapp/constants/appColors.dart';
 import 'package:flutter_keyboard_visibility/flutter_keyboard_visibility.dart';
 
-class Signup9Screen extends StatefulWidget {
-  const Signup9Screen({super.key});
+class Signup8Screen extends StatefulWidget {
+  const Signup8Screen({super.key});
 
   @override
-  State<Signup9Screen> createState() => _Signup9ScreenState();
+  State<Signup8Screen> createState() => _Signup8ScreenState();
 }
 
-class _Signup9ScreenState extends State<Signup9Screen> {
-  final TextEditingController _dealBreakerController = TextEditingController();
-  String? _selectedRelationship;
-  double _importanceValue = 0.4;
+class _Signup8ScreenState extends State<Signup8Screen> {
+  final TextEditingController _hobbiesController = TextEditingController();
+  final Set<String> _selectedSports = {'Soccer/football', 'Tennis'};
 
-  final List<String> _relationshipOptions = [
-    'Friendship',
-    'Networking',
-    'Dating',
-    'Cultural Exchange',
-    'Community Support',
-    'Not Sure Yet',
+  final List<String> _sportOptions = [
+    'Soccer/football',
+    'Cricket',
+    'Basketball',
+    'Tennis',
+    'Martial arts',
+    'Other',
   ];
 
   @override
   void dispose() {
-    _dealBreakerController.dispose();
+    _hobbiesController.dispose();
     super.dispose();
   }
 
   void _onNextPressed() {
-    debugPrint("Seeking: $_selectedRelationship");
-    debugPrint("Importance: $_importanceValue");
-    debugPrint("Deal-breakers: ${_dealBreakerController.text}");
+    debugPrint("Hobbies: ${_hobbiesController.text}");
+    debugPrint("Selected Sports: $_selectedSports");
 
     if (context.mounted) {
       Navigator.of(
         context,
-      ).push(MaterialPageRoute(builder: (context) => const Signup10Screen()));
+      ).push(MaterialPageRoute(builder: (context) => const Signup9Screen()));
     }
   }
 
@@ -62,7 +60,7 @@ class _Signup9ScreenState extends State<Signup9Screen> {
         ),
         body: SafeArea(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12.0),
+            padding: const EdgeInsets.symmetric(horizontal: 24.0),
             child: Column(
               children: [
                 Expanded(
@@ -84,31 +82,25 @@ class _Signup9ScreenState extends State<Signup9Screen> {
                         // UPDATED: Reduced spacing
                         const SizedBox(height: 20),
                         Text(
-                          'What you are Looking For',
+                          'Hobbies & Interest',
                           // UPDATED: Used new title style
                           style: textTheme.titleLarge,
                         ),
                         const SizedBox(height: 12),
                         Text(
-                          'What kind of relationship are you seeking?',
+                          'What do you love to do in your free time?',
                           style: textTheme.titleMedium,
                         ),
-                        const SizedBox(height: 10),
-                        _buildRelationshipChips(),
+                        const SizedBox(height: 12),
+                        _buildHobbiesInput(),
                         const SizedBox(height: 20),
                         Text(
-                          'How important is that your partner shares your cultural background?',
+                          'Sports & activates you enjoy',
                           style: textTheme.titleMedium,
                         ),
-                        const SizedBox(height: 10),
-                        _buildImportanceSlider(),
+                        const SizedBox(height: 12),
+                        _buildSportChips(),
                         const SizedBox(height: 20),
-                        Text(
-                          'What are your absolute deal-breakers?',
-                          style: textTheme.titleMedium,
-                        ),
-                        const SizedBox(height: 10),
-                        _buildDealBreakerInput(),
                       ],
                     ),
                   ),
@@ -122,101 +114,12 @@ class _Signup9ScreenState extends State<Signup9Screen> {
     );
   }
 
-  Widget _buildRelationshipChips() {
-    return Wrap(
-      spacing: 5.0,
-      runSpacing: 10.0,
-      children: _relationshipOptions.map((relationship) {
-        final isSelected = _selectedRelationship == relationship;
-        return ChoiceChip(
-          label: Text(relationship),
-          selected: isSelected,
-          onSelected: (selected) {
-            setState(() {
-              _selectedRelationship = selected ? relationship : null;
-            });
-          },
-          // UPDATED: Reduced font size for compact chip
-          labelStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
-            fontWeight: FontWeight.w600,
-            color: isSelected ? AppColors.primaryRed : AppColors.textSecondary,
-          ),
-          selectedColor: Colors.white,
-          backgroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20.0),
-            side: BorderSide(
-              color: isSelected ? AppColors.primaryRed : AppColors.inputBorder,
-              width: 1.5,
-            ),
-          ),
-          showCheckmark: false,
-          // UPDATED: Reduced padding for compact chip
-          padding: const EdgeInsets.symmetric(
-            horizontal: 14.0,
-            vertical: 8.0,
-          ),
-        );
-      }).toList(),
-    );
-  }
-
-  Widget _buildImportanceSlider() {
-    return Column(
-      children: [
-        SliderTheme(
-          data: SliderTheme.of(context).copyWith(
-            activeTrackColor: AppColors.primaryRed,
-            inactiveTrackColor: AppColors.inputBorder,
-            thumbColor: AppColors.primaryRed,
-            overlayColor: AppColors.primaryRed.withOpacity(0.2),
-            thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 10.0),
-            overlayShape: const RoundSliderOverlayShape(overlayRadius: 20.0),
-          ),
-          child: Slider(
-            value: _importanceValue,
-            onChanged: (newValue) {
-              setState(() {
-                _importanceValue = newValue;
-              });
-            },
-          ),
-        ),
-        const SizedBox(height: 4),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Not Important',
-                // UPDATED: Used smaller text style
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppColors.textSecondary,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              Text(
-                'Important',
-                // UPDATED: Used smaller text style
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppColors.textSecondary,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildDealBreakerInput() {
+  Widget _buildHobbiesInput() {
     return TextField(
-      controller: _dealBreakerController,
-      maxLines: 4,
+      controller: _hobbiesController,
+      maxLines: 5,
       decoration: InputDecoration(
-        hintText: 'e.g, smoking, dishonesty, lack of family respect....',
+        hintText: 'Tell us about your passions, hobbies, and interest...',
         // UPDATED: Reduced hint text size
         hintStyle: const TextStyle(fontSize: 14, color: AppColors.textSecondary),
         alignLabelWithHint: true,
@@ -250,9 +153,48 @@ class _Signup9ScreenState extends State<Signup9Screen> {
     );
   }
 
+  Widget _buildSportChips() {
+    return Wrap(
+      spacing: 8.0,
+      runSpacing: 8.0,
+      children: _sportOptions.map((sport) {
+        final isSelected = _selectedSports.contains(sport);
+        return ChoiceChip(
+          label: Text(sport),
+          selected: isSelected,
+          onSelected: (selected) {
+            setState(() {
+              if (selected) {
+                _selectedSports.add(sport);
+              } else {
+                _selectedSports.remove(sport);
+              }
+            });
+          },
+          // UPDATED: Reduced font size for compact chip
+          labelStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: isSelected ? AppColors.primaryRed : AppColors.textSecondary,
+          ),
+          selectedColor: Colors.white,
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15.0),
+            side: BorderSide(
+              color: isSelected ? AppColors.primaryRed : AppColors.inputBorder,
+              width: 1.5,
+            ),
+          ),
+          showCheckmark: false,
+          // UPDATED: Reduced padding for compact chip
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
+        );
+      }).toList(),
+    );
+  }
+
   Widget _buildBottomNav(TextTheme textTheme) {
     return Padding(
-      padding: const EdgeInsets.only(top: 10.0, bottom: 24.0, left: 10),
+      padding: const EdgeInsets.only(top: 10.0, bottom: 24.0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -264,7 +206,7 @@ class _Signup9ScreenState extends State<Signup9Screen> {
               ),
               children: const <TextSpan>[
                 TextSpan(
-                  text: '9',
+                  text: '8',
                   style: TextStyle(color: AppColors.primaryOrange),
                 ),
                 TextSpan(

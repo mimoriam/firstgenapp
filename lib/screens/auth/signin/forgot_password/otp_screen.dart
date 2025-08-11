@@ -1,6 +1,6 @@
 import 'package:firstgenapp/common/gradient_btn.dart';
 import 'package:firstgenapp/constants/appColors.dart';
-import 'package:firstgenapp/screens/forgot_password/create_new_password_screen.dart';
+import 'package:firstgenapp/screens/auth/signin/forgot_password/create_new_password_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:pinput/pinput.dart';
 

@@ -1,8 +1,8 @@
 import 'package:country_flags/country_flags.dart';
 import 'package:firstgenapp/common/gradient_btn.dart';
 import 'package:firstgenapp/constants/appColors.dart';
-import 'package:firstgenapp/screens/signin/signin_indirect_screen.dart';
-import 'package:firstgenapp/screens/signup/signup_screen.dart';
+import 'package:firstgenapp/screens/auth/signin/signin_indirect_screen.dart';
+import 'package:firstgenapp/screens/auth/signup/signup_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:firstgenapp/common/exit_dialog.dart';
@@ -38,65 +38,62 @@ class _SigninScreenState extends State<SigninScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 24.0),
             child: Column(
               children: [
-                const Spacer(flex: 2),
-                _buildLogo(context),
-                // UPDATED: Reduced spacing
-                const SizedBox(height: 32),
-                _buildWelcomeText(context),
-                // UPDATED: Reduced spacing
-                const SizedBox(height: 24),
-                _buildSocialButton(
-                  context: context,
-                  iconPath: 'images/icons/google.svg',
-                  text: 'Continue with Google',
-                  onPressed: () {
-                    // TODO: Implement Google Sign-In logic
-                  },
-                ),
-                const SizedBox(height: 16),
-                _buildSocialButton(
-                  context: context,
-                  iconPath: 'images/icons/apple.svg',
-                  text: 'Continue with Apple',
-                  onPressed: () {
-                    // TODO: Implement Apple Sign-In logic
-                  },
-                ),
-                const SizedBox(height: 16),
-                _buildSocialButton(
-                  context: context,
-                  iconPath: 'images/icons/facebook.svg',
-                  text: 'Continue with Facebook',
-                  onPressed: () {
-                    // TODO: Implement Facebook Sign-In logic
-                  },
-                ),
-                const SizedBox(height: 24),
-                GradientButton(
-                  text: 'Sign Up',
-                  onPressed: () {
-                    if (context.mounted) {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => const SignUpScreen(),
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const SizedBox(height: 40),
+                        _buildLogo(context),
+                        const SizedBox(height: 32),
+                        _buildWelcomeText(context),
+                        const SizedBox(height: 24),
+                        _buildSocialButton(
+                          context: context,
+                          iconPath: 'images/icons/google.svg',
+                          text: 'Continue with Google',
+                          onPressed: () {},
                         ),
-                      );
-                    }
-                  },
-                  // UPDATED: Reduced padding and font size for consistency
-                  insets: 14,
-                  fontSize: 15,
+                        const SizedBox(height: 16),
+                        _buildSocialButton(
+                          context: context,
+                          iconPath: 'images/icons/apple.svg',
+                          text: 'Continue with Apple',
+                          onPressed: () {},
+                        ),
+                        const SizedBox(height: 16),
+                        _buildSocialButton(
+                          context: context,
+                          iconPath: 'images/icons/facebook.svg',
+                          text: 'Continue with Facebook',
+                          onPressed: () {},
+                        ),
+                        const SizedBox(height: 24),
+                        GradientButton(
+                          text: 'Sign Up',
+                          onPressed: () {
+                            if (context.mounted) {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (context) => const SignUpScreen(),
+                                ),
+                              );
+                            }
+                          },
+                          insets: 14,
+                          fontSize: 15,
+                        ),
+                        const SizedBox(height: 16),
+                        _buildSignInButton(context),
+                        const SizedBox(height: 24),
+                        _buildFooterLinks(context),
+                        const SizedBox(height: 24),
+                      ],
+                    ),
+                  ),
                 ),
-                const SizedBox(height: 16),
-                _buildSignInButton(context),
-                const Spacer(flex: 1),
-                _buildFooterLinks(context),
-                const Spacer(flex: 1),
-                // UPDATED: Reduced spacing
-                const SizedBox(height: 24),
                 _buildFlagBanner(),
-                // UPDATED: Reduced spacing
-                const SizedBox(height: 54),
+                const SizedBox(height: 32), // UPDATED: Increased bottom padding
               ],
             ),
           ),
@@ -113,7 +110,6 @@ class _SigninScreenState extends State<SigninScreen> {
         const SizedBox(width: 12),
         Text(
           'First Gen',
-          // UPDATED: Reduced font size for a more compact logo
           style: Theme.of(context).textTheme.headlineLarge?.copyWith(
             fontSize: 32,
             color: AppColors.primaryRed,
@@ -130,14 +126,12 @@ class _SigninScreenState extends State<SigninScreen> {
         Text(
           'Welcome to First Gen!',
           textAlign: TextAlign.center,
-          // UPDATED: Used a smaller headline style for compactness
           style: Theme.of(context).textTheme.headlineMedium,
         ),
         const SizedBox(height: 8),
         Text(
           'Connecting First Generation Individuals\nand Culture Enthusiasts',
           textAlign: TextAlign.center,
-          // UPDATED: Used a smaller body style
           style: Theme.of(context).textTheme.bodySmall,
         ),
       ],
@@ -155,7 +149,6 @@ class _SigninScreenState extends State<SigninScreen> {
       child: OutlinedButton(
         onPressed: onPressed,
         style: OutlinedButton.styleFrom(
-          // UPDATED: Reduced padding
           padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
           side: const BorderSide(color: AppColors.inputBorder, width: 1.5),
           shape: RoundedRectangleBorder(
@@ -171,7 +164,6 @@ class _SigninScreenState extends State<SigninScreen> {
             ),
             Text(
               text,
-              // UPDATED: Inherited from theme and reduced size
               style: Theme.of(context).textTheme.labelLarge?.copyWith(
                 color: AppColors.textPrimary,
                 fontWeight: FontWeight.w600,
@@ -198,7 +190,6 @@ class _SigninScreenState extends State<SigninScreen> {
         },
         style: TextButton.styleFrom(
           backgroundColor: AppColors.secondaryBackground,
-          // UPDATED: Reduced padding to match other buttons
           padding: const EdgeInsets.symmetric(vertical: 14),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
@@ -206,9 +197,8 @@ class _SigninScreenState extends State<SigninScreen> {
         ),
         child: Text(
           'Sign In',
-          // UPDATED: Inherited from theme and matched font size
           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-            color: AppColors.textTertiary.withOpacity(0.9),
+            color: AppColors.textTertiary.withAlpha(230),
             fontWeight: FontWeight.bold,
             fontSize: 15,
           ),
@@ -218,7 +208,6 @@ class _SigninScreenState extends State<SigninScreen> {
   }
 
   Widget _buildFooterLinks(BuildContext context) {
-    // UPDATED: Used a more appropriate text style for footer links
     final footerTextStyle = Theme.of(context).textTheme.bodySmall?.copyWith(
       fontWeight: FontWeight.w500,
       color: AppColors.textSecondary,

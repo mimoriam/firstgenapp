@@ -1,4 +1,4 @@
-import 'package:firstgenapp/screens/signin/signin_screen.dart';
+import 'package:firstgenapp/screens/auth/signin/signin_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firstgenapp/common/gradient_btn.dart';
 import 'package:firstgenapp/constants/appColors.dart';

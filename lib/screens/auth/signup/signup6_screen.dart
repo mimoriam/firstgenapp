@@ -1,4 +1,4 @@
-import 'package:firstgenapp/screens/signup/signup7_screen.dart';
+import 'package:firstgenapp/screens/auth/signup/signup7_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firstgenapp/constants/appColors.dart';
 import 'package:flutter_keyboard_visibility/flutter_keyboard_visibility.dart';

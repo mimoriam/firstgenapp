@@ -1,37 +1,50 @@
-import 'package:firstgenapp/screens/signup/signup5_screen.dart';
+import 'package:firstgenapp/screens/auth/signup/signup8_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firstgenapp/constants/appColors.dart';
 
-class Signup4Screen extends StatefulWidget {
-  const Signup4Screen({super.key});
+class Signup7Screen extends StatefulWidget {
+  const Signup7Screen({super.key});
 
   @override
-  State<Signup4Screen> createState() => _Signup4ScreenState();
+  State<Signup7Screen> createState() => _Signup7ScreenState();
 }
 
-class _Signup4ScreenState extends State<Signup4Screen> {
-  double _familyImportanceValue = 0.4;
-  final Set<String> _selectedTraditions = {
-    'Cultural holiday',
-    'Food traditions',
+class _Signup7ScreenState extends State<Signup7Screen> {
+  final Set<String> _selectedValues = {
+    'Family first',
+    'Community service',
+    'Hard work & ambition',
   };
 
-  final List<String> _traditionOptions = [
-    'Cultural holiday',
-    'Food traditions',
-    'Religious practice',
-    'Music & dance',
+  final List<String> _valueOptions = [
+    'Family first',
+    'Education & growth',
+    'Community service',
+    'Honesty & integrity',
+    'Hard work & ambition',
+    'Respect for elders',
   ];
 
   void _onNextPressed() {
-    debugPrint("Family Importance: $_familyImportanceValue");
-    debugPrint("Selected Traditions: $_selectedTraditions");
+    debugPrint("Selected Values: $_selectedValues");
 
     if (context.mounted) {
       Navigator.of(
         context,
-      ).push(MaterialPageRoute(builder: (context) => const Signup5Screen()));
+      ).push(MaterialPageRoute(builder: (context) => const Signup8Screen()));
     }
+  }
+
+  void _onValueSelected(bool selected, String value) {
+    setState(() {
+      if (selected) {
+        if (_selectedValues.length < 3) {
+          _selectedValues.add(value);
+        }
+      } else {
+        _selectedValues.remove(value);
+      }
+    });
   }
 
   @override
@@ -74,24 +87,17 @@ class _Signup4ScreenState extends State<Signup4Screen> {
                       // UPDATED: Reduced spacing
                       const SizedBox(height: 20),
                       Text(
-                        'Family & Traditions',
+                        'Values & Beliefs',
                         // UPDATED: Used new title style
                         style: textTheme.titleLarge,
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        'How important is family in your life?',
+                        'What are your core values? (Select your top 3)',
                         style: textTheme.titleMedium,
                       ),
                       const SizedBox(height: 12),
-                      _buildFamilySlider(),
-                      const SizedBox(height: 20),
-                      Text(
-                        'Which traditions are important to you?',
-                        style: textTheme.titleMedium,
-                      ),
-                      const SizedBox(height: 12),
-                      _buildTraditionChips(),
+                      _buildValueChips(),
                       const SizedBox(height: 20),
                     ],
                   ),
@@ -105,76 +111,19 @@ class _Signup4ScreenState extends State<Signup4Screen> {
     );
   }
 
-  Widget _buildFamilySlider() {
-    return Column(
-      children: [
-        SliderTheme(
-          data: SliderTheme.of(context).copyWith(
-            activeTrackColor: AppColors.primaryRed,
-            inactiveTrackColor: AppColors.inputBorder,
-            thumbColor: AppColors.primaryRed,
-            overlayColor: AppColors.primaryRed.withOpacity(0.2),
-            thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 10.0),
-            overlayShape: const RoundSliderOverlayShape(overlayRadius: 15.0),
-          ),
-          child: Slider(
-            value: _familyImportanceValue,
-            onChanged: (newValue) {
-              setState(() {
-                _familyImportanceValue = newValue;
-              });
-            },
-          ),
-        ),
-        const SizedBox(height: 4),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Not Important',
-                // UPDATED: Used smaller text style
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppColors.textSecondary,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              Text(
-                'Important',
-                // UPDATED: Used smaller text style
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppColors.textSecondary,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildTraditionChips() {
+  Widget _buildValueChips() {
     return Wrap(
       spacing: 8.0,
       runSpacing: 8.0,
-      children: _traditionOptions.map((tradition) {
-        final isSelected = _selectedTraditions.contains(tradition);
+      children: _valueOptions.map((value) {
+        final isSelected = _selectedValues.contains(value);
         return ChoiceChip(
-          label: Text(tradition),
+          label: Text(value),
           selected: isSelected,
-          onSelected: (selected) {
-            setState(() {
-              if (selected) {
-                _selectedTraditions.add(tradition);
-              } else {
-                _selectedTraditions.remove(tradition);
-              }
-            });
-          },
+          onSelected: (selected) => _onValueSelected(selected, value),
           // UPDATED: Reduced font size for compact chip
           labelStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
+            fontWeight: FontWeight.w600,
             color: isSelected ? AppColors.primaryRed : AppColors.textSecondary,
           ),
           selectedColor: Colors.white,
@@ -208,7 +157,7 @@ class _Signup4ScreenState extends State<Signup4Screen> {
               ),
               children: const <TextSpan>[
                 TextSpan(
-                  text: '4',
+                  text: '7',
                   style: TextStyle(color: AppColors.primaryOrange),
                 ),
                 TextSpan(
@@ -218,28 +167,27 @@ class _Signup4ScreenState extends State<Signup4Screen> {
               ],
             ),
           ),
-          Container(
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: const LinearGradient(
-                colors: [AppColors.primaryRed, AppColors.primaryOrange],
-                begin: Alignment.centerLeft,
-                end: Alignment.centerRight,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.primaryRed.withOpacity(0.3),
-                  spreadRadius: 2,
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
+          GestureDetector(
+            onTap: _onNextPressed,
+            child: Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: const LinearGradient(
+                  colors: [AppColors.primaryRed, AppColors.primaryOrange],
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
                 ),
-              ],
-            ),
-            child: FloatingActionButton(
-              onPressed: _onNextPressed,
-              elevation: 0,
-              enableFeedback: false,
-              backgroundColor: Colors.transparent,
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primaryRed.withOpacity(0.3),
+                    spreadRadius: 2,
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
               child: const Icon(Icons.arrow_forward, color: Colors.white),
             ),
           ),

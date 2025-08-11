@@ -1,4 +1,4 @@
-import 'package:firstgenapp/screens/signup/signup3_screen.dart';
+import 'package:firstgenapp/screens/auth/signup/signup3_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firstgenapp/constants/appColors.dart';
 import 'package:country_picker/country_picker.dart';

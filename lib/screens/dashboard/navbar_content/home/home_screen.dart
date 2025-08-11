@@ -1,8 +1,8 @@
 import 'package:firstgenapp/common/gradient_btn.dart';
-import 'package:firstgenapp/screens/community_detail/community_detail_screen.dart';
-import 'package:firstgenapp/screens/match_detail/match_detail_screen.dart';
-import 'package:firstgenapp/screens/recent_activities/recent_activities_screen.dart';
-import 'package:firstgenapp/screens/your_matches/your_matches_screen.dart';
+import 'package:firstgenapp/screens/dashboard/navbar_content/communities/community_detail/community_detail_screen.dart';
+import 'package:firstgenapp/screens/dashboard/navbar_content/home/match_detail/match_detail_screen.dart';
+import 'package:firstgenapp/screens/dashboard/navbar_content/home/recent_activities/recent_activities_screen.dart';
+import 'package:firstgenapp/screens/dashboard/navbar_content/home/your_matches/your_matches_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firstgenapp/constants/appColors.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';

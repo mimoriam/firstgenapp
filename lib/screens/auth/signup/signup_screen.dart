@@ -1,4 +1,4 @@
-import 'package:firstgenapp/screens/signup/signup2_screen.dart';
+import 'package:firstgenapp/screens/auth/signup/signup2_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firstgenapp/constants/appColors.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';

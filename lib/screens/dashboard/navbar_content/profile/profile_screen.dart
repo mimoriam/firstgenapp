@@ -1,4 +1,4 @@
-import 'package:firstgenapp/screens/profile/profile_inner_screen.dart';
+import 'package:firstgenapp/screens/dashboard/navbar_content/profile/profile_inner/profile_inner_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firstgenapp/constants/appColors.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';

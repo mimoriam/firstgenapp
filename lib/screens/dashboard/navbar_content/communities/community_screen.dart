@@ -1,9 +1,9 @@
 import 'package:firstgenapp/constants/appColors.dart';
-import 'package:firstgenapp/screens/all_communities/all_communities_screen.dart';
-import 'package:firstgenapp/screens/community_detail/community_detail_screen.dart';
-import 'package:firstgenapp/screens/create_community/create_community_screen.dart';
-import 'package:firstgenapp/screens/create_event_screen/create_event_screen.dart';
-import 'package:firstgenapp/screens/dashboard/navbar_content/home_screen.dart';
+import 'package:firstgenapp/screens/dashboard/navbar_content/communities/all_communities/all_communities_screen.dart';
+import 'package:firstgenapp/screens/dashboard/navbar_content/communities/community_detail/community_detail_screen.dart';
+import 'package:firstgenapp/screens/dashboard/navbar_content/communities/community_detail/create_event_screen/create_event_screen.dart';
+import 'package:firstgenapp/screens/dashboard/navbar_content/communities/create_community/create_community_screen.dart';
+import 'package:firstgenapp/screens/dashboard/navbar_content/home/home_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:iconly/iconly.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
@@ -67,9 +67,9 @@ class _CommunityScreenState extends State<CommunityScreen>
       'time': '17 July at 08:02 AM',
       'community': 'Reiki Healing',
       'image':
-      'https://images.unsplash.com/photo-1593113598332-cd288d649433?w=500&q=80',
+          'https://images.unsplash.com/photo-1593113598332-cd288d649433?w=500&q=80',
       'caption':
-      'My daughter just got diagnosed with ANOREXIA. Feeling overwhelmed. Any advice?',
+          'My daughter just got diagnosed with ANOREXIA. Feeling overwhelmed. Any advice?',
       'likes': 45,
       'comments': 12,
       'shares': 2,
@@ -81,7 +81,7 @@ class _CommunityScreenState extends State<CommunityScreen>
       'community': 'Reiki Healing',
       'title': 'This is what I learned in my recent course',
       'quote':
-      '"The whole secret of existence lies in the pursuit of meaning, purpose, and connection. It is a delicate dance between self-discovery, compassion for others, and embracing the ever-unfolding mysteries of life. Finding harmony in the ebb and flow of experiences, we unlock the profound beauty that resides within our shared journey."',
+          '"The whole secret of existence lies in the pursuit of meaning, purpose, and connection. It is a delicate dance between self-discovery, compassion for others, and embracing the ever-unfolding mysteries of life. Finding harmony in the ebb and flow of experiences, we unlock the profound beauty that resides within our shared journey."',
       'likes': 45,
       'comments': 12,
       'shares': 2,
@@ -267,19 +267,29 @@ class _CommunityScreenState extends State<CommunityScreen>
               Expanded(
                 child: Text(
                   "What's on your mind? Ask a question or share your story..",
-                  style: textTheme.bodySmall
-                      ?.copyWith(color: AppColors.textSecondary),
+                  style: textTheme.bodySmall?.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
                 ),
               ),
               const SizedBox(width: 8),
-              const Icon(IconlyLight.camera,
-                  color: AppColors.textSecondary, size: 22),
+              const Icon(
+                IconlyLight.camera,
+                color: AppColors.textSecondary,
+                size: 22,
+              ),
               const SizedBox(width: 12),
-              const Icon(Icons.attach_file_outlined,
-                  color: AppColors.textSecondary, size: 22),
+              const Icon(
+                Icons.attach_file_outlined,
+                color: AppColors.textSecondary,
+                size: 22,
+              ),
               const SizedBox(width: 12),
-              const Icon(Icons.emoji_emotions_outlined,
-                  color: AppColors.textSecondary, size: 22),
+              const Icon(
+                Icons.emoji_emotions_outlined,
+                color: AppColors.textSecondary,
+                size: 22,
+              ),
             ],
           ),
         ),
@@ -288,8 +298,11 @@ class _CommunityScreenState extends State<CommunityScreen>
           padding: const EdgeInsets.only(bottom: 16),
           child: Row(
             children: [
-              const Icon(Iconsax.global_copy,
-                  color: AppColors.textSecondary, size: 20),
+              const Icon(
+                Iconsax.global_copy,
+                color: AppColors.textSecondary,
+                size: 20,
+              ),
               const SizedBox(width: 4),
               Text('Add your post in', style: textTheme.labelLarge),
               const Icon(Icons.arrow_drop_down, color: AppColors.textSecondary),
@@ -300,7 +313,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                     PersistentNavBarNavigator.pushNewScreen(
                       context,
                       screen:
-                      CreateEventScreen(), // Assuming this is the correct screen
+                          CreateEventScreen(), // Assuming this is the correct screen
                       withNavBar: false,
                     );
                   }
@@ -313,10 +326,12 @@ class _CommunityScreenState extends State<CommunityScreen>
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  padding:
-                  const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 12,
+                  ),
                 ),
-              )
+              ),
             ],
           ),
         ),
@@ -346,14 +361,14 @@ class _MyCommunitiesTab extends StatelessWidget {
       'rating': 4.3,
       'members': '10K+',
       'image':
-      'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=500&q=80',
+          'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=500&q=80',
     },
     {
       'name': 'Yoga & Meditation',
       'rating': 4.8,
       'members': '25K+',
       'image':
-      'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=500&q=80',
+          'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=500&q=80',
     },
   ];
 
@@ -363,21 +378,21 @@ class _MyCommunitiesTab extends StatelessWidget {
       'rating': 4.5,
       'members': '15K+',
       'image':
-      'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=500&q=80',
+          'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=500&q=80',
     },
     {
       'name': 'Holistic Health',
       'rating': 4.6,
       'members': '18K+',
       'image':
-      'https://images.unsplash.com/photo-1475924156734-496f6cac6ec1?w=500&q=80',
+          'https://images.unsplash.com/photo-1475924156734-496f6cac6ec1?w=500&q=80',
     },
     {
       'name': 'Mindfulness Practices',
       'rating': 4.7,
       'members': '22K+',
       'image':
-      'https://images.unsplash.com/photo-1552083375-1447ce886485?w=500&q=80',
+          'https://images.unsplash.com/photo-1552083375-1447ce886485?w=500&q=80',
     },
   ];
 
@@ -526,7 +541,7 @@ class _UpcomingEventsTab extends StatelessWidget {
       "date": "8 December, 2025",
       "location": "Spice Garden Kitchen",
       "description":
-      "Soothing audio and gentle vibrations to ease discomfort. Soothing audio and gentle vibrations to.",
+          "Soothing audio and gentle vibrations to ease discomfort. Soothing audio and gentle vibrations to.",
       "attendees": 31,
       "isInterested": true,
       "hasVideo": false,
@@ -537,7 +552,7 @@ class _UpcomingEventsTab extends StatelessWidget {
       "date": "8 December, 2025",
       "location": "Spice Garden Kitchen",
       "description":
-      "Soothing audio and gentle vibrations to ease discomfort. Soothing audio and gentle vibrations to.",
+          "Soothing audio and gentle vibrations to ease discomfort. Soothing audio and gentle vibrations to.",
       "attendees": 31,
       "isInterested": false,
       "hasVideo": true,
@@ -556,8 +571,10 @@ class _UpcomingEventsTab extends StatelessWidget {
             Text('Upcoming Events', style: textTheme.titleLarge),
             IconButton(
               onPressed: () {},
-              icon:
-              const Icon(IconlyLight.search, color: AppColors.textSecondary),
+              icon: const Icon(
+                IconlyLight.search,
+                color: AppColors.textSecondary,
+              ),
             ),
           ],
         ),
@@ -781,7 +798,11 @@ class _PostCard extends StatelessWidget {
   }
 
   Widget _buildFooterIcon(
-      IconData icon, String count, Color iconColor, Color color) {
+    IconData icon,
+    String count,
+    Color iconColor,
+    Color color,
+  ) {
     return Row(
       children: [
         Icon(icon, color: iconColor, size: 20),
@@ -811,10 +832,10 @@ class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
 
   @override
   Widget build(
-      BuildContext context,
-      double shrinkOffset,
-      bool overlapsContent,
-      ) {
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
     return Container(color: AppColors.primaryBackground, child: _tabBar);
   }
 
