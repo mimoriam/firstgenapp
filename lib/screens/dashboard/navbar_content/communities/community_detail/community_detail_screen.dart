@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:firstgenapp/common/gradient_btn.dart';
 import 'package:firstgenapp/constants/appColors.dart';
+import 'package:firstgenapp/screens/dashboard/navbar_content/communities/community_detail/comments/comments_screen.dart';
 import 'package:firstgenapp/screens/dashboard/navbar_content/communities/community_detail/create_event_screen/create_event_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:iconly/iconly.dart';
@@ -52,9 +53,11 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
         child: FloatingActionButton(
           onPressed: () {
             if (context.mounted) {
-              Navigator.of(
-                context,
-              ).push(MaterialPageRoute(builder: (context) => const CreateEventScreen()));
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const CreateEventScreen(),
+                ),
+              );
             }
           },
           backgroundColor:
@@ -473,7 +476,13 @@ class _PostCard extends StatelessWidget {
           ],
         ),
         TextButton.icon(
-          onPressed: () {},
+          onPressed: () {
+            if (context.mounted) {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (context) => const CommentsScreen()),
+              );
+            }
+          },
           icon: const Icon(
             IconlyLight.send,
             color: AppColors.textSecondary,
