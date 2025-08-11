@@ -75,7 +75,7 @@ class _RecentActivitiesScreenState extends State<RecentActivitiesScreen> {
       Map<String, String> activity, TextTheme textTheme) {
     return Container(
       // UPDATED: Reduced vertical padding
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -99,7 +99,7 @@ class _RecentActivitiesScreenState extends State<RecentActivitiesScreen> {
                   // UPDATED: Inherited from theme
                   style: textTheme.labelLarge?.copyWith(
                     color: AppColors.textPrimary,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
                 const SizedBox(height: 4),

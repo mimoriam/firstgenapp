@@ -2,7 +2,7 @@ import 'dart:ui';
 
 import 'package:firstgenapp/common/gradient_btn.dart';
 import 'package:firstgenapp/constants/appColors.dart';
-import 'package:firstgenapp/screens/dashboard/navbar_content/communities/community_detail/comments/comments_screen.dart';
+import 'package:firstgenapp/screens/dashboard/navbar_content/communities/comments/comments_screen.dart';
 import 'package:firstgenapp/screens/dashboard/navbar_content/communities/community_detail/create_event_screen/create_event_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:iconly/iconly.dart';
@@ -213,10 +213,14 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
               ElevatedButton(
                 onPressed: () {},
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: AppColors.primaryRed,
+                  backgroundColor: AppColors.tertiaryBackground,
+                  foregroundColor: AppColors.primaryOrange,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  side: BorderSide(
+                    color: AppColors.primaryRed, // Set the border color
+                    width: 1.2,
                   ),
                   padding: const EdgeInsets.symmetric(
                     horizontal: 24,
@@ -226,6 +230,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
                 child: Text(
                   'Join Community',
                   style: textTheme.labelLarge?.copyWith(
+                    color: AppColors.primaryRed,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -618,6 +623,8 @@ class _AboutTab extends StatelessWidget {
     return Theme(
       data: ThemeData().copyWith(dividerColor: Colors.transparent),
       child: ExpansionTile(
+        collapsedIconColor: Colors.black,
+        iconColor: Colors.black,
         initiallyExpanded: isInitiallyExpanded,
         title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
         childrenPadding: const EdgeInsets.symmetric(

@@ -2,9 +2,11 @@ import 'dart:async';
 
 import 'package:country_picker/country_picker.dart';
 import 'package:firstgenapp/common/gradient_btn.dart';
+import 'package:firstgenapp/screens/dashboard/navbar_content/home/match_detail/match_detail_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firstgenapp/constants/appColors.dart';
 import 'package:flutter_keyboard_visibility/flutter_keyboard_visibility.dart';
+import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
@@ -55,8 +57,8 @@ class _SearchScreenState extends State<SearchScreen> {
     var keyboardVisibilityController = KeyboardVisibilityController();
 
     keyboardSubscription = keyboardVisibilityController.onChange.listen((
-        bool visible,
-        ) {
+      bool visible,
+    ) {
       setState(() {
         _isKeyboardVisible = visible;
       });
@@ -73,10 +75,10 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   void _addItemToList(
-      String item,
-      List<String> list,
-      TextEditingController controller,
-      ) {
+    String item,
+    List<String> list,
+    TextEditingController controller,
+  ) {
     final trimmedItem = item.trim();
     if (trimmedItem.isNotEmpty && !list.contains(trimmedItem)) {
       setState(() {
@@ -141,7 +143,7 @@ class _SearchScreenState extends State<SearchScreen> {
                   'Which generation are you looking for?',
                   _generationOptions,
                   _selectedGeneration,
-                      (val) {
+                  (val) {
                     setState(() => _selectedGeneration = val);
                   },
                 ),
@@ -150,7 +152,7 @@ class _SearchScreenState extends State<SearchScreen> {
                   'Gender',
                   _genderOptions,
                   _selectedGender,
-                      (val) {
+                  (val) {
                     setState(() => _selectedGender = val);
                   },
                 ),
@@ -181,7 +183,20 @@ class _SearchScreenState extends State<SearchScreen> {
                   ),
                 ),
                 const SizedBox(height: 32),
-                GradientButton(text: 'Search', onPressed: () {}, fontSize: 15, insets: 14),
+                GradientButton(
+                  text: 'Search',
+                  onPressed: () {
+                    if (context.mounted) {
+                      PersistentNavBarNavigator.pushNewScreen(
+                        context,
+                        screen: MatchDetailScreen(),
+                        withNavBar: false,
+                      );
+                    }
+                  },
+                  fontSize: 15,
+                  insets: 14,
+                ),
                 if (_isKeyboardVisible) const SizedBox(height: 260),
               ],
             ),
@@ -192,10 +207,7 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   Widget _buildSectionTitle(String title, TextTheme textTheme) {
-    return Text(
-      title,
-      style: textTheme.titleLarge?.copyWith(fontSize: 16),
-    );
+    return Text(title, style: textTheme.titleLarge?.copyWith(fontSize: 16));
   }
 
   Widget _buildCountryPicker() {
@@ -258,11 +270,11 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   Widget _buildChoiceChipSection(
-      String title,
-      List<String> options,
-      String? selectedValue,
-      ValueChanged<String?> onChanged,
-      ) {
+    String title,
+    List<String> options,
+    String? selectedValue,
+    ValueChanged<String?> onChanged,
+  ) {
     final textTheme = Theme.of(context).textTheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -283,13 +295,17 @@ class _SearchScreenState extends State<SearchScreen> {
               selectedColor: AppColors.primaryRed.withOpacity(0.1),
               backgroundColor: Colors.white,
               labelStyle: textTheme.bodySmall?.copyWith(
-                color: isSelected ? AppColors.primaryRed : AppColors.textSecondary,
+                color: isSelected
+                    ? AppColors.primaryRed
+                    : AppColors.textSecondary,
                 fontWeight: FontWeight.w600,
               ),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
                 side: BorderSide(
-                  color: isSelected ? AppColors.primaryRed : AppColors.inputBorder,
+                  color: isSelected
+                      ? AppColors.primaryRed
+                      : AppColors.inputBorder,
                 ),
               ),
               showCheckmark: false,
@@ -339,7 +355,9 @@ class _SearchScreenState extends State<SearchScreen> {
               child: Center(
                 child: Text(
                   '${_currentRangeValues.start.round()}-${_currentRangeValues.end.round()}',
-                  style: textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
+                  style: textTheme.bodySmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ),
@@ -405,18 +423,21 @@ class _TitledChipInputState extends State<_TitledChipInput> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          widget.title,
-          style: textTheme.titleLarge?.copyWith(fontSize: 16),
-        ),
+        Text(widget.title, style: textTheme.titleLarge?.copyWith(fontSize: 16)),
         const SizedBox(height: 8),
         TextField(
           focusNode: _focusNode,
           controller: widget.controller,
           decoration: InputDecoration(
             hintText: widget.hint,
-            hintStyle: const TextStyle(fontSize: 14, color: AppColors.textSecondary),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            hintStyle: const TextStyle(
+              fontSize: 14,
+              color: AppColors.textSecondary,
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 20,
+              vertical: 12,
+            ),
           ),
           onSubmitted: (_) => widget.onSubmitted(),
         ),
@@ -427,26 +448,29 @@ class _TitledChipInputState extends State<_TitledChipInput> {
           children: widget.items
               .map(
                 (item) => Chip(
-              label: Text(item),
-              onDeleted: () {
-                setState(() {
-                  widget.items.remove(item);
-                });
-              },
-              deleteIconColor: AppColors.primaryRed,
-              backgroundColor: AppColors.secondaryBackground,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-                side: const BorderSide(color: Color(0xFFE9C5C5)),
-              ),
-              labelStyle: textTheme.bodySmall?.copyWith(
-                color: AppColors.primaryRed,
-                fontWeight: FontWeight.w600,
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              deleteIcon: const Icon(Icons.close, size: 16),
-            ),
-          )
+                  label: Text(item),
+                  onDeleted: () {
+                    setState(() {
+                      widget.items.remove(item);
+                    });
+                  },
+                  deleteIconColor: AppColors.primaryRed,
+                  backgroundColor: AppColors.secondaryBackground,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                    side: const BorderSide(color: Color(0xFFE9C5C5)),
+                  ),
+                  labelStyle: textTheme.bodySmall?.copyWith(
+                    color: AppColors.primaryRed,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  deleteIcon: const Icon(Icons.close, size: 16),
+                ),
+              )
               .toList(),
         ),
       ],

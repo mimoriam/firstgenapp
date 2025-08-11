@@ -1,10 +1,14 @@
 import 'package:firstgenapp/common/gradient_btn.dart';
 import 'package:firstgenapp/constants/appColors.dart';
 import 'package:firstgenapp/screens/dashboard/navbar_content/communities/all_communities/all_communities_screen.dart';
+import 'package:firstgenapp/screens/dashboard/navbar_content/communities/comments/comments_screen.dart';
 import 'package:firstgenapp/screens/dashboard/navbar_content/communities/community_detail/community_detail_screen.dart';
 import 'package:firstgenapp/screens/dashboard/navbar_content/communities/community_detail/create_event_screen/create_event_screen.dart';
 import 'package:firstgenapp/screens/dashboard/navbar_content/communities/create_community/create_community_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_form_builder/flutter_form_builder.dart';
+import 'package:flutter_keyboard_visibility/flutter_keyboard_visibility.dart';
+import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:iconly/iconly.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
@@ -20,6 +24,7 @@ class CommunityScreen extends StatefulWidget {
 class _CommunityScreenState extends State<CommunityScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  final _formKey = GlobalKey<FormBuilderState>();
 
   @override
   void initState() {
@@ -72,9 +77,9 @@ class _CommunityScreenState extends State<CommunityScreen>
       'time': '17 July at 08:02 AM',
       'community': 'Reiki Healing',
       'image':
-          'https://images.unsplash.com/photo-1593113598332-cd288d649433?w=500&q=80',
+      'https://images.unsplash.com/photo-1593113598332-cd288d649433?w=500&q=80',
       'caption':
-          'My daughter just got diagnosed with ANOREXIA. Feeling overwhelmed. Any advice?',
+      'My daughter just got diagnosed with ANOREXIA. Feeling overwhelmed. Any advice?',
       'likes': 45,
       'comments': 12,
       'shares': 2,
@@ -86,7 +91,7 @@ class _CommunityScreenState extends State<CommunityScreen>
       'community': 'Reiki Healing',
       'title': 'This is what I learned in my recent course',
       'quote':
-          '"The whole secret of existence lies in the pursuit of meaning, purpose, and connection. It is a delicate dance between self-discovery, compassion for others, and embracing the ever-unfolding mysteries of life. Finding harmony in the ebb and flow of experiences, we unlock the profound beauty that resides within our shared journey."',
+      '"The whole secret of existence lies in the pursuit of meaning, purpose, and connection. It is a delicate dance between self-discovery, compassion for others, and embracing the ever-unfolding mysteries of life. Finding harmony in the ebb and flow of experiences, we unlock the profound beauty that resides within our shared journey."',
       'likes': 45,
       'comments': 12,
       'shares': 2,
@@ -96,77 +101,82 @@ class _CommunityScreenState extends State<CommunityScreen>
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    return Scaffold(
-      backgroundColor: AppColors.primaryBackground,
-      appBar: AppBar(
+    return KeyboardDismissOnTap(
+      dismissOnCapturedTaps: true,
+      child: Scaffold(
         backgroundColor: AppColors.primaryBackground,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Explore Communities', style: textTheme.headlineSmall),
-            const SizedBox(height: 4),
-            Text('Culture starts with connection', style: textTheme.bodySmall),
-          ],
-        ),
-        actions: [
-          GestureDetector(
-            onTap: () {
-              if (context.mounted) {
-                PersistentNavBarNavigator.pushNewScreen(
-                  context,
-                  screen: const CreateCommunityScreen(),
-                  withNavBar: false,
-                );
-              }
-            },
-            child: Container(
-              margin: const EdgeInsets.only(right: 16),
-              child: const Icon(
-                Iconsax.add_square_copy,
-                color: AppColors.primaryRed,
-                size: 24,
-              ),
-            ),
+        appBar: AppBar(
+          backgroundColor: AppColors.primaryBackground,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          title: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Explore Communities', style: textTheme.headlineSmall),
+              const SizedBox(height: 4),
+              Text('Culture starts with connection',
+                  style: textTheme.bodySmall),
+            ],
           ),
-        ],
-      ),
-      body: NestedScrollView(
-        headerSliverBuilder: (context, innerBoxIsScrolled) {
-          return [
-            SliverToBoxAdapter(child: _buildAllCommunities()),
-            SliverPersistentHeader(
-              delegate: _SliverAppBarDelegate(
-                TabBar(
-                  controller: _tabController,
-                  labelColor: AppColors.primaryRed,
-                  unselectedLabelColor: AppColors.textSecondary,
-                  indicatorColor: AppColors.primaryRed,
-                  indicatorSize: TabBarIndicatorSize.label,
-                  isScrollable: true,
-                  tabAlignment: TabAlignment.start,
-                  padding: EdgeInsets.zero,
-                  labelPadding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  dividerColor: Colors.transparent,
-                  labelStyle: textTheme.labelLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                  unselectedLabelStyle: textTheme.labelLarge,
-                  tabs: const [
-                    Tab(text: 'My feed'),
-                    Tab(text: 'My communities'),
-                    Tab(text: 'Upcoming Events'),
-                  ],
+          actions: [
+            GestureDetector(
+              onTap: () {
+                if (context.mounted) {
+                  PersistentNavBarNavigator.pushNewScreen(
+                    context,
+                    screen: const CreateCommunityScreen(),
+                    withNavBar: false,
+                  );
+                }
+              },
+              child: Container(
+                margin: const EdgeInsets.only(right: 16),
+                child: const Icon(
+                  Iconsax.add_square_copy,
+                  color: AppColors.primaryRed,
+                  size: 24,
                 ),
               ),
-              pinned: true,
             ),
-          ];
-        },
-        body: TabBarView(
-          controller: _tabController,
-          children: [buildFeed(), _MyCommunitiesTab(), _UpcomingEventsTab()],
+          ],
+        ),
+        body: NestedScrollView(
+          headerSliverBuilder: (context, innerBoxIsScrolled) {
+            return [
+              SliverToBoxAdapter(child: _buildAllCommunities()),
+              SliverPersistentHeader(
+                delegate: _SliverAppBarDelegate(
+                  TabBar(
+                    controller: _tabController,
+                    labelColor: AppColors.primaryRed,
+                    unselectedLabelColor: AppColors.textSecondary,
+                    indicatorColor: AppColors.primaryRed,
+                    indicatorSize: TabBarIndicatorSize.label,
+                    isScrollable: true,
+                    tabAlignment: TabAlignment.start,
+                    padding: EdgeInsets.zero,
+                    labelPadding:
+                    const EdgeInsets.symmetric(horizontal: 16.0),
+                    dividerColor: Colors.transparent,
+                    labelStyle: textTheme.labelLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                    unselectedLabelStyle: textTheme.labelLarge,
+                    tabs: const [
+                      Tab(text: 'My feed'),
+                      Tab(text: 'My communities'),
+                      Tab(text: 'Upcoming Events'),
+                    ],
+                  ),
+                ),
+                pinned: true,
+              ),
+            ];
+          },
+          body: TabBarView(
+            controller: _tabController,
+            children: [buildFeed(), _MyCommunitiesTab(), _UpcomingEventsTab()],
+          ),
         ),
       ),
     );
@@ -249,27 +259,23 @@ class _CommunityScreenState extends State<CommunityScreen>
 
   Widget _buildCreatePostSection() {
     final textTheme = Theme.of(context).textTheme;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          '👋 Good to see you again!',
-          style: textTheme.titleLarge?.copyWith(fontSize: 16),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          "Here's a real-time view of what needs your attention today.",
-          style: textTheme.bodySmall,
-        ),
-        const SizedBox(height: 16),
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey.shade200),
+    return FormBuilder(
+      key: _formKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '👋 Good to see you again!',
+            style: textTheme.titleLarge?.copyWith(fontSize: 16),
           ),
-          child: Row(
+          const SizedBox(height: 4),
+          Text(
+            "Here's a real-time view of what needs your attention today.",
+            style: textTheme.bodySmall,
+          ),
+          const SizedBox(height: 16),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const CircleAvatar(
                 radius: 20,
@@ -279,70 +285,110 @@ class _CommunityScreenState extends State<CommunityScreen>
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: Text(
-                  "What's on your mind? Ask a question or share your story..",
-                  style: textTheme.bodySmall?.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
+                child: Stack(
+                  children: [
+                    FormBuilderTextField(
+                      name: 'post_content',
+                      maxLines: 5,
+                      minLines: 1,
+                      decoration: InputDecoration(
+                        hintText:
+                        "What's on your mind? Ask a question or share your story..",
+                        hintStyle: textTheme.bodySmall?.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                        filled: true,
+                        fillColor: Colors.white,
+                        contentPadding:
+                        const EdgeInsets.fromLTRB(12, 16, 12, 40),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.grey.shade200),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.grey.shade200),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(
+                              color: AppColors.primaryRed, width: 1.5),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      bottom: 8,
+                      right: 12,
+                      child: Row(
+                        children: const [
+                          Icon(
+                            IconlyLight.camera,
+                            color: AppColors.textSecondary,
+                            size: 22,
+                          ),
+                          SizedBox(width: 12),
+                          Icon(
+                            Icons.attach_file_outlined,
+                            color: AppColors.textSecondary,
+                            size: 22,
+                          ),
+                          SizedBox(width: 12),
+                          Icon(
+                            Icons.emoji_emotions_outlined,
+                            color: AppColors.textSecondary,
+                            size: 22,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-              const SizedBox(width: 8),
-              const Icon(
-                IconlyLight.camera,
-                color: AppColors.textSecondary,
-                size: 22,
-              ),
-              const SizedBox(width: 12),
-              const Icon(
-                Icons.attach_file_outlined,
-                color: AppColors.textSecondary,
-                size: 22,
-              ),
-              const SizedBox(width: 12),
-              const Icon(
-                Icons.emoji_emotions_outlined,
-                color: AppColors.textSecondary,
-                size: 22,
               ),
             ],
           ),
-        ),
-        const SizedBox(height: 16),
-        Padding(
-          padding: const EdgeInsets.only(bottom: 16),
-          child: Row(
-            children: [
-              const Icon(
-                Iconsax.global_copy,
-                color: AppColors.textSecondary,
-                size: 20,
-              ),
-              const SizedBox(width: 4),
-              Text('Add your post in', style: textTheme.labelLarge),
-              const Icon(Icons.arrow_drop_down, color: AppColors.textSecondary),
-              const Spacer(),
-              ElevatedButton.icon(
-                onPressed: () {
-                  // TODO: Post now implementation
-                },
-                icon: const Icon(IconlyLight.send, size: 18),
-                label: const Text('Post Now'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primaryRed,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 12,
+          const SizedBox(height: 16),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 2),
+            child: Row(
+              children: [
+                const Icon(
+                  Iconsax.global_copy,
+                  color: AppColors.textSecondary,
+                  size: 20,
+                ),
+                const SizedBox(width: 4),
+                Text('Add your post in', style: textTheme.labelLarge),
+                const Icon(Icons.arrow_drop_down,
+                    color: AppColors.textSecondary),
+                const Spacer(),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    // TODO: Post now implementation
+                    // Example of how to get the value:
+                    // if (_formKey.currentState?.saveAndValidate() ?? false) {
+                    //   final postContent = _formKey.currentState?.value['post_content'];
+                    //   debugPrint(postContent);
+                    // }
+                  },
+                  icon: const Icon(IconlyLight.send, size: 18),
+                  label: const Text('Post Now'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primaryRed,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 12,
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -368,14 +414,14 @@ class _MyCommunitiesTab extends StatelessWidget {
       'rating': 4.3,
       'members': '10K+',
       'image':
-          'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=500&q=80',
+      'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=500&q=80',
     },
     {
       'name': 'Yoga & Meditation',
       'rating': 4.8,
       'members': '25K+',
       'image':
-          'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=500&q=80',
+      'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=500&q=80',
     },
   ];
 
@@ -385,21 +431,21 @@ class _MyCommunitiesTab extends StatelessWidget {
       'rating': 4.5,
       'members': '15K+',
       'image':
-          'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=500&q=80',
+      'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=500&q=80',
     },
     {
       'name': 'Holistic Health',
       'rating': 4.6,
       'members': '18K+',
       'image':
-          'https://images.unsplash.com/photo-1475924156734-496f6cac6ec1?w=500&q=80',
+      'https://images.unsplash.com/photo-1475924156734-496f6cac6ec1?w=500&q=80',
     },
     {
       'name': 'Mindfulness Practices',
       'rating': 4.7,
       'members': '22K+',
       'image':
-          'https://images.unsplash.com/photo-1552083375-1447ce886485?w=500&q=80',
+      'https://images.unsplash.com/photo-1552083375-1447ce886485?w=500&q=80',
     },
   ];
 
@@ -548,7 +594,7 @@ class _UpcomingEventsTab extends StatelessWidget {
       "date": "8 December, 2025",
       "location": "Spice Garden Kitchen",
       "description":
-          "Soothing audio and gentle vibrations to ease discomfort. Soothing audio and gentle vibrations to.",
+      "Soothing audio and gentle vibrations to ease discomfort. Soothing audio and gentle vibrations to.",
       "attendees": 31,
       "isInterested": true,
       "hasVideo": false,
@@ -559,7 +605,7 @@ class _UpcomingEventsTab extends StatelessWidget {
       "date": "15 December, 2025",
       "location": "The Grand Hall",
       "description":
-          "Experience the rich musical traditions from around the world. A night of melody and harmony.",
+      "Experience the rich musical traditions from around the world. A night of melody and harmony.",
       "attendees": 85,
       "isInterested": false,
     },
@@ -812,7 +858,13 @@ class _PostCard extends StatelessWidget {
           ],
         ),
         TextButton.icon(
-          onPressed: () {},
+          onPressed: () {
+            if (context.mounted) {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (context) => const CommentsScreen()),
+              );
+            }
+          },
           icon: const Icon(
             IconlyLight.send,
             color: AppColors.textSecondary,
@@ -834,11 +886,11 @@ class _PostCard extends StatelessWidget {
   }
 
   Widget _buildFooterIcon(
-    IconData icon,
-    String count,
-    Color iconColor,
-    Color color,
-  ) {
+      IconData icon,
+      String count,
+      Color iconColor,
+      Color color,
+      ) {
     return Row(
       children: [
         Icon(icon, color: iconColor, size: 20),
@@ -868,10 +920,10 @@ class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
 
   @override
   Widget build(
-    BuildContext context,
-    double shrinkOffset,
-    bool overlapsContent,
-  ) {
+      BuildContext context,
+      double shrinkOffset,
+      bool overlapsContent,
+      ) {
     return Container(color: AppColors.primaryBackground, child: _tabBar);
   }
 
@@ -987,31 +1039,31 @@ class _EventCardState extends State<EventCard> {
                 Expanded(
                   child: _isInterested
                       ? GradientButton(
-                          text: "I'm Interested",
-                          onPressed: () {
-                            setState(() {
-                              _isInterested = false;
-                            });
-                          },
-                          fontSize: 13,
-                          insets: 10,
-                        )
+                    text: "I'm Interested",
+                    onPressed: () {
+                      setState(() {
+                        _isInterested = false;
+                      });
+                    },
+                    fontSize: 13,
+                    insets: 10,
+                  )
                       : OutlinedButton(
-                          onPressed: () {
-                            setState(() {
-                              _isInterested = true;
-                            });
-                          },
-                          style: buttonStyle.copyWith(
-                            side: WidgetStateProperty.all(
-                              const BorderSide(color: AppColors.primaryRed),
-                            ),
-                            foregroundColor: WidgetStateProperty.all(
-                              AppColors.primaryRed,
-                            ),
-                          ),
-                          child: const Text("I'm Interested"),
-                        ),
+                    onPressed: () {
+                      setState(() {
+                        _isInterested = true;
+                      });
+                    },
+                    style: buttonStyle.copyWith(
+                      side: WidgetStateProperty.all(
+                        const BorderSide(color: AppColors.primaryRed),
+                      ),
+                      foregroundColor: WidgetStateProperty.all(
+                        AppColors.primaryRed,
+                      ),
+                    ),
+                    child: const Text("I'm Interested"),
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
