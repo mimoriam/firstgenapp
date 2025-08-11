@@ -72,9 +72,9 @@ class _CommunityScreenState extends State<CommunityScreen>
       'time': '17 July at 08:02 AM',
       'community': 'Reiki Healing',
       'image':
-      'https://images.unsplash.com/photo-1593113598332-cd288d649433?w=500&q=80',
+          'https://images.unsplash.com/photo-1593113598332-cd288d649433?w=500&q=80',
       'caption':
-      'My daughter just got diagnosed with ANOREXIA. Feeling overwhelmed. Any advice?',
+          'My daughter just got diagnosed with ANOREXIA. Feeling overwhelmed. Any advice?',
       'likes': 45,
       'comments': 12,
       'shares': 2,
@@ -86,7 +86,7 @@ class _CommunityScreenState extends State<CommunityScreen>
       'community': 'Reiki Healing',
       'title': 'This is what I learned in my recent course',
       'quote':
-      '"The whole secret of existence lies in the pursuit of meaning, purpose, and connection. It is a delicate dance between self-discovery, compassion for others, and embracing the ever-unfolding mysteries of life. Finding harmony in the ebb and flow of experiences, we unlock the profound beauty that resides within our shared journey."',
+          '"The whole secret of existence lies in the pursuit of meaning, purpose, and connection. It is a delicate dance between self-discovery, compassion for others, and embracing the ever-unfolding mysteries of life. Finding harmony in the ebb and flow of experiences, we unlock the profound beauty that resides within our shared journey."',
       'likes': 45,
       'comments': 12,
       'shares': 2,
@@ -323,14 +323,7 @@ class _CommunityScreenState extends State<CommunityScreen>
               const Spacer(),
               ElevatedButton.icon(
                 onPressed: () {
-                  if (context.mounted) {
-                    PersistentNavBarNavigator.pushNewScreen(
-                      context,
-                      screen:
-                      const CreateEventScreen(),
-                      withNavBar: false,
-                    );
-                  }
+                  // TODO: Post now implementation
                 },
                 icon: const Icon(IconlyLight.send, size: 18),
                 label: const Text('Post Now'),
@@ -375,14 +368,14 @@ class _MyCommunitiesTab extends StatelessWidget {
       'rating': 4.3,
       'members': '10K+',
       'image':
-      'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=500&q=80',
+          'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=500&q=80',
     },
     {
       'name': 'Yoga & Meditation',
       'rating': 4.8,
       'members': '25K+',
       'image':
-      'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=500&q=80',
+          'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=500&q=80',
     },
   ];
 
@@ -392,21 +385,21 @@ class _MyCommunitiesTab extends StatelessWidget {
       'rating': 4.5,
       'members': '15K+',
       'image':
-      'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=500&q=80',
+          'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=500&q=80',
     },
     {
       'name': 'Holistic Health',
       'rating': 4.6,
       'members': '18K+',
       'image':
-      'https://images.unsplash.com/photo-1475924156734-496f6cac6ec1?w=500&q=80',
+          'https://images.unsplash.com/photo-1475924156734-496f6cac6ec1?w=500&q=80',
     },
     {
       'name': 'Mindfulness Practices',
       'rating': 4.7,
       'members': '22K+',
       'image':
-      'https://images.unsplash.com/photo-1552083375-1447ce886485?w=500&q=80',
+          'https://images.unsplash.com/photo-1552083375-1447ce886485?w=500&q=80',
     },
   ];
 
@@ -555,7 +548,7 @@ class _UpcomingEventsTab extends StatelessWidget {
       "date": "8 December, 2025",
       "location": "Spice Garden Kitchen",
       "description":
-      "Soothing audio and gentle vibrations to ease discomfort. Soothing audio and gentle vibrations to.",
+          "Soothing audio and gentle vibrations to ease discomfort. Soothing audio and gentle vibrations to.",
       "attendees": 31,
       "isInterested": true,
       "hasVideo": false,
@@ -566,7 +559,7 @@ class _UpcomingEventsTab extends StatelessWidget {
       "date": "15 December, 2025",
       "location": "The Grand Hall",
       "description":
-      "Experience the rich musical traditions from around the world. A night of melody and harmony.",
+          "Experience the rich musical traditions from around the world. A night of melody and harmony.",
       "attendees": 85,
       "isInterested": false,
     },
@@ -698,14 +691,17 @@ class _PostCard extends StatelessWidget {
                   value: 'share',
                   child: Row(
                     children: [
-                      const Icon(Icons.share_outlined,
-                          color: AppColors.textSecondary),
+                      const Icon(
+                        Icons.share_outlined,
+                        color: AppColors.textSecondary,
+                      ),
                       const SizedBox(width: 8),
                       Text(
                         'Share Post',
                         style: textTheme.labelLarge?.copyWith(
-                            color: AppColors.textPrimary,
-                            fontWeight: FontWeight.w600),
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ],
                   ),
@@ -714,14 +710,17 @@ class _PostCard extends StatelessWidget {
                   value: 'hide',
                   child: Row(
                     children: [
-                      const Icon(IconlyLight.hide,
-                          color: AppColors.textSecondary),
+                      const Icon(
+                        IconlyLight.hide,
+                        color: AppColors.textSecondary,
+                      ),
                       const SizedBox(width: 8),
                       Text(
                         'Hide Post',
                         style: textTheme.labelLarge?.copyWith(
-                            color: AppColors.textPrimary,
-                            fontWeight: FontWeight.w600),
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ],
                   ),
@@ -835,11 +834,11 @@ class _PostCard extends StatelessWidget {
   }
 
   Widget _buildFooterIcon(
-      IconData icon,
-      String count,
-      Color iconColor,
-      Color color,
-      ) {
+    IconData icon,
+    String count,
+    Color iconColor,
+    Color color,
+  ) {
     return Row(
       children: [
         Icon(icon, color: iconColor, size: 20),
@@ -869,10 +868,10 @@ class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
 
   @override
   Widget build(
-      BuildContext context,
-      double shrinkOffset,
-      bool overlapsContent,
-      ) {
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
     return Container(color: AppColors.primaryBackground, child: _tabBar);
   }
 
@@ -951,10 +950,7 @@ class _EventCardState extends State<EventCard> {
               ),
             ),
             const SizedBox(height: 12),
-            Text(
-              widget.event['title'],
-              style: textTheme.titleLarge,
-            ),
+            Text(widget.event['title'], style: textTheme.titleLarge),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8.0,
@@ -991,31 +987,31 @@ class _EventCardState extends State<EventCard> {
                 Expanded(
                   child: _isInterested
                       ? GradientButton(
-                    text: "I'm Interested",
-                    onPressed: () {
-                      setState(() {
-                        _isInterested = false;
-                      });
-                    },
-                    fontSize: 13,
-                    insets: 10,
-                  )
+                          text: "I'm Interested",
+                          onPressed: () {
+                            setState(() {
+                              _isInterested = false;
+                            });
+                          },
+                          fontSize: 13,
+                          insets: 10,
+                        )
                       : OutlinedButton(
-                    onPressed: () {
-                      setState(() {
-                        _isInterested = true;
-                      });
-                    },
-                    style: buttonStyle.copyWith(
-                      side: WidgetStateProperty.all(
-                        const BorderSide(color: AppColors.primaryRed),
-                      ),
-                      foregroundColor: WidgetStateProperty.all(
-                        AppColors.primaryRed,
-                      ),
-                    ),
-                    child: const Text("I'm Interested"),
-                  ),
+                          onPressed: () {
+                            setState(() {
+                              _isInterested = true;
+                            });
+                          },
+                          style: buttonStyle.copyWith(
+                            side: WidgetStateProperty.all(
+                              const BorderSide(color: AppColors.primaryRed),
+                            ),
+                            foregroundColor: WidgetStateProperty.all(
+                              AppColors.primaryRed,
+                            ),
+                          ),
+                          child: const Text("I'm Interested"),
+                        ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
