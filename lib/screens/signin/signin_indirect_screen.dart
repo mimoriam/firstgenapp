@@ -1,4 +1,5 @@
 import 'package:firstgenapp/screens/dashboard/dashboard_screen.dart';
+import 'package:firstgenapp/screens/forgot_password/forgot_password_screen.dart';
 import 'package:firstgenapp/screens/signup/signup_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firstgenapp/common/gradient_btn.dart';
@@ -32,7 +33,7 @@ class _SigninIndirectScreenState extends State<SigninIndirectScreen> {
       if (context.mounted) {
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (context) => const DashboardScreen()),
-              (Route<dynamic> route) => false,
+          (Route<dynamic> route) => false,
         );
       }
     } else {
@@ -84,8 +85,14 @@ class _SigninIndirectScreenState extends State<SigninIndirectScreen> {
                             name: 'email',
                             decoration: InputDecoration(
                               hintText: 'Email',
-                              hintStyle: const TextStyle(fontSize: 14, color: AppColors.textSecondary),
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                              hintStyle: const TextStyle(
+                                fontSize: 14,
+                                color: AppColors.textSecondary,
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                                vertical: 14,
+                              ),
                               prefixIcon: Icon(
                                 // Icons.email_outlined,
                                 IconlyLight.message,
@@ -106,8 +113,14 @@ class _SigninIndirectScreenState extends State<SigninIndirectScreen> {
                             obscureText: _isPasswordObscured,
                             decoration: InputDecoration(
                               hintText: 'Password',
-                              hintStyle: const TextStyle(fontSize: 14, color: AppColors.textSecondary),
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                              hintStyle: const TextStyle(
+                                fontSize: 14,
+                                color: AppColors.textSecondary,
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                                vertical: 14,
+                              ),
                               prefixIcon: const Icon(
                                 // Icons.lock_outline,
                                 IconlyLight.unlock,
@@ -116,10 +129,10 @@ class _SigninIndirectScreenState extends State<SigninIndirectScreen> {
                               suffixIcon: IconButton(
                                 icon: Icon(
                                   _isPasswordObscured
-                                  ? IconlyLight.hide :
-                                      IconlyLight.show,
-                                      // ? Icons.visibility_off_outlined
-                                      // : Icons.visibility_outlined,
+                                      ? IconlyLight.hide
+                                      : IconlyLight.show,
+                                  // ? Icons.visibility_off_outlined
+                                  // : Icons.visibility_outlined,
                                   color: AppColors.textSecondary,
                                 ),
                                 onPressed: () {
@@ -178,7 +191,10 @@ class _SigninIndirectScreenState extends State<SigninIndirectScreen> {
                   });
                 },
                 activeColor: AppColors.primaryRed,
-                side: const BorderSide(color: AppColors.inputBorder, width: 1.5),
+                side: const BorderSide(
+                  color: AppColors.inputBorder,
+                  width: 1.5,
+                ),
                 // UPDATED: Reduced tap area to help with alignment
                 // tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
@@ -201,7 +217,13 @@ class _SigninIndirectScreenState extends State<SigninIndirectScreen> {
         ),
         TextButton(
           onPressed: () {
-            // TODO: Navigate to Forgot Password screen
+            if (context.mounted) {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const ForgotPasswordScreen(),
+                ),
+              );
+            }
           },
           // UPDATED: Removed padding to ensure right alignment
           style: TextButton.styleFrom(
@@ -246,6 +268,7 @@ class _SigninIndirectScreenState extends State<SigninIndirectScreen> {
             'Sign up',
             style: Theme.of(context).textTheme.labelLarge?.copyWith(
               color: AppColors.primaryRed,
+              fontSize: 13,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -264,9 +287,7 @@ class _SigninIndirectScreenState extends State<SigninIndirectScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 12.0),
           child: Text(
             'or continue with',
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall,
+            style: Theme.of(context).textTheme.bodySmall,
           ),
         ),
         const Expanded(
