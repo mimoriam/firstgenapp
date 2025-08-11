@@ -1,16 +1,17 @@
+import 'package:firstgenapp/common/gradient_btn.dart';
 import 'package:firstgenapp/constants/appColors.dart';
 import 'package:firstgenapp/screens/dashboard/navbar_content/communities/all_communities/all_communities_screen.dart';
 import 'package:firstgenapp/screens/dashboard/navbar_content/communities/community_detail/community_detail_screen.dart';
 import 'package:firstgenapp/screens/dashboard/navbar_content/communities/community_detail/create_event_screen/create_event_screen.dart';
 import 'package:firstgenapp/screens/dashboard/navbar_content/communities/create_community/create_community_screen.dart';
-import 'package:firstgenapp/screens/dashboard/navbar_content/home/home_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:iconly/iconly.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 
 class CommunityScreen extends StatefulWidget {
-  const CommunityScreen({super.key});
+  final int? initialIndex;
+  const CommunityScreen({super.key, this.initialIndex});
 
   @override
   State<CommunityScreen> createState() => _CommunityScreenState();
@@ -23,7 +24,11 @@ class _CommunityScreenState extends State<CommunityScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(
+      length: 3,
+      vsync: this,
+      initialIndex: widget.initialIndex ?? 0,
+    );
   }
 
   @override
@@ -67,9 +72,9 @@ class _CommunityScreenState extends State<CommunityScreen>
       'time': '17 July at 08:02 AM',
       'community': 'Reiki Healing',
       'image':
-          'https://images.unsplash.com/photo-1593113598332-cd288d649433?w=500&q=80',
+      'https://images.unsplash.com/photo-1593113598332-cd288d649433?w=500&q=80',
       'caption':
-          'My daughter just got diagnosed with ANOREXIA. Feeling overwhelmed. Any advice?',
+      'My daughter just got diagnosed with ANOREXIA. Feeling overwhelmed. Any advice?',
       'likes': 45,
       'comments': 12,
       'shares': 2,
@@ -81,7 +86,7 @@ class _CommunityScreenState extends State<CommunityScreen>
       'community': 'Reiki Healing',
       'title': 'This is what I learned in my recent course',
       'quote':
-          '"The whole secret of existence lies in the pursuit of meaning, purpose, and connection. It is a delicate dance between self-discovery, compassion for others, and embracing the ever-unfolding mysteries of life. Finding harmony in the ebb and flow of experiences, we unlock the profound beauty that resides within our shared journey."',
+      '"The whole secret of existence lies in the pursuit of meaning, purpose, and connection. It is a delicate dance between self-discovery, compassion for others, and embracing the ever-unfolding mysteries of life. Finding harmony in the ebb and flow of experiences, we unlock the profound beauty that resides within our shared journey."',
       'likes': 45,
       'comments': 12,
       'shares': 2,
@@ -111,7 +116,7 @@ class _CommunityScreenState extends State<CommunityScreen>
               if (context.mounted) {
                 PersistentNavBarNavigator.pushNewScreen(
                   context,
-                  screen: CreateCommunityScreen(),
+                  screen: const CreateCommunityScreen(),
                   withNavBar: false,
                 );
               }
@@ -185,7 +190,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                     if (context.mounted) {
                       PersistentNavBarNavigator.pushNewScreen(
                         context,
-                        screen: AllCommunitiesScreen(),
+                        screen: const AllCommunitiesScreen(),
                         withNavBar: false,
                       );
                     }
@@ -212,15 +217,26 @@ class _CommunityScreenState extends State<CommunityScreen>
                 final community = _communities[index];
                 return Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                  child: Column(
-                    children: [
-                      CircleAvatar(
-                        radius: 28,
-                        backgroundImage: NetworkImage(community['avatar']!),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(community['name']!, style: textTheme.bodySmall),
-                    ],
+                  child: GestureDetector(
+                    onTap: () {
+                      if (context.mounted) {
+                        PersistentNavBarNavigator.pushNewScreen(
+                          context,
+                          screen: const CommunityDetailScreen(),
+                          withNavBar: false,
+                        );
+                      }
+                    },
+                    child: Column(
+                      children: [
+                        CircleAvatar(
+                          radius: 28,
+                          backgroundImage: NetworkImage(community['avatar']!),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(community['name']!, style: textTheme.bodySmall),
+                      ],
+                    ),
                   ),
                 );
               },
@@ -231,13 +247,11 @@ class _CommunityScreenState extends State<CommunityScreen>
     );
   }
 
-  // UPDATED: To match the new design in the screenshot
   Widget _buildCreatePostSection() {
     final textTheme = Theme.of(context).textTheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // UPDATED: Header is now outside the card
         Text(
           '👋 Good to see you again!',
           style: textTheme.titleLarge?.copyWith(fontSize: 16),
@@ -313,7 +327,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                     PersistentNavBarNavigator.pushNewScreen(
                       context,
                       screen:
-                          CreateEventScreen(), // Assuming this is the correct screen
+                      const CreateEventScreen(),
                       withNavBar: false,
                     );
                   }
@@ -361,14 +375,14 @@ class _MyCommunitiesTab extends StatelessWidget {
       'rating': 4.3,
       'members': '10K+',
       'image':
-          'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=500&q=80',
+      'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=500&q=80',
     },
     {
       'name': 'Yoga & Meditation',
       'rating': 4.8,
       'members': '25K+',
       'image':
-          'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=500&q=80',
+      'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=500&q=80',
     },
   ];
 
@@ -378,21 +392,21 @@ class _MyCommunitiesTab extends StatelessWidget {
       'rating': 4.5,
       'members': '15K+',
       'image':
-          'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=500&q=80',
+      'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=500&q=80',
     },
     {
       'name': 'Holistic Health',
       'rating': 4.6,
       'members': '18K+',
       'image':
-          'https://images.unsplash.com/photo-1475924156734-496f6cac6ec1?w=500&q=80',
+      'https://images.unsplash.com/photo-1475924156734-496f6cac6ec1?w=500&q=80',
     },
     {
       'name': 'Mindfulness Practices',
       'rating': 4.7,
       'members': '22K+',
       'image':
-          'https://images.unsplash.com/photo-1552083375-1447ce886485?w=500&q=80',
+      'https://images.unsplash.com/photo-1552083375-1447ce886485?w=500&q=80',
     },
   ];
 
@@ -457,8 +471,8 @@ class _CommunityListCard extends StatelessWidget {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    Colors.black.withOpacity(0.7),
-                    Colors.black.withOpacity(0.4),
+                    Colors.black.withAlpha(178),
+                    Colors.black.withAlpha(102),
                     Colors.transparent,
                   ],
                   begin: Alignment.centerLeft,
@@ -500,7 +514,7 @@ class _CommunityListCard extends StatelessWidget {
                       if (context.mounted) {
                         PersistentNavBarNavigator.pushNewScreen(
                           context,
-                          screen: CommunityDetailScreen(),
+                          screen: const CommunityDetailScreen(),
                           withNavBar: false,
                         );
                       }
@@ -541,52 +555,31 @@ class _UpcomingEventsTab extends StatelessWidget {
       "date": "8 December, 2025",
       "location": "Spice Garden Kitchen",
       "description":
-          "Soothing audio and gentle vibrations to ease discomfort. Soothing audio and gentle vibrations to.",
+      "Soothing audio and gentle vibrations to ease discomfort. Soothing audio and gentle vibrations to.",
       "attendees": 31,
       "isInterested": true,
       "hasVideo": false,
     },
     {
-      "image": "https://picsum.photos/seed/e1/400/200",
-      "title": "Diwali Cooking Workshop",
-      "date": "8 December, 2025",
-      "location": "Spice Garden Kitchen",
+      "image": "https://picsum.photos/seed/e2/400/200",
+      "title": "Cultural Music Night",
+      "date": "15 December, 2025",
+      "location": "The Grand Hall",
       "description":
-          "Soothing audio and gentle vibrations to ease discomfort. Soothing audio and gentle vibrations to.",
-      "attendees": 31,
+      "Experience the rich musical traditions from around the world. A night of melody and harmony.",
+      "attendees": 85,
       "isInterested": false,
-      "hasVideo": true,
     },
   ];
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    return ListView(
+    // UPDATED: Removed header and simplified to a single ListView
+    return ListView.separated(
       padding: const EdgeInsets.all(16.0),
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text('Upcoming Events', style: textTheme.titleLarge),
-            IconButton(
-              onPressed: () {},
-              icon: const Icon(
-                IconlyLight.search,
-                color: AppColors.textSecondary,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        ListView.separated(
-          physics: const NeverScrollableScrollPhysics(),
-          shrinkWrap: true,
-          itemCount: _events.length,
-          itemBuilder: (context, index) => EventCard(event: _events[index]),
-          separatorBuilder: (context, index) => const SizedBox(height: 12),
-        ),
-      ],
+      itemCount: _events.length,
+      itemBuilder: (context, index) => EventCard(event: _events[index]),
+      separatorBuilder: (context, index) => const SizedBox(height: 12),
     );
   }
 }
@@ -650,7 +643,7 @@ class _PostCard extends StatelessWidget {
                 if (context.mounted) {
                   PersistentNavBarNavigator.pushNewScreen(
                     context,
-                    screen: CommunityDetailScreen(),
+                    screen: const CommunityDetailScreen(),
                     withNavBar: false,
                   );
                 }
@@ -665,7 +658,6 @@ class _PostCard extends StatelessWidget {
             ),
           ],
         ),
-        // UPDATED: Divider color to match the lower one
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 8.0),
           child: Divider(height: 1, color: Colors.grey.shade200),
@@ -689,7 +681,53 @@ class _PostCard extends StatelessWidget {
                 ],
               ),
             ),
-            const Icon(Icons.more_vert, color: AppColors.textSecondary),
+            PopupMenuButton<String>(
+              onSelected: (value) {
+                if (value == 'share') {
+                  debugPrint('Share post tapped');
+                } else if (value == 'hide') {
+                  debugPrint('Hide post tapped');
+                }
+              },
+              icon: const Icon(Icons.more_vert, color: AppColors.textSecondary),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                PopupMenuItem<String>(
+                  value: 'share',
+                  child: Row(
+                    children: [
+                      const Icon(Icons.share_outlined,
+                          color: AppColors.textSecondary),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Share Post',
+                        style: textTheme.labelLarge?.copyWith(
+                            color: AppColors.textPrimary,
+                            fontWeight: FontWeight.w600),
+                      ),
+                    ],
+                  ),
+                ),
+                PopupMenuItem<String>(
+                  value: 'hide',
+                  child: Row(
+                    children: [
+                      const Icon(IconlyLight.hide,
+                          color: AppColors.textSecondary),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Hide Post',
+                        style: textTheme.labelLarge?.copyWith(
+                            color: AppColors.textPrimary,
+                            fontWeight: FontWeight.w600),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
       ],
@@ -728,7 +766,6 @@ class _PostCard extends StatelessWidget {
               ),
             ),
           ),
-        // UPDATED: Removed the border from the quote
         if (post['quote'] != null)
           Container(
             margin: const EdgeInsets.only(top: 8.0),
@@ -737,7 +774,7 @@ class _PostCard extends StatelessWidget {
               post['quote'],
               style: textTheme.bodyMedium?.copyWith(
                 fontStyle: FontStyle.italic,
-                color: AppColors.textPrimary.withOpacity(0.8),
+                color: AppColors.textPrimary.withAlpha(204),
                 fontWeight: FontWeight.normal,
               ),
             ),
@@ -798,11 +835,11 @@ class _PostCard extends StatelessWidget {
   }
 
   Widget _buildFooterIcon(
-    IconData icon,
-    String count,
-    Color iconColor,
-    Color color,
-  ) {
+      IconData icon,
+      String count,
+      Color iconColor,
+      Color color,
+      ) {
     return Row(
       children: [
         Icon(icon, color: iconColor, size: 20),
@@ -832,15 +869,180 @@ class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
 
   @override
   Widget build(
-    BuildContext context,
-    double shrinkOffset,
-    bool overlapsContent,
-  ) {
+      BuildContext context,
+      double shrinkOffset,
+      bool overlapsContent,
+      ) {
     return Container(color: AppColors.primaryBackground, child: _tabBar);
   }
 
   @override
   bool shouldRebuild(_SliverAppBarDelegate oldDelegate) {
     return false;
+  }
+}
+
+class EventCard extends StatefulWidget {
+  final Map<String, dynamic> event;
+  final bool? copied;
+
+  const EventCard({super.key, required this.event, this.copied});
+
+  @override
+  State<EventCard> createState() => _EventCardState();
+}
+
+class _EventCardState extends State<EventCard> {
+  late bool _isInterested;
+
+  @override
+  void initState() {
+    super.initState();
+    _isInterested = widget.event['isInterested'];
+  }
+
+  Widget _buildInfoItem(IconData icon, String text, Color color) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 14, color: color),
+        const SizedBox(width: 4),
+        Text(
+          text,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            fontSize: 11,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final buttonStyle = TextButton.styleFrom(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      textStyle: textTheme.labelLarge?.copyWith(
+        fontSize: 13,
+        fontWeight: FontWeight.w600,
+      ),
+    );
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.grey.shade200, width: 1),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(10.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.network(
+                widget.event['image'],
+                height: 150,
+                width: double.infinity,
+                fit: BoxFit.cover,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              widget.event['title'],
+              style: textTheme.titleLarge,
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8.0,
+              runSpacing: 4.0,
+              children: [
+                _buildInfoItem(
+                  Iconsax.calendar,
+                  widget.event['date'],
+                  const Color(0xFF009E60),
+                ),
+                _buildInfoItem(
+                  Iconsax.location,
+                  widget.event['location'],
+                  const Color(0xFFF7C108),
+                ),
+                _buildInfoItem(
+                  Iconsax.profile_2user,
+                  "${widget.event['attendees']} Attending",
+                  const Color(0xFF0A75BA),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              widget.event['description'],
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: textTheme.bodySmall,
+            ),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: _isInterested
+                      ? GradientButton(
+                    text: "I'm Interested",
+                    onPressed: () {
+                      setState(() {
+                        _isInterested = false;
+                      });
+                    },
+                    fontSize: 13,
+                    insets: 10,
+                  )
+                      : OutlinedButton(
+                    onPressed: () {
+                      setState(() {
+                        _isInterested = true;
+                      });
+                    },
+                    style: buttonStyle.copyWith(
+                      side: WidgetStateProperty.all(
+                        const BorderSide(color: AppColors.primaryRed),
+                      ),
+                      foregroundColor: WidgetStateProperty.all(
+                        AppColors.primaryRed,
+                      ),
+                    ),
+                    child: const Text("I'm Interested"),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: TextButton(
+                    onPressed: () {
+                      PersistentNavBarNavigator.pushNewScreen(
+                        context,
+                        screen: const CommunityDetailScreen(),
+                        withNavBar: false,
+                      );
+                    },
+                    style: buttonStyle.copyWith(
+                      backgroundColor: WidgetStateProperty.all(
+                        AppColors.secondaryBackground,
+                      ),
+                      foregroundColor: WidgetStateProperty.all(
+                        AppColors.primaryRed,
+                      ),
+                    ),
+                    child: const Text("View Community"),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

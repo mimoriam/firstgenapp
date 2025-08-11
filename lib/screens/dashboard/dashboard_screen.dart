@@ -18,6 +18,8 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   late PersistentTabController _controller;
+  // State to hold the desired starting tab for CommunityScreen
+  int _communityScreenInitialIndex = 0;
 
   @override
   void initState() {
@@ -25,12 +27,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _controller = PersistentTabController(initialIndex: 0);
   }
 
+  // This function will be passed to HomeScreen to handle the tab switch
+  void _handleSwitchTab(int tabIndex, {int? communitySubTabIndex}) {
+    setState(() {
+      // If a sub-tab index is provided, update the state
+      if (communitySubTabIndex != null) {
+        _communityScreenInitialIndex = communitySubTabIndex;
+      }
+    });
+    // Switch the main bottom navigation tab
+    _controller.jumpToTab(tabIndex);
+  }
+
   List<Widget> _buildScreens() {
     return [
-      const HomeScreen(),
+      HomeScreen(onSwitchTab: _handleSwitchTab),
       const SearchScreen(),
       const ChatsScreen(),
-      const CommunityScreen(),
+      CommunityScreen(
+        // Use a ValueKey to ensure CommunityScreen rebuilds when the index changes
+        key: ValueKey(_communityScreenInitialIndex),
+        initialIndex: _communityScreenInitialIndex,
+      ),
       const ProfileScreen(),
     ];
   }
@@ -84,14 +102,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // UPDATED: Wrapped with PopScope to handle back button press
     return PopScope(
       canPop: false,
       onPopInvoked: (bool didPop) {
         if (didPop) {
           return;
         }
-        showExitConfirmationDialogForHome(context);
+
+        if (_controller.index == 0) {
+          showExitConfirmationDialogForHome(context);
+        }
       },
       child: PersistentTabView(
         context,

@@ -1,5 +1,7 @@
 import 'package:firstgenapp/common/gradient_btn.dart';
+import 'package:firstgenapp/screens/dashboard/navbar_content/chats/chats_screen.dart';
 import 'package:firstgenapp/screens/dashboard/navbar_content/communities/community_detail/community_detail_screen.dart';
+import 'package:firstgenapp/screens/dashboard/navbar_content/communities/community_screen.dart';
 import 'package:firstgenapp/screens/dashboard/navbar_content/home/match_detail/match_detail_screen.dart';
 import 'package:firstgenapp/screens/dashboard/navbar_content/home/recent_activities/recent_activities_screen.dart';
 import 'package:firstgenapp/screens/dashboard/navbar_content/home/your_matches/your_matches_screen.dart';
@@ -12,7 +14,10 @@ import 'dart:ui';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart'; // Needed for ImageFilter.blur
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  // MODIFICATION: Add a callback function to handle tab switching.
+  final Function(int, {int? communitySubTabIndex}) onSwitchTab;
+
+  const HomeScreen({super.key, required this.onSwitchTab});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -122,7 +127,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 const SizedBox(height: 10),
                 _buildNewMatchesList(),
                 const SizedBox(height: 12),
-                _buildSectionHeader("Recent Events"),
+                _buildSectionHeader("Upcoming Events"),
                 const SizedBox(height: 10),
                 _buildRecentEventsList(),
                 const SizedBox(height: 12),
@@ -188,23 +193,57 @@ class _HomeScreenState extends State<HomeScreen> {
           const Color(0xFFFCE8E8),
           const Color(0xFFC62828),
         ),
-        _buildStatItem(
-          "3",
-          "New Matches",
-          const Color(0xFFE8F5E9),
-          const Color(0xFF2E7D32),
+        GestureDetector(
+          onTap: () {
+            if (context.mounted) {
+              PersistentNavBarNavigator.pushNewScreen(
+                context,
+                screen: YourMatchesScreen(),
+                withNavBar: false,
+              );
+            }
+          },
+          child: _buildStatItem(
+            "3",
+            "New Matches",
+            const Color(0xFFE8F5E9),
+            const Color(0xFF2E7D32),
+          ),
         ),
-        _buildStatItem(
-          "5",
-          "Messages",
-          const Color(0xFFE3F2FD),
-          const Color(0xFF1565C0),
+
+        GestureDetector(
+          onTap: () {
+            if (context.mounted) {
+              PersistentNavBarNavigator.pushNewScreen(
+                context,
+                screen: ChatsScreen(),
+                withNavBar: false,
+              );
+            }
+          },
+          child: _buildStatItem(
+            "5",
+            "Messages",
+            const Color(0xFFE3F2FD),
+            const Color(0xFF1565C0),
+          ),
         ),
-        _buildStatItem(
-          "6",
-          "Events",
-          const Color(0xFFFFFDE7),
-          const Color(0xFFF9A825),
+
+        GestureDetector(
+          onTap: () {
+            if (context.mounted) {
+              // MODIFICATION: Call the callback function instead of pushing a new screen.
+              // This will switch the main tab to index 1 (Communities)
+              // and tell it to open its own inner tab at index 2 (Upcoming Events).
+              widget.onSwitchTab(3, communitySubTabIndex: 2);
+            }
+          },
+          child: _buildStatItem(
+            "6",
+            "Events",
+            const Color(0xFFFFFDE7),
+            const Color(0xFFF9A825),
+          ),
         ),
       ],
     );
@@ -268,12 +307,16 @@ class _HomeScreenState extends State<HomeScreen> {
                   screen: YourMatchesScreen(),
                   withNavBar: false,
                 );
-              } else if (title == "Recent Events") {
-                PersistentNavBarNavigator.pushNewScreen(
-                  context,
-                  screen: RecentActivitiesScreen(),
-                  withNavBar: false,
-                );
+              } else if (title == "Upcoming Events") {
+                // PersistentNavBarNavigator.pushNewScreen(
+                //   context,
+                //   screen: RecentActivitiesScreen(),
+                //   withNavBar: false,
+                // );
+
+                if (context.mounted) {
+                  widget.onSwitchTab(3, communitySubTabIndex: 2);
+                }
               } else {
                 PersistentNavBarNavigator.pushNewScreen(
                   context,
