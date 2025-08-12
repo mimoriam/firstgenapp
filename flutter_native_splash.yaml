@@ -5,12 +5,12 @@ flutter_native_splash:
 #  branding: "images/icons/firstgen_logo_resized.png"
 #  branding_bottom_padding: 24
 
-  android_12:
-    color: "#CB3839"
+#  android_12:
+#    color: "#CB3839"
 #    branding: "images/icons/firstgen_logo_resized.png"
 #    branding_bottom_padding: 24
 #    image: "images/icons/firstgen_logo.png"
-    image: "images/icons/output-onlinepngtools.png"
+#    image: "images/icons/output-onlinepngtools.png"
 #    icon_background_color: "#0EC66F"
   #    branding: "images/icons/image.png"
 
