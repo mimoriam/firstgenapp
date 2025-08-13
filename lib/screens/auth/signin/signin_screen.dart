@@ -3,10 +3,13 @@ import 'package:firstgenapp/common/gradient_btn.dart';
 import 'package:firstgenapp/constants/appColors.dart';
 import 'package:firstgenapp/screens/auth/signin/signin_indirect_screen.dart';
 import 'package:firstgenapp/screens/auth/signup/signup_screen.dart';
+import 'package:firstgenapp/services/firebase_service.dart';
+import 'package:firstgenapp/utils/authException.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:firstgenapp/common/exit_dialog.dart';
 import 'package:marqueer/marqueer.dart';
+import 'package:provider/provider.dart';
 
 class SigninScreen extends StatefulWidget {
   const SigninScreen({super.key});
@@ -16,11 +19,145 @@ class SigninScreen extends StatefulWidget {
 }
 
 class _SigninScreenState extends State<SigninScreen> {
+  // MODIFICATION: Added loading state for Google button.
+  bool _isGoogleLoading = false;
+
   final List<String> _countryCodes = [
-    'us', 'ca', 'mx', 'br', 'ar', 'gb', 'fr', 'de', 'it', 'es', 'ru', 'cn',
-    'jp', 'in', 'au', 'za', 'ng', 'eg', 'co', 'se', 'il', 'ua', 'no', 'dk',
-    'lk', 'sv', 'tz', 'by', 'pk', 'bd', 'vn', 'ph', 'th', 'my', 'id', 'tr',
+    'us',
+    'ca',
+    'mx',
+    'br',
+    'ar',
+    'gb',
+    'fr',
+    'de',
+    'it',
+    'es',
+    'ru',
+    'cn',
+    'jp',
+    'in',
+    'au',
+    'za',
+    'ng',
+    'eg',
+    'co',
+    'se',
+    'il',
+    'ua',
+    'no',
+    'dk',
+    'lk',
+    'sv',
+    'tz',
+    'by',
+    'pk',
+    'bd',
+    'vn',
+    'ph',
+    'th',
+    'my',
+    'id',
+    'tr',
   ];
+
+  // MODIFICATION: Added handler for Google Sign-In.
+  Future<void> _handleGoogleSignIn() async {
+    if (_isGoogleLoading) return;
+    setState(() {
+      _isGoogleLoading = true;
+    });
+
+    final firebaseService = Provider.of<FirebaseService>(
+      context,
+      listen: false,
+    );
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+
+    try {
+      await firebaseService.signInWithGoogle();
+      // On success, AuthGate will navigate the user.
+    } on AuthException catch (e) {
+      if (e.code == 'account-exists-with-different-credential' &&
+          e.credential != null &&
+          e.email != null) {
+        final password = await _showPasswordDialog();
+        if (password != null && password.isNotEmpty) {
+          try {
+            await firebaseService.linkCredentials(
+              email: e.email!,
+              password: password,
+              credentialToLink: e.credential!,
+            );
+            // On success, AuthGate will navigate.
+          } on AuthException catch (linkError) {
+            scaffoldMessenger.showSnackBar(
+              SnackBar(
+                content: Text(linkError.message),
+                backgroundColor: AppColors.error,
+              ),
+            );
+          }
+        }
+      } else {
+        scaffoldMessenger.showSnackBar(
+          SnackBar(content: Text(e.message), backgroundColor: AppColors.error),
+        );
+      }
+    } catch (e) {
+      scaffoldMessenger.showSnackBar(
+        SnackBar(
+          content: Text("An unexpected error occurred: ${e.toString()}"),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isGoogleLoading = false;
+        });
+      }
+    }
+  }
+
+  // MODIFICATION: Added dialog to get password for account linking.
+  Future<String?> _showPasswordDialog() {
+    final passwordController = TextEditingController();
+    return showDialog<String>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Link Accounts'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'This Google account uses the same email as an existing account. Please enter your password to link them.',
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: passwordController,
+                obscureText: true,
+                decoration: const InputDecoration(labelText: 'Password'),
+                autofocus: true,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () =>
+                  Navigator.of(context).pop(passwordController.text),
+              child: const Text('Link'),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -48,11 +185,13 @@ class _SigninScreenState extends State<SigninScreen> {
                         const SizedBox(height: 32),
                         _buildWelcomeText(context),
                         const SizedBox(height: 24),
+                        // MODIFICATION: Hooked up Google Sign-In handler.
                         _buildSocialButton(
                           context: context,
                           iconPath: 'images/icons/google.svg',
                           text: 'Continue with Google',
-                          onPressed: () {},
+                          onPressed: _handleGoogleSignIn,
+                          isLoading: _isGoogleLoading,
                         ),
                         const SizedBox(height: 16),
                         _buildSocialButton(
@@ -93,7 +232,7 @@ class _SigninScreenState extends State<SigninScreen> {
                   ),
                 ),
                 _buildFlagBanner(),
-                const SizedBox(height: 32), // UPDATED: Increased bottom padding
+                const SizedBox(height: 32),
               ],
             ),
           ),
@@ -138,16 +277,18 @@ class _SigninScreenState extends State<SigninScreen> {
     );
   }
 
+  // MODIFICATION: Updated to handle loading state.
   Widget _buildSocialButton({
     required BuildContext context,
     required String iconPath,
     required String text,
     required VoidCallback onPressed,
+    bool isLoading = false,
   }) {
     return SizedBox(
       width: double.infinity,
       child: OutlinedButton(
-        onPressed: onPressed,
+        onPressed: isLoading ? null : onPressed,
         style: OutlinedButton.styleFrom(
           padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
           side: const BorderSide(color: AppColors.inputBorder, width: 1.5),
@@ -158,17 +299,25 @@ class _SigninScreenState extends State<SigninScreen> {
         child: Stack(
           alignment: Alignment.center,
           children: [
-            Align(
-              alignment: Alignment.centerLeft,
-              child: SvgPicture.asset(iconPath, height: 18, width: 18),
-            ),
-            Text(
-              text,
-              style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                color: AppColors.textPrimary,
-                fontWeight: FontWeight.w600,
+            if (!isLoading) ...[
+              Align(
+                alignment: Alignment.centerLeft,
+                child: SvgPicture.asset(iconPath, height: 18, width: 18),
               ),
-            ),
+              Text(
+                text,
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+            if (isLoading)
+              const SizedBox(
+                height: 20,
+                width: 20,
+                child: CircularProgressIndicator(strokeWidth: 2.0),
+              ),
           ],
         ),
       ),
@@ -247,10 +396,7 @@ class _SigninScreenState extends State<SigninScreen> {
 
     return SizedBox(
       height: 25,
-      child: Marqueer(
-        pps: 20,
-        child: Row(children: flagWidgets),
-      ),
+      child: Marqueer(pps: 20, child: Row(children: flagWidgets)),
     );
   }
 }

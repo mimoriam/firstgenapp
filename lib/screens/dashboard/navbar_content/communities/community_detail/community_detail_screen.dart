@@ -7,7 +7,6 @@ import 'package:firstgenapp/screens/dashboard/navbar_content/communities/communi
 import 'package:flutter/material.dart';
 import 'package:iconly/iconly.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
-import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 
 class CommunityDetailScreen extends StatefulWidget {
   const CommunityDetailScreen({super.key});

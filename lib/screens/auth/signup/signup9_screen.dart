@@ -1,7 +1,12 @@
+import 'dart:async';
 import 'package:firstgenapp/screens/auth/signup/signup10_screen.dart';
+import 'package:firstgenapp/viewmodels/SignupViewModel.dart';
 import 'package:flutter/material.dart';
 import 'package:firstgenapp/constants/appColors.dart';
+import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_keyboard_visibility/flutter_keyboard_visibility.dart';
+import 'package:form_builder_validators/form_builder_validators.dart';
+import 'package:provider/provider.dart';
 
 class Signup9Screen extends StatefulWidget {
   const Signup9Screen({super.key});
@@ -11,9 +16,10 @@ class Signup9Screen extends StatefulWidget {
 }
 
 class _Signup9ScreenState extends State<Signup9Screen> {
-  final TextEditingController _dealBreakerController = TextEditingController();
-  String? _selectedRelationship;
-  double _importanceValue = 0.4;
+  final _formKey = GlobalKey<FormBuilderState>();
+  bool _isLoading = false;
+  bool _showBottomNav = true;
+  late StreamSubscription<bool> _keyboardSubscription;
 
   final List<String> _relationshipOptions = [
     'Friendship',
@@ -25,29 +31,62 @@ class _Signup9ScreenState extends State<Signup9Screen> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    final keyboardVisibilityController = KeyboardVisibilityController();
+    _keyboardSubscription = keyboardVisibilityController.onChange.listen((
+      bool visible,
+    ) {
+      if (mounted) {
+        if (visible) {
+          setState(() {
+            _showBottomNav = false;
+          });
+        } else {
+          Future.delayed(const Duration(milliseconds: 100), () {
+            if (mounted) {
+              setState(() {
+                _showBottomNav = true;
+              });
+            }
+          });
+        }
+      }
+    });
+  }
+
+  @override
   void dispose() {
-    _dealBreakerController.dispose();
+    _keyboardSubscription.cancel();
     super.dispose();
   }
 
   void _onNextPressed() {
-    debugPrint("Seeking: $_selectedRelationship");
-    debugPrint("Importance: $_importanceValue");
-    debugPrint("Deal-breakers: ${_dealBreakerController.text}");
-
-    if (context.mounted) {
+    if (_formKey.currentState?.saveAndValidate() ?? false) {
+      setState(() {
+        _isLoading = true;
+      });
+      final viewModel = Provider.of<SignUpViewModel>(context, listen: false);
+      viewModel.updateData(_formKey.currentState!.value);
       Navigator.of(
         context,
       ).push(MaterialPageRoute(builder: (context) => const Signup10Screen()));
+      setState(() {
+        _isLoading = false;
+      });
+    } else {
+      debugPrint("Form is invalid");
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final viewModel = Provider.of<SignUpViewModel>(context, listen: false);
 
+    // MODIFICATION: Changed dismissOnCapturedTaps to false.
     return KeyboardDismissOnTap(
-      dismissOnCapturedTaps: true,
+      dismissOnCapturedTaps: false,
       child: Scaffold(
         resizeToAvoidBottomInset: true,
         backgroundColor: AppColors.primaryBackground,
@@ -63,58 +102,63 @@ class _Signup9ScreenState extends State<Signup9Screen> {
         body: SafeArea(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12.0),
-            child: Column(
-              children: [
-                Expanded(
-                  child: SingleChildScrollView(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Begin Your Journey',
-                          // UPDATED: Used smaller headline style
-                          style: textTheme.headlineSmall,
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          'Create your First Gen account and begin your cultural journey.',
-                          // UPDATED: Used smaller body style for consistency
-                          style: textTheme.bodySmall?.copyWith(fontSize: 14),
-                        ),
-                        // UPDATED: Reduced spacing
-                        const SizedBox(height: 20),
-                        Text(
-                          'What you are Looking For',
-                          // UPDATED: Used new title style
-                          style: textTheme.titleLarge,
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          'What kind of relationship are you seeking?',
-                          style: textTheme.titleMedium,
-                        ),
-                        const SizedBox(height: 10),
-                        _buildRelationshipChips(),
-                        const SizedBox(height: 20),
-                        Text(
-                          'How important is that your partner shares your cultural background?',
-                          style: textTheme.titleMedium,
-                        ),
-                        const SizedBox(height: 10),
-                        _buildImportanceSlider(),
-                        const SizedBox(height: 20),
-                        Text(
-                          'What are your absolute deal-breakers?',
-                          style: textTheme.titleMedium,
-                        ),
-                        const SizedBox(height: 10),
-                        _buildDealBreakerInput(),
-                      ],
+            child: FormBuilder(
+              key: _formKey,
+              initialValue: {
+                'relationship_seeking': viewModel.relationshipSeeking,
+                'partner_cultural_background_importance':
+                    viewModel.partnerCulturalBackgroundImportance,
+                'deal_breakers': viewModel.dealBreakers,
+              },
+              child: Column(
+                children: [
+                  Expanded(
+                    child: SingleChildScrollView(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Begin Your Journey',
+                            style: textTheme.headlineSmall,
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            'Create your First Gen account and begin your cultural journey.',
+                            style: textTheme.bodySmall?.copyWith(fontSize: 14),
+                          ),
+                          const SizedBox(height: 20),
+                          Text(
+                            'What you are Looking For',
+                            style: textTheme.titleLarge,
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            'What kind of relationship are you seeking?',
+                            style: textTheme.titleMedium,
+                          ),
+                          const SizedBox(height: 10),
+                          _buildRelationshipChips(),
+                          const SizedBox(height: 20),
+                          Text(
+                            'How important is that your partner shares your cultural background?',
+                            style: textTheme.titleMedium,
+                          ),
+                          const SizedBox(height: 10),
+                          _buildImportanceSlider(),
+                          const SizedBox(height: 20),
+                          Text(
+                            'What are your absolute deal-breakers?',
+                            style: textTheme.titleMedium,
+                          ),
+                          const SizedBox(height: 10),
+                          _buildDealBreakerInput(),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-                _buildBottomNav(textTheme),
-              ],
+                  _buildBottomNav(textTheme),
+                ],
+              ),
             ),
           ),
         ),
@@ -123,183 +167,170 @@ class _Signup9ScreenState extends State<Signup9Screen> {
   }
 
   Widget _buildRelationshipChips() {
-    return Wrap(
-      spacing: 5.0,
-      runSpacing: 10.0,
-      children: _relationshipOptions.map((relationship) {
-        final isSelected = _selectedRelationship == relationship;
-        return ChoiceChip(
-          label: Text(relationship),
-          selected: isSelected,
-          onSelected: (selected) {
-            setState(() {
-              _selectedRelationship = selected ? relationship : null;
-            });
-          },
-          // UPDATED: Reduced font size for compact chip
-          labelStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
-            fontWeight: FontWeight.w600,
-            color: isSelected ? AppColors.primaryRed : AppColors.textSecondary,
-          ),
-          selectedColor: Colors.white,
-          backgroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20.0),
-            side: BorderSide(
-              color: isSelected ? AppColors.primaryRed : AppColors.inputBorder,
-              width: 1.5,
+    return FormBuilderField<String>(
+      name: 'relationship_seeking',
+      validator: FormBuilderValidators.required(
+        errorText: 'Please select what you are looking for',
+      ),
+      builder: (FormFieldState<String> field) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Wrap(
+              spacing: 5.0,
+              runSpacing: 10.0,
+              children: _relationshipOptions.map((relationship) {
+                final isSelected = field.value == relationship;
+                return ChoiceChip(
+                  label: Text(relationship),
+                  selected: isSelected,
+                  onSelected: (selected) {
+                    if (selected) {
+                      field.didChange(relationship);
+                    }
+                  },
+                  labelStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: isSelected
+                        ? AppColors.primaryRed
+                        : AppColors.textSecondary,
+                  ),
+                  selectedColor: Colors.white,
+                  backgroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20.0),
+                    side: BorderSide(
+                      color: isSelected
+                          ? AppColors.primaryRed
+                          : AppColors.inputBorder,
+                      width: 1.5,
+                    ),
+                  ),
+                  showCheckmark: false,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14.0,
+                    vertical: 8.0,
+                  ),
+                );
+              }).toList(),
             ),
-          ),
-          showCheckmark: false,
-          // UPDATED: Reduced padding for compact chip
-          padding: const EdgeInsets.symmetric(
-            horizontal: 14.0,
-            vertical: 8.0,
-          ),
+            if (field.hasError)
+              Padding(
+                padding: const EdgeInsets.only(top: 8.0, left: 12.0),
+                child: Text(
+                  field.errorText!,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.error,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+          ],
         );
-      }).toList(),
+      },
     );
   }
 
   Widget _buildImportanceSlider() {
-    return Column(
-      children: [
-        SliderTheme(
-          data: SliderTheme.of(context).copyWith(
-            activeTrackColor: AppColors.primaryRed,
-            inactiveTrackColor: AppColors.inputBorder,
-            thumbColor: AppColors.primaryRed,
-            overlayColor: AppColors.primaryRed.withOpacity(0.2),
-            thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 10.0),
-            overlayShape: const RoundSliderOverlayShape(overlayRadius: 20.0),
-          ),
-          child: Slider(
-            value: _importanceValue,
-            onChanged: (newValue) {
-              setState(() {
-                _importanceValue = newValue;
-              });
-            },
-          ),
-        ),
-        const SizedBox(height: 4),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Not Important',
-                // UPDATED: Used smaller text style
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppColors.textSecondary,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              Text(
-                'Important',
-                // UPDATED: Used smaller text style
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppColors.textSecondary,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
+    return FormBuilderSlider(
+      name: 'partner_cultural_background_importance',
+      min: 0.0,
+      max: 1.0,
+      initialValue: 0.5,
+      divisions: 4,
+      displayValues: DisplayValues.current,
+      decoration: const InputDecoration(
+        border: InputBorder.none,
+        enabledBorder: InputBorder.none,
+        contentPadding: EdgeInsets.zero,
+      ),
+      activeColor: AppColors.primaryRed,
+      inactiveColor: AppColors.inputBorder,
     );
   }
 
   Widget _buildDealBreakerInput() {
-    return TextField(
-      controller: _dealBreakerController,
+    return FormBuilderTextField(
+      name: 'deal_breakers',
       maxLines: 4,
-      decoration: InputDecoration(
+      decoration: const InputDecoration(
         hintText: 'e.g, smoking, dishonesty, lack of family respect....',
-        // UPDATED: Reduced hint text size
-        hintStyle: const TextStyle(fontSize: 14, color: AppColors.textSecondary),
-        alignLabelWithHint: true,
-        // UPDATED: Slightly reduced vertical padding
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 20,
-          vertical: 14,
-        ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(
-            color: AppColors.inputBorder,
-            width: 1.5,
-          ),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(
-            color: AppColors.inputBorder,
-            width: 1.5,
-          ),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(
-            color: AppColors.primaryOrange,
-            width: 2,
-          ),
-        ),
+        hintStyle: TextStyle(fontSize: 14, color: AppColors.textSecondary),
+      ),
+      validator: FormBuilderValidators.required(
+        errorText: 'Please enter your deal-breakers',
       ),
     );
   }
 
   Widget _buildBottomNav(TextTheme textTheme) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 10.0, bottom: 24.0, left: 10),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          RichText(
-            text: TextSpan(
-              style: textTheme.bodyLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-              children: const <TextSpan>[
-                TextSpan(
-                  text: '9',
-                  style: TextStyle(color: AppColors.primaryOrange),
-                ),
-                TextSpan(
-                  text: ' out of 10',
-                  style: TextStyle(color: AppColors.textSecondary),
-                ),
-              ],
-            ),
-          ),
-          GestureDetector(
-            onTap: _onNextPressed,
-            child: Container(
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: const LinearGradient(
-                  colors: [AppColors.primaryRed, AppColors.primaryOrange],
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.primaryRed.withOpacity(0.3),
-                    spreadRadius: 2,
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 100),
+      transitionBuilder: (Widget child, Animation<double> animation) {
+        return SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(0.0, 1.0),
+            end: Offset.zero,
+          ).animate(animation),
+          child: child,
+        );
+      },
+      child: _showBottomNav
+          ? Padding(
+              key: const ValueKey<int>(1),
+              padding: const EdgeInsets.only(top: 10.0, bottom: 12.0, left: 10),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  RichText(
+                    text: TextSpan(
+                      style: textTheme.bodyLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                      children: const <TextSpan>[
+                        TextSpan(
+                          text: '9',
+                          style: TextStyle(color: AppColors.primaryOrange),
+                        ),
+                        TextSpan(
+                          text: ' out of 10',
+                          style: TextStyle(color: AppColors.textSecondary),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: const LinearGradient(
+                        colors: [AppColors.primaryRed, AppColors.primaryOrange],
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
+                      ),
+                    ),
+                    child: FloatingActionButton(
+                      onPressed: _isLoading ? null : _onNextPressed,
+                      elevation: 0,
+                      enableFeedback: false,
+                      backgroundColor: Colors.transparent,
+                      child: _isLoading
+                          ? const CircularProgressIndicator(
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
+                              strokeWidth: 2.0,
+                            )
+                          : const Icon(
+                              Icons.arrow_forward,
+                              color: Colors.white,
+                            ),
+                    ),
                   ),
                 ],
               ),
-              child: const Icon(Icons.arrow_forward, color: Colors.white),
-            ),
-          ),
-        ],
-      ),
+            )
+          : const SizedBox.shrink(key: ValueKey<int>(2)),
     );
   }
 }

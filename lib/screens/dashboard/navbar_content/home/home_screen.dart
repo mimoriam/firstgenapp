@@ -1,7 +1,6 @@
 import 'package:firstgenapp/common/gradient_btn.dart';
 import 'package:firstgenapp/screens/dashboard/navbar_content/chats/chats_screen.dart';
 import 'package:firstgenapp/screens/dashboard/navbar_content/communities/community_detail/community_detail_screen.dart';
-import 'package:firstgenapp/screens/dashboard/navbar_content/communities/community_screen.dart';
 import 'package:firstgenapp/screens/dashboard/navbar_content/home/match_detail/match_detail_screen.dart';
 import 'package:firstgenapp/screens/dashboard/navbar_content/home/recent_activities/recent_activities_screen.dart';
 import 'package:firstgenapp/screens/dashboard/navbar_content/home/your_matches/your_matches_screen.dart';
@@ -9,7 +8,6 @@ import 'package:flutter/material.dart';
 import 'package:firstgenapp/constants/appColors.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:intl/intl.dart';
-import 'dart:ui';
 
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart'; // Needed for ImageFilter.blur
 
@@ -105,36 +103,49 @@ class _HomeScreenState extends State<HomeScreen> {
     },
   ];
 
+  // MODIFICATION: Added refresh logic.
+  Future<void> _handleRefresh() async {
+    // Simulate a network call for fetching new data
+    await Future.delayed(const Duration(seconds: 1));
+    // In a real app, you would re-fetch your data from Firebase here.
+    // For this example, we'll just rebuild the widget.
+    setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.primaryBackground,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 12.0,
-              vertical: 8.0,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildHeader(),
-                const SizedBox(height: 12),
-                _buildStatsSection(),
-                const SizedBox(height: 12),
-                _buildSectionHeader("New Matches"),
-                const SizedBox(height: 10),
-                _buildNewMatchesList(),
-                const SizedBox(height: 12),
-                _buildSectionHeader("Upcoming Events"),
-                const SizedBox(height: 10),
-                _buildRecentEventsList(),
-                const SizedBox(height: 12),
-                _buildSectionHeader("Recent Activity"),
-                const SizedBox(height: 10),
-                _buildRecentActivityList(),
-              ],
+      // MODIFICATION: Wrapped the body with RefreshIndicator.
+      body: RefreshIndicator(
+        onRefresh: _handleRefresh,
+        child: SafeArea(
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 12.0,
+                vertical: 8.0,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildHeader(),
+                  const SizedBox(height: 12),
+                  _buildStatsSection(),
+                  const SizedBox(height: 12),
+                  _buildSectionHeader("New Matches"),
+                  const SizedBox(height: 10),
+                  _buildNewMatchesList(),
+                  const SizedBox(height: 12),
+                  _buildSectionHeader("Upcoming Events"),
+                  const SizedBox(height: 10),
+                  _buildRecentEventsList(),
+                  const SizedBox(height: 12),
+                  _buildSectionHeader("Recent Activity"),
+                  const SizedBox(height: 10),
+                  _buildRecentActivityList(),
+                ],
+              ),
             ),
           ),
         ),
@@ -210,7 +221,6 @@ class _HomeScreenState extends State<HomeScreen> {
             const Color(0xFF2E7D32),
           ),
         ),
-
         GestureDetector(
           onTap: () {
             if (context.mounted) {
@@ -228,7 +238,6 @@ class _HomeScreenState extends State<HomeScreen> {
             const Color(0xFF1565C0),
           ),
         ),
-
         GestureDetector(
           onTap: () {
             if (context.mounted) {

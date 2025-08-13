@@ -3,6 +3,10 @@ cd /Users/hum/Library/Android/sdk/platform-tools
 ./adb connect 192.168.1.7:5555
 
 dart run flutter_native_splash:create
+flutter build apk --split-per-abi
+dart run flutter_launcher_icons
+
+keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android
 
 Splash > Onboard (x3)
 Signin > SigninIndirect ↓  > Forgot Password > OTP > New Pass

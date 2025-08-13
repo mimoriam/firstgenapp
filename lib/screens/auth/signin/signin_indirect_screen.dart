@@ -1,14 +1,17 @@
+import 'package:firstgenapp/constants/appColors.dart';
 import 'package:firstgenapp/screens/auth/signin/forgot_password/forgot_password_screen.dart';
 import 'package:firstgenapp/screens/auth/signup/signup_screen.dart';
-import 'package:firstgenapp/screens/dashboard/dashboard_screen.dart';
+import 'package:firstgenapp/services/firebase_service.dart';
+import 'package:firstgenapp/utils/authException.dart';
 import 'package:flutter/material.dart';
 import 'package:firstgenapp/common/gradient_btn.dart';
-import 'package:firstgenapp/constants/appColors.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:flutter_keyboard_visibility/flutter_keyboard_visibility.dart';
 import 'package:iconly/iconly.dart';
+import 'package:provider/provider.dart';
+import 'package:tap_debouncer/tap_debouncer.dart';
 
 class SigninIndirectScreen extends StatefulWidget {
   const SigninIndirectScreen({super.key});
@@ -20,25 +23,155 @@ class SigninIndirectScreen extends StatefulWidget {
 class _SigninIndirectScreenState extends State<SigninIndirectScreen> {
   bool _isPasswordObscured = true;
   final _formKey = GlobalKey<FormBuilderState>();
-  bool _rememberMe = false;
+  bool _isLoading = false;
+  // MODIFICATION: Added loading state for Google Sign-In button.
+  bool _isGoogleLoading = false;
 
-  void _onSignInPressed() {
+  Future<void> _onSignInPressed() async {
     if (_formKey.currentState?.saveAndValidate() ?? false) {
+      setState(() {
+        _isLoading = true;
+      });
+
       final formData = _formKey.currentState?.value;
-      debugPrint("Form is valid. Data: $formData");
-      debugPrint("Remember Me is checked: $_rememberMe");
+      final firebaseService = Provider.of<FirebaseService>(
+        context,
+        listen: false,
+      );
 
-      // TODO: Implement Sign In Logic with formData and _rememberMe value
-
-      if (context.mounted) {
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (context) => const DashboardScreen()),
-          (Route<dynamic> route) => false,
+      try {
+        await firebaseService.loginWithEmail(
+          email: formData?["email"],
+          password: formData?["password"],
         );
+
+        // AuthGate will handle navigation, so no need for pushAndRemoveUntil here.
+      } on AuthException catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(e.message),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text("Failed to sign in: ${e.toString()}"),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
       }
     } else {
       debugPrint("Form is invalid");
     }
+  }
+
+  // MODIFICATION: Added handler for Google Sign-In.
+  Future<void> _handleGoogleSignIn() async {
+    if (_isGoogleLoading) return;
+    setState(() {
+      _isGoogleLoading = true;
+    });
+
+    final firebaseService = Provider.of<FirebaseService>(
+      context,
+      listen: false,
+    );
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+
+    try {
+      await firebaseService.signInWithGoogle();
+      // On success, AuthGate will navigate the user.
+    } on AuthException catch (e) {
+      if (e.code == 'account-exists-with-different-credential' &&
+          e.credential != null &&
+          e.email != null) {
+        final password = await _showPasswordDialog();
+        if (password != null && password.isNotEmpty) {
+          try {
+            await firebaseService.linkCredentials(
+              email: e.email!,
+              password: password,
+              credentialToLink: e.credential!,
+            );
+            // On success, AuthGate will navigate.
+          } on AuthException catch (linkError) {
+            scaffoldMessenger.showSnackBar(
+              SnackBar(
+                content: Text(linkError.message),
+                backgroundColor: AppColors.error,
+              ),
+            );
+          }
+        }
+      } else {
+        scaffoldMessenger.showSnackBar(
+          SnackBar(content: Text(e.message), backgroundColor: AppColors.error),
+        );
+      }
+    } catch (e) {
+      scaffoldMessenger.showSnackBar(
+        SnackBar(
+          content: Text("An unexpected error occurred: ${e.toString()}"),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isGoogleLoading = false;
+        });
+      }
+    }
+  }
+
+  // MODIFICATION: Added dialog to get password for account linking.
+  Future<String?> _showPasswordDialog() {
+    final passwordController = TextEditingController();
+    return showDialog<String>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Link Accounts'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'This Google account uses the same email as an existing account. Please enter your password to link them.',
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: passwordController,
+                obscureText: true,
+                decoration: const InputDecoration(labelText: 'Password'),
+                autofocus: true,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () =>
+                  Navigator.of(context).pop(passwordController.text),
+              child: const Text('Link'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -94,7 +227,6 @@ class _SigninIndirectScreenState extends State<SigninIndirectScreen> {
                                 vertical: 14,
                               ),
                               prefixIcon: Icon(
-                                // Icons.email_outlined,
                                 IconlyLight.message,
                                 color: AppColors.textSecondary,
                               ),
@@ -122,7 +254,6 @@ class _SigninIndirectScreenState extends State<SigninIndirectScreen> {
                                 vertical: 14,
                               ),
                               prefixIcon: const Icon(
-                                // Icons.lock_outline,
                                 IconlyLight.unlock,
                                 color: AppColors.textSecondary,
                               ),
@@ -131,8 +262,6 @@ class _SigninIndirectScreenState extends State<SigninIndirectScreen> {
                                   _isPasswordObscured
                                       ? IconlyLight.hide
                                       : IconlyLight.show,
-                                  // ? Icons.visibility_off_outlined
-                                  // : Icons.visibility_outlined,
                                   color: AppColors.textSecondary,
                                 ),
                                 onPressed: () {
@@ -157,11 +286,33 @@ class _SigninIndirectScreenState extends State<SigninIndirectScreen> {
                       ),
                     ),
                   ),
-                  GradientButton(
-                    text: 'Sign In',
-                    onPressed: _onSignInPressed,
-                    insets: 14,
-                    fontSize: 15,
+                  TapDebouncer(
+                    cooldown: const Duration(seconds: 3),
+                    onTap: _isLoading ? null : _onSignInPressed,
+                    builder: (BuildContext context, TapDebouncerFunc? onTap) {
+                      return Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          GradientButton(
+                            text: _isLoading ? '' : 'Sign In',
+                            onPressed: onTap ?? () {},
+                            insets: 14,
+                            fontSize: 15,
+                          ),
+                          if (_isLoading)
+                            const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Colors.white,
+                                ),
+                                strokeWidth: 2.0,
+                              ),
+                            ),
+                        ],
+                      );
+                    },
                   ),
                   const SizedBox(height: 14),
                 ],
@@ -175,46 +326,9 @@ class _SigninIndirectScreenState extends State<SigninIndirectScreen> {
 
   Widget _buildRememberAndForgotRow(BuildContext context) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      mainAxisAlignment: MainAxisAlignment.end,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        // UPDATED: Wrapped in Transform.translate to perfectly align the checkbox
-        Transform.translate(
-          offset: const Offset(-10, 0),
-          child: Row(
-            children: [
-              Checkbox(
-                value: _rememberMe,
-                onChanged: (bool? value) {
-                  setState(() {
-                    _rememberMe = value ?? false;
-                  });
-                },
-                activeColor: AppColors.primaryRed,
-                side: const BorderSide(
-                  color: AppColors.inputBorder,
-                  width: 1.5,
-                ),
-                // UPDATED: Reduced tap area to help with alignment
-                // tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
-              GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _rememberMe = !_rememberMe;
-                  });
-                },
-                child: Text(
-                  'Remember me',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    fontWeight: FontWeight.w500,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
         TextButton(
           onPressed: () {
             if (context.mounted) {
@@ -225,11 +339,9 @@ class _SigninIndirectScreenState extends State<SigninIndirectScreen> {
               );
             }
           },
-          // UPDATED: Removed padding to ensure right alignment
           style: TextButton.styleFrom(
             padding: EdgeInsets.zero,
             minimumSize: Size.zero,
-            // tapTargetSize: MaterialTapTargetSize.shrinkWrap,
           ),
           child: Text(
             'Forgot Password',
@@ -297,11 +409,16 @@ class _SigninIndirectScreenState extends State<SigninIndirectScreen> {
     );
   }
 
+  // MODIFICATION: Hooked up Google Sign-In and loading state.
   Widget _buildSocialLoginRow() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        _buildSocialIconButton('images/icons/google.svg', () {}),
+        _buildSocialIconButton(
+          'images/icons/google.svg',
+          _isGoogleLoading ? null : _handleGoogleSignIn,
+          isLoading: _isGoogleLoading,
+        ),
         const SizedBox(width: 20),
         _buildSocialIconButton('images/icons/apple.svg', () {}),
         const SizedBox(width: 20),
@@ -310,7 +427,12 @@ class _SigninIndirectScreenState extends State<SigninIndirectScreen> {
     );
   }
 
-  Widget _buildSocialIconButton(String iconPath, VoidCallback onPressed) {
+  // MODIFICATION: Updated to handle loading state.
+  Widget _buildSocialIconButton(
+    String iconPath,
+    VoidCallback? onPressed, {
+    bool isLoading = false,
+  }) {
     return OutlinedButton(
       onPressed: onPressed,
       style: OutlinedButton.styleFrom(
@@ -318,7 +440,13 @@ class _SigninIndirectScreenState extends State<SigninIndirectScreen> {
         side: const BorderSide(color: AppColors.inputBorder, width: 1.5),
         padding: const EdgeInsets.symmetric(horizontal: 34, vertical: 17),
       ),
-      child: SvgPicture.asset(iconPath, height: 20, width: 20),
+      child: isLoading
+          ? const SizedBox(
+              height: 20,
+              width: 20,
+              child: CircularProgressIndicator(strokeWidth: 2.0),
+            )
+          : SvgPicture.asset(iconPath, height: 20, width: 20),
     );
   }
 }

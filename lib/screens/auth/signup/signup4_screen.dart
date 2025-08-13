@@ -1,6 +1,9 @@
 import 'package:firstgenapp/screens/auth/signup/signup5_screen.dart';
+import 'package:firstgenapp/viewmodels/SignupViewModel.dart';
 import 'package:flutter/material.dart';
 import 'package:firstgenapp/constants/appColors.dart';
+import 'package:flutter_form_builder/flutter_form_builder.dart';
+import 'package:provider/provider.dart';
 
 class Signup4Screen extends StatefulWidget {
   const Signup4Screen({super.key});
@@ -10,11 +13,8 @@ class Signup4Screen extends StatefulWidget {
 }
 
 class _Signup4ScreenState extends State<Signup4Screen> {
-  double _familyImportanceValue = 0.4;
-  final Set<String> _selectedTraditions = {
-    'Cultural holiday',
-    'Food traditions',
-  };
+  final _formKey = GlobalKey<FormBuilderState>();
+  bool _isLoading = false;
 
   final List<String> _traditionOptions = [
     'Cultural holiday',
@@ -24,19 +24,27 @@ class _Signup4ScreenState extends State<Signup4Screen> {
   ];
 
   void _onNextPressed() {
-    debugPrint("Family Importance: $_familyImportanceValue");
-    debugPrint("Selected Traditions: $_selectedTraditions");
-
-    if (context.mounted) {
+    if (_formKey.currentState?.saveAndValidate() ?? false) {
+      setState(() {
+        _isLoading = true;
+      });
+      final viewModel = Provider.of<SignUpViewModel>(context, listen: false);
+      viewModel.updateData(_formKey.currentState!.value);
       Navigator.of(
         context,
       ).push(MaterialPageRoute(builder: (context) => const Signup5Screen()));
+      setState(() {
+        _isLoading = false;
+      });
+    } else {
+      debugPrint("Form is invalid");
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final viewModel = Provider.of<SignUpViewModel>(context, listen: false);
 
     return Scaffold(
       resizeToAvoidBottomInset: true,
@@ -53,52 +61,55 @@ class _Signup4ScreenState extends State<Signup4Screen> {
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24.0),
-          child: Column(
-            children: [
-              Expanded(
-                child: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Begin Your Journey',
-                        // UPDATED: Used smaller headline style
-                        style: textTheme.headlineSmall,
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        'Create your First Gen account and begin your cultural journey.',
-                        // UPDATED: Used smaller body style for consistency
-                        style: textTheme.bodySmall?.copyWith(fontSize: 14),
-                      ),
-                      // UPDATED: Reduced spacing
-                      const SizedBox(height: 20),
-                      Text(
-                        'Family & Traditions',
-                        // UPDATED: Used new title style
-                        style: textTheme.titleLarge,
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        'How important is family in your life?',
-                        style: textTheme.titleMedium,
-                      ),
-                      const SizedBox(height: 12),
-                      _buildFamilySlider(),
-                      const SizedBox(height: 20),
-                      Text(
-                        'Which traditions are important to you?',
-                        style: textTheme.titleMedium,
-                      ),
-                      const SizedBox(height: 12),
-                      _buildTraditionChips(),
-                      const SizedBox(height: 20),
-                    ],
+          child: FormBuilder(
+            key: _formKey,
+            initialValue: {
+              'family_importance': viewModel.familyImportance,
+              'traditions': viewModel.traditions,
+            },
+            child: Column(
+              children: [
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Begin Your Journey',
+                          style: textTheme.headlineSmall,
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'Create your First Gen account and begin your cultural journey.',
+                          style: textTheme.bodySmall?.copyWith(fontSize: 14),
+                        ),
+                        const SizedBox(height: 20),
+                        Text(
+                          'Family & Traditions',
+                          style: textTheme.titleLarge,
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'How important is family in your life?',
+                          style: textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 12),
+                        _buildFamilySlider(),
+                        const SizedBox(height: 20),
+                        Text(
+                          'Which traditions are important to you?',
+                          style: textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 12),
+                        _buildTraditionChips(),
+                        const SizedBox(height: 20),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-              _buildBottomNav(textTheme),
-            ],
+                _buildBottomNav(textTheme),
+              ],
+            ),
           ),
         ),
       ),
@@ -106,106 +117,106 @@ class _Signup4ScreenState extends State<Signup4Screen> {
   }
 
   Widget _buildFamilySlider() {
-    return Column(
-      children: [
-        SliderTheme(
-          data: SliderTheme.of(context).copyWith(
-            activeTrackColor: AppColors.primaryRed,
-            inactiveTrackColor: AppColors.inputBorder,
-            thumbColor: AppColors.primaryRed,
-            overlayColor: AppColors.primaryRed.withOpacity(0.2),
-            thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 10.0),
-            overlayShape: const RoundSliderOverlayShape(overlayRadius: 15.0),
-          ),
-          child: Slider(
-            value: _familyImportanceValue,
-            onChanged: (newValue) {
-              setState(() {
-                _familyImportanceValue = newValue;
-              });
-            },
-          ),
-        ),
-        const SizedBox(height: 4),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Not Important',
-                // UPDATED: Used smaller text style
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppColors.textSecondary,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              Text(
-                'Important',
-                // UPDATED: Used smaller text style
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppColors.textSecondary,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
+    return FormBuilderSlider(
+      name: 'family_importance',
+      min: 0.0,
+      max: 1.0,
+      initialValue: 0.5,
+      divisions: 4,
+      displayValues: DisplayValues.current,
+      decoration: const InputDecoration(
+        border: InputBorder.none,
+        enabledBorder: InputBorder.none,
+        contentPadding: EdgeInsets.zero,
+      ),
+      activeColor: AppColors.primaryRed,
+      inactiveColor: AppColors.inputBorder,
     );
   }
 
   Widget _buildTraditionChips() {
-    return Wrap(
-      spacing: 8.0,
-      runSpacing: 8.0,
-      children: _traditionOptions.map((tradition) {
-        final isSelected = _selectedTraditions.contains(tradition);
-        return ChoiceChip(
-          label: Text(tradition),
-          selected: isSelected,
-          onSelected: (selected) {
-            setState(() {
-              if (selected) {
-                _selectedTraditions.add(tradition);
-              } else {
-                _selectedTraditions.remove(tradition);
-              }
-            });
-          },
-          // UPDATED: Reduced font size for compact chip
-          labelStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: isSelected ? AppColors.primaryRed : AppColors.textSecondary,
-          ),
-          selectedColor: Colors.white,
-          backgroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15.0),
-            side: BorderSide(
-              color: isSelected ? AppColors.primaryRed : AppColors.inputBorder,
-              width: 1.5,
+    return FormBuilderField<List<String>>(
+      name: 'traditions',
+      validator: (value) {
+        if (value == null || value.isEmpty) {
+          return 'Please select at least one tradition';
+        }
+        return null;
+      },
+      builder: (FormFieldState<List<String>> field) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Wrap(
+              spacing: 8.0,
+              runSpacing: 8.0,
+              children: _traditionOptions.map((tradition) {
+                final isSelected = field.value?.contains(tradition) ?? false;
+                return ChoiceChip(
+                  label: Text(tradition),
+                  selected: isSelected,
+                  onSelected: (selected) {
+                    List<String> currentSelection = List.from(
+                      field.value ?? [],
+                    );
+                    if (selected) {
+                      currentSelection.add(tradition);
+                    } else {
+                      currentSelection.remove(tradition);
+                    }
+                    field.didChange(currentSelection);
+                  },
+                  labelStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: isSelected
+                        ? AppColors.primaryRed
+                        : AppColors.textSecondary,
+                  ),
+                  selectedColor: Colors.white,
+                  backgroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(15.0),
+                    side: BorderSide(
+                      color: isSelected
+                          ? AppColors.primaryRed
+                          : AppColors.inputBorder,
+                      width: 1.5,
+                    ),
+                  ),
+                  showCheckmark: false,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16.0,
+                    vertical: 10.0,
+                  ),
+                );
+              }).toList(),
             ),
-          ),
-          showCheckmark: false,
-          // UPDATED: Reduced padding for compact chip
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
+            if (field.hasError)
+              Padding(
+                padding: const EdgeInsets.only(top: 8.0, left: 12.0),
+                child: Text(
+                  field.errorText!,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.error,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+          ],
         );
-      }).toList(),
+      },
     );
   }
 
   Widget _buildBottomNav(TextTheme textTheme) {
     return Padding(
-      padding: const EdgeInsets.only(top: 10.0, bottom: 24.0),
+      padding: const EdgeInsets.only(top: 10.0, bottom: 12.0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           RichText(
             text: TextSpan(
-              style: textTheme.bodyLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+              style: textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold),
               children: const <TextSpan>[
                 TextSpan(
                   text: '4',
@@ -226,21 +237,18 @@ class _Signup4ScreenState extends State<Signup4Screen> {
                 begin: Alignment.centerLeft,
                 end: Alignment.centerRight,
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.primaryRed.withOpacity(0.3),
-                  spreadRadius: 2,
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
             ),
             child: FloatingActionButton(
-              onPressed: _onNextPressed,
+              onPressed: _isLoading ? null : _onNextPressed,
               elevation: 0,
               enableFeedback: false,
               backgroundColor: Colors.transparent,
-              child: const Icon(Icons.arrow_forward, color: Colors.white),
+              child: _isLoading
+                  ? const CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                strokeWidth: 2.0,
+              )
+                  : const Icon(Icons.arrow_forward, color: Colors.white),
             ),
           ),
         ],

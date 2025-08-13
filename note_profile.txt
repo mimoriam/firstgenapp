@@ -1,0 +1,92 @@
+class _ProfileCheckGate extends StatelessWidget {
+  final User user;
+  const _ProfileCheckGate({required this.user});
+
+  @override
+  Widget build(BuildContext context) {
+    // Access the service again
+    final firebaseService = Provider.of<FirebaseService>(context, listen: false);
+
+    return FutureBuilder<bool>(
+      future: firebaseService.checkIfUserDataExistsForSocialLogin(user: user),
+      builder: (context, snapshot) {
+        // Handle errors and loading state for the profile check
+        if (snapshot.hasError) {
+          return ErrorScreen(error: snapshot.error.toString());
+        }
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const LoadingIndicator();
+        }
+
+        final profileExists = snapshot.data ?? false;
+
+        if (profileExists) {
+          // Profile exists, go to home
+          return const HomeScreen();
+        } else {
+          // Profile doesn't exist, go to profile creation screen
+          return SignupGoogleScreen(user: user);
+        }
+      },
+    );
+  }
+}
+
+
+try {
+        final auth = FirebaseAuth.instance;
+
+        final firebaseService = Provider.of<FirebaseService>(
+          context,
+          listen: false,
+        );
+
+        await firebaseService.loginWithEmail(
+          email: formData?["email"],
+          password: formData?["password"],
+        );
+
+        if (mounted) {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (context) => const DashboardScreen()),
+            (Route<dynamic> route) => false,
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text("Failed to sign in: ${e.toString()}")),
+          );
+        }
+      }
+
+      try {
+              final firebaseService = Provider.of<FirebaseService>(
+                context,
+                listen: false,
+              );
+
+              print(formData);
+
+              await firebaseService.signUpWithEmail(
+                email: formData?["email"],
+                password: formData?["password"],
+                fullName: formData?["full_name"],
+              );
+
+              if (mounted) {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (context) => const Signup2Screen()),
+                );
+
+                // Navigator.of(context).pushReplacement(
+                //   MaterialPageRoute(builder: (context) => const SigninScreen()),
+                // );
+              }
+            } catch (e) {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text("Failed to sign up: ${e.toString()}")),
+                );
+              }
+            }

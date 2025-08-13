@@ -1,6 +1,9 @@
 import 'package:firstgenapp/screens/auth/signup/signup8_screen.dart';
+import 'package:firstgenapp/viewmodels/SignupViewModel.dart';
 import 'package:flutter/material.dart';
 import 'package:firstgenapp/constants/appColors.dart';
+import 'package:flutter_form_builder/flutter_form_builder.dart';
+import 'package:provider/provider.dart';
 
 class Signup7Screen extends StatefulWidget {
   const Signup7Screen({super.key});
@@ -10,11 +13,8 @@ class Signup7Screen extends StatefulWidget {
 }
 
 class _Signup7ScreenState extends State<Signup7Screen> {
-  final Set<String> _selectedValues = {
-    'Family first',
-    'Community service',
-    'Hard work & ambition',
-  };
+  final _formKey = GlobalKey<FormBuilderState>();
+  bool _isLoading = false;
 
   final List<String> _valueOptions = [
     'Family first',
@@ -26,30 +26,27 @@ class _Signup7ScreenState extends State<Signup7Screen> {
   ];
 
   void _onNextPressed() {
-    debugPrint("Selected Values: $_selectedValues");
-
-    if (context.mounted) {
+    if (_formKey.currentState?.saveAndValidate() ?? false) {
+      setState(() {
+        _isLoading = true;
+      });
+      final viewModel = Provider.of<SignUpViewModel>(context, listen: false);
+      viewModel.updateData(_formKey.currentState!.value);
       Navigator.of(
         context,
       ).push(MaterialPageRoute(builder: (context) => const Signup8Screen()));
+      setState(() {
+        _isLoading = false;
+      });
+    } else {
+      debugPrint("Form is invalid");
     }
-  }
-
-  void _onValueSelected(bool selected, String value) {
-    setState(() {
-      if (selected) {
-        if (_selectedValues.length < 3) {
-          _selectedValues.add(value);
-        }
-      } else {
-        _selectedValues.remove(value);
-      }
-    });
   }
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final viewModel = Provider.of<SignUpViewModel>(context, listen: false);
 
     return Scaffold(
       resizeToAvoidBottomInset: true,
@@ -66,45 +63,42 @@ class _Signup7ScreenState extends State<Signup7Screen> {
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24.0),
-          child: Column(
-            children: [
-              Expanded(
-                child: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Begin Your Journey',
-                        // UPDATED: Used smaller headline style
-                        style: textTheme.headlineSmall,
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        'Create your First Gen account and begin your cultural journey.',
-                        // UPDATED: Used smaller body style for consistency
-                        style: textTheme.bodySmall?.copyWith(fontSize: 14),
-                      ),
-                      // UPDATED: Reduced spacing
-                      const SizedBox(height: 20),
-                      Text(
-                        'Values & Beliefs',
-                        // UPDATED: Used new title style
-                        style: textTheme.titleLarge,
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        'What are your core values? (Select your top 3)',
-                        style: textTheme.titleMedium,
-                      ),
-                      const SizedBox(height: 12),
-                      _buildValueChips(),
-                      const SizedBox(height: 20),
-                    ],
+          child: FormBuilder(
+            key: _formKey,
+            initialValue: {'core_values': viewModel.coreValues},
+            child: Column(
+              children: [
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Begin Your Journey',
+                          style: textTheme.headlineSmall,
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'Create your First Gen account and begin your cultural journey.',
+                          style: textTheme.bodySmall?.copyWith(fontSize: 14),
+                        ),
+                        const SizedBox(height: 20),
+                        Text('Values & Beliefs', style: textTheme.titleLarge),
+                        const SizedBox(height: 12),
+                        Text(
+                          'What are your core values? (Select your top 3)',
+                          style: textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 12),
+                        _buildValueChips(),
+                        const SizedBox(height: 20),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-              _buildBottomNav(textTheme),
-            ],
+                _buildBottomNav(textTheme),
+              ],
+            ),
           ),
         ),
       ),
@@ -112,49 +106,94 @@ class _Signup7ScreenState extends State<Signup7Screen> {
   }
 
   Widget _buildValueChips() {
-    return Wrap(
-      spacing: 8.0,
-      runSpacing: 8.0,
-      children: _valueOptions.map((value) {
-        final isSelected = _selectedValues.contains(value);
-        return ChoiceChip(
-          label: Text(value),
-          selected: isSelected,
-          onSelected: (selected) => _onValueSelected(selected, value),
-          // UPDATED: Reduced font size for compact chip
-          labelStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
-            fontWeight: FontWeight.w600,
-            color: isSelected ? AppColors.primaryRed : AppColors.textSecondary,
-          ),
-          selectedColor: Colors.white,
-          backgroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15.0),
-            side: BorderSide(
-              color: isSelected ? AppColors.primaryRed : AppColors.inputBorder,
-              width: 1.5,
+    return FormBuilderField<List<String>>(
+      name: 'core_values',
+      validator: (value) {
+        if (value == null || value.isEmpty) {
+          return 'Please select at least one value';
+        }
+        if (value.length > 3) {
+          return 'Please select no more than 3 values';
+        }
+        return null;
+      },
+      builder: (FormFieldState<List<String>> field) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Wrap(
+              spacing: 8.0,
+              runSpacing: 8.0,
+              children: _valueOptions.map((value) {
+                final isSelected = field.value?.contains(value) ?? false;
+                return ChoiceChip(
+                  label: Text(value),
+                  selected: isSelected,
+                  onSelected: (selected) {
+                    List<String> currentSelection = List.from(
+                      field.value ?? [],
+                    );
+                    if (selected) {
+                      if (currentSelection.length < 3) {
+                        currentSelection.add(value);
+                      }
+                    } else {
+                      currentSelection.remove(value);
+                    }
+                    field.didChange(currentSelection);
+                  },
+                  labelStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: isSelected
+                        ? AppColors.primaryRed
+                        : AppColors.textSecondary,
+                  ),
+                  selectedColor: Colors.white,
+                  backgroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(15.0),
+                    side: BorderSide(
+                      color: isSelected
+                          ? AppColors.primaryRed
+                          : AppColors.inputBorder,
+                      width: 1.5,
+                    ),
+                  ),
+                  showCheckmark: false,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16.0,
+                    vertical: 10.0,
+                  ),
+                );
+              }).toList(),
             ),
-          ),
-          showCheckmark: false,
-          // UPDATED: Reduced padding for compact chip
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
+            if (field.hasError)
+              Padding(
+                padding: const EdgeInsets.only(top: 8.0, left: 12.0),
+                child: Text(
+                  field.errorText!,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.error,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+          ],
         );
-      }).toList(),
+      },
     );
   }
 
   Widget _buildBottomNav(TextTheme textTheme) {
     return Padding(
-      padding: const EdgeInsets.only(top: 10.0, bottom: 24.0),
+      padding: const EdgeInsets.only(top: 10.0, bottom: 12.0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           RichText(
             text: TextSpan(
-              style: textTheme.bodyLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+              style: textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold),
               children: const <TextSpan>[
                 TextSpan(
                   text: '7',
@@ -167,28 +206,26 @@ class _Signup7ScreenState extends State<Signup7Screen> {
               ],
             ),
           ),
-          GestureDetector(
-            onTap: _onNextPressed,
-            child: Container(
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: const LinearGradient(
-                  colors: [AppColors.primaryRed, AppColors.primaryOrange],
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.primaryRed.withOpacity(0.3),
-                    spreadRadius: 2,
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
+          Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: const LinearGradient(
+                colors: [AppColors.primaryRed, AppColors.primaryOrange],
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
               ),
-              child: const Icon(Icons.arrow_forward, color: Colors.white),
+            ),
+            child: FloatingActionButton(
+              onPressed: _isLoading ? null : _onNextPressed,
+              elevation: 0,
+              enableFeedback: false,
+              backgroundColor: Colors.transparent,
+              child: _isLoading
+                  ? const CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      strokeWidth: 2.0,
+                    )
+                  : const Icon(Icons.arrow_forward, color: Colors.white),
             ),
           ),
         ],

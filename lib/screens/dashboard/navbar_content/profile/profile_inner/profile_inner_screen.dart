@@ -1,5 +1,8 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:country_picker/country_picker.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firstgenapp/common/gradient_btn.dart';
+import 'package:firstgenapp/services/firebase_service.dart';
 import 'package:flutter/material.dart';
 import 'package:firstgenapp/constants/appColors.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
@@ -7,6 +10,8 @@ import 'package:flutter_keyboard_visibility/flutter_keyboard_visibility.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:iconly/iconly.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+import 'package:tap_debouncer/tap_debouncer.dart';
 
 class ProfileInnerScreen extends StatefulWidget {
   const ProfileInnerScreen({super.key});
@@ -18,8 +23,22 @@ class ProfileInnerScreen extends StatefulWidget {
 class _ProfileInnerScreenState extends State<ProfileInnerScreen> {
   final _formKey = GlobalKey<FormBuilderState>();
   final _languageController = TextEditingController();
-
   final _languagesFieldKey = GlobalKey<FormBuilderFieldState>();
+
+  User? _user;
+  late Future<DocumentSnapshot<Map<String, dynamic>>?> _userProfileFuture;
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final firebaseService = Provider.of<FirebaseService>(
+      context,
+      listen: false,
+    );
+    _user = firebaseService.currentUser;
+    _userProfileFuture = firebaseService.getUserProfile();
+  }
 
   @override
   void dispose() {
@@ -27,11 +46,58 @@ class _ProfileInnerScreenState extends State<ProfileInnerScreen> {
     super.dispose();
   }
 
-  void _onSavePressed() {
+  Future<void> _onSavePressed() async {
     if (_formKey.currentState?.saveAndValidate() ?? false) {
-      debugPrint("Form is valid. Data: ${_formKey.currentState?.value}");
-      // TODO: Implement save logic with the form data
-      Navigator.of(context).pop();
+      setState(() {
+        _isLoading = true;
+      });
+
+      final firebaseService = Provider.of<FirebaseService>(
+        context,
+        listen: false,
+      );
+      final formData = _formKey.currentState!.value;
+
+      final Map<String, dynamic> dataToUpdate = {
+        'fullName': formData['full_name'],
+        'gender': formData['gender'],
+        'dateOfBirth': formData['dob'],
+        'profession': formData['profession'],
+        'culturalHeritage': formData['country'],
+        'languages': formData['languages'],
+        'bio': formData['bio'],
+      };
+
+      try {
+        await firebaseService.updateUserProfile(dataToUpdate);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              key: UniqueKey(),
+              duration: const Duration(milliseconds: 500),
+              content: const Text("Profile updated successfully!"),
+            ),
+          );
+          // Navigator.of(context).pop(true); // Pop with a success result
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).clearSnackBars();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              key: UniqueKey(),
+              content: Text("Failed to update profile: ${e.toString()}"),
+            ),
+          );
+        }
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
+      }
     } else {
       debugPrint("Form is invalid");
     }
@@ -65,168 +131,207 @@ class _ProfileInnerScreenState extends State<ProfileInnerScreen> {
           icon: const Icon(Icons.arrow_back, color: AppColors.textSecondary),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        title: Text(
-          'Profile',
-          // UPDATED: Inherited from theme
-          style: textTheme.titleLarge,
-        ),
+        title: Text('Profile', style: textTheme.titleLarge),
       ),
-      body: KeyboardDismissOnTap(
-        dismissOnCapturedTaps: true,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
-          child: FormBuilder(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildProfileAvatar(),
-                const SizedBox(height: 24),
-                _buildSectionTitle('Full Name', textTheme),
-                FormBuilderTextField(
-                  name: 'full_name',
-                  initialValue: 'Rana Utban',
-                  decoration: const InputDecoration(
-                    hintText: 'Enter your full name',
-                    // UPDATED: Compacted field
-                    hintStyle: TextStyle(
-                      fontSize: 14,
-                      color: AppColors.textSecondary,
+      body: FutureBuilder<DocumentSnapshot<Map<String, dynamic>>?>(
+        future: _userProfileFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          }
+          if (!snapshot.hasData || snapshot.data == null) {
+            return const Center(child: Text('No profile data found.'));
+          }
+
+          final userData = snapshot.data!.data();
+          final dob = (userData?['dateOfBirth'] as Timestamp?)?.toDate();
+
+          return KeyboardDismissOnTap(
+            dismissOnCapturedTaps: true,
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 24.0,
+                vertical: 16.0,
+              ),
+              child: FormBuilder(
+                key: _formKey,
+                initialValue: {
+                  'full_name': userData?['fullName'] ?? _user?.displayName,
+                  'email': userData?['email'] ?? _user?.email,
+                  'gender': userData?['gender'],
+                  'dob': dob,
+                  'profession': userData?['profession'],
+                  'country': userData?['culturalHeritage'],
+                  'languages': List<String>.from(userData?['languages'] ?? []),
+                  'bio': userData?['bio'],
+                },
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildProfileAvatar(),
+                    const SizedBox(height: 24),
+                    _buildSectionTitle('Full Name', textTheme),
+                    FormBuilderTextField(
+                      name: 'full_name',
+                      decoration: const InputDecoration(
+                        hintText: 'Enter your full name',
+                        hintStyle: TextStyle(
+                          fontSize: 14,
+                          color: AppColors.textSecondary,
+                        ),
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 14,
+                        ),
+                        prefixIcon: Icon(
+                          IconlyLight.profile,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      validator: FormBuilderValidators.required(),
                     ),
-                    contentPadding: EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 14,
+                    const SizedBox(height: 20),
+                    _buildSectionTitle('Email', textTheme),
+                    FormBuilderTextField(
+                      name: 'email',
+                      readOnly: true,
+                      decoration: const InputDecoration(
+                        hintText: 'Enter your email',
+                        hintStyle: TextStyle(
+                          fontSize: 14,
+                          color: AppColors.textSecondary,
+                        ),
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 14,
+                        ),
+                        prefixIcon: Icon(
+                          IconlyLight.message,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      keyboardType: TextInputType.emailAddress,
+                      validator: FormBuilderValidators.compose([
+                        FormBuilderValidators.required(),
+                        FormBuilderValidators.email(),
+                      ]),
                     ),
-                    prefixIcon: Icon(
-                      // Icons.person_outline,
-                      IconlyLight.profile,
-                      color: AppColors.textSecondary,
+                    const SizedBox(height: 20),
+                    _buildSectionTitle('Gender', textTheme),
+                    _buildGenderChips(),
+                    const SizedBox(height: 20),
+                    _buildSectionTitle('Date of birth', textTheme),
+                    FormBuilderDateTimePicker(
+                      name: 'dob',
+                      inputType: InputType.date,
+                      format: DateFormat('MM-dd-yyyy'),
+                      decoration: const InputDecoration(
+                        hintText: 'Select your date of birth',
+                        hintStyle: TextStyle(
+                          fontSize: 14,
+                          color: AppColors.textSecondary,
+                        ),
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 14,
+                        ),
+                        suffixIcon: Icon(
+                          IconlyLight.calendar,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
                     ),
-                  ),
-                  validator: FormBuilderValidators.required(),
+                    const SizedBox(height: 20),
+                    _buildSectionTitle('What is your profession?', textTheme),
+                    FormBuilderTextField(
+                      name: 'profession',
+                      decoration: const InputDecoration(
+                        hintText: 'Enter your profession',
+                        hintStyle: TextStyle(
+                          fontSize: 14,
+                          color: AppColors.textSecondary,
+                        ),
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 14,
+                        ),
+                        prefixIcon: Icon(
+                          IconlyLight.work,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      validator: FormBuilderValidators.required(),
+                    ),
+                    const SizedBox(height: 20),
+                    _buildSectionTitle(
+                      'What is your cultural heritage or background?',
+                      textTheme,
+                    ),
+                    _buildCountryPicker(),
+                    const SizedBox(height: 20),
+                    _buildSectionTitle('Language you speak', textTheme),
+                    _buildLanguageInput(),
+                    const SizedBox(height: 20),
+                    _buildSectionTitle('Write a Short Bio', textTheme),
+                    FormBuilderTextField(
+                      name: 'bio',
+                      decoration: const InputDecoration(
+                        hintText: 'Tell us about yourself...',
+                        hintStyle: TextStyle(
+                          fontSize: 14,
+                          color: AppColors.textSecondary,
+                        ),
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 14,
+                        ),
+                      ),
+                      maxLines: 5,
+                      validator: FormBuilderValidators.required(),
+                    ),
+                    const SizedBox(height: 32),
+                    TapDebouncer(
+                      cooldown: const Duration(seconds: 3),
+                      onTap: _isLoading ? null : _onSavePressed,
+                      builder: (BuildContext context, TapDebouncerFunc? onTap) {
+                        return Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            GradientButton(
+                              text: _isLoading ? '' : 'Save',
+                              onPressed: () {
+                                if (onTap != null) {
+                                  onTap();
+                                }
+                              },
+                              fontSize: 15,
+                              insets: 14,
+                            ),
+                            if (_isLoading)
+                              const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.white,
+                                  ),
+                                  strokeWidth: 2.0,
+                                ),
+                              ),
+                          ],
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                  ],
                 ),
-                const SizedBox(height: 20),
-                _buildSectionTitle('Email', textTheme),
-                FormBuilderTextField(
-                  name: 'email',
-                  initialValue: 'ranautban007@gmail.com',
-                  decoration: const InputDecoration(
-                    hintText: 'Enter your email',
-                    // UPDATED: Compacted field
-                    hintStyle: TextStyle(
-                      fontSize: 14,
-                      color: AppColors.textSecondary,
-                    ),
-                    contentPadding: EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 14,
-                    ),
-                    prefixIcon: Icon(
-                      // Icons.email_outlined,
-                      IconlyLight.message,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                  keyboardType: TextInputType.emailAddress,
-                  validator: FormBuilderValidators.compose([
-                    FormBuilderValidators.required(),
-                    FormBuilderValidators.email(),
-                  ]),
-                ),
-                const SizedBox(height: 20),
-                _buildSectionTitle('Gender', textTheme),
-                _buildGenderChips(),
-                const SizedBox(height: 20),
-                _buildSectionTitle('Date of birth', textTheme),
-                FormBuilderDateTimePicker(
-                  name: 'dob',
-                  initialValue: DateTime(1995, 12, 25),
-                  inputType: InputType.date,
-                  format: DateFormat('MM-dd-yyyy'),
-                  decoration: const InputDecoration(
-                    hintText: 'Select your date of birth',
-                    // UPDATED: Compacted field
-                    hintStyle: TextStyle(
-                      fontSize: 14,
-                      color: AppColors.textSecondary,
-                    ),
-                    contentPadding: EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 14,
-                    ),
-                    suffixIcon: Icon(
-                      // Icons.calendar_today_outlined,
-                      IconlyLight.calendar,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                _buildSectionTitle('What is your profession?', textTheme),
-                FormBuilderTextField(
-                  name: 'profession',
-                  initialValue: 'Doctor',
-                  decoration: const InputDecoration(
-                    hintText: 'Enter your profession',
-                    // UPDATED: Compacted field
-                    hintStyle: TextStyle(
-                      fontSize: 14,
-                      color: AppColors.textSecondary,
-                    ),
-                    contentPadding: EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 14,
-                    ),
-                    prefixIcon: Icon(
-                      // Icons.work_outline,
-                      IconlyLight.work,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                  validator: FormBuilderValidators.required(),
-                ),
-                const SizedBox(height: 20),
-                _buildSectionTitle(
-                  'What is your cultural heritage or background?',
-                  textTheme,
-                ),
-                _buildCountryPicker(),
-                const SizedBox(height: 20),
-                _buildSectionTitle('Language you speak', textTheme),
-                _buildLanguageInput(),
-                const SizedBox(height: 20),
-                _buildSectionTitle('Write a Short Bio', textTheme),
-                FormBuilderTextField(
-                  name: 'bio',
-                  initialValue:
-                      'Lorem ipsum dolor sit amet consectetur. Leo nec risus laoreet egestas mauris nulla sagittis odio. Tempor nec congue posuere quam dictum nam mi pulvinar. Sit adipiscing sem et lacus sed eros ac augue.',
-                  decoration: const InputDecoration(
-                    hintText: 'Tell us about yourself...',
-                    // UPDATED: Compacted field
-                    hintStyle: TextStyle(
-                      fontSize: 14,
-                      color: AppColors.textSecondary,
-                    ),
-                    contentPadding: EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 14,
-                    ),
-                  ),
-                  maxLines: 5,
-                  validator: FormBuilderValidators.required(),
-                ),
-                const SizedBox(height: 32),
-                GradientButton(
-                  text: 'Save',
-                  onPressed: _onSavePressed,
-                  fontSize: 15,
-                  insets: 14,
-                ),
-                const SizedBox(height: 16),
-              ],
+              ),
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }
@@ -234,23 +339,27 @@ class _ProfileInnerScreenState extends State<ProfileInnerScreen> {
   Widget _buildSectionTitle(String title, TextTheme textTheme) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8.0),
-      child: Text(
-        title,
-        // UPDATED: Inherited from theme
-        style: textTheme.titleMedium,
-      ),
+      child: Text(title, style: textTheme.titleMedium),
     );
   }
 
   Widget _buildProfileAvatar() {
+    final hasPhoto = _user?.photoURL != null && _user!.photoURL!.isNotEmpty;
+
     return Center(
       child: Stack(
         children: [
-          const CircleAvatar(
+          CircleAvatar(
             radius: 50,
-            backgroundImage: NetworkImage(
-              'https://randomuser.me/api/portraits/men/75.jpg',
-            ),
+            backgroundColor: AppColors.secondaryBackground,
+            backgroundImage: hasPhoto ? NetworkImage(_user!.photoURL!) : null,
+            child: !hasPhoto
+                ? const Icon(
+                    IconlyLight.profile,
+                    size: 50,
+                    color: AppColors.textSecondary,
+                  )
+                : null,
           ),
           Positioned(
             bottom: 0,
@@ -264,7 +373,6 @@ class _ProfileInnerScreenState extends State<ProfileInnerScreen> {
               child: const Padding(
                 padding: EdgeInsets.all(6.0),
                 child: Icon(
-                  // Icons.edit,
                   IconlyBold.edit,
                   color: AppColors.primaryOrange,
                   size: 18,
@@ -281,7 +389,6 @@ class _ProfileInnerScreenState extends State<ProfileInnerScreen> {
     const genders = ['Male', 'Female', 'Other', 'Prefer Not to Say'];
     return FormBuilderField<String>(
       name: 'gender',
-      initialValue: 'Male',
       validator: FormBuilderValidators.required(),
       builder: (FormFieldState<String> field) {
         return Wrap(
@@ -297,7 +404,6 @@ class _ProfileInnerScreenState extends State<ProfileInnerScreen> {
                   field.didChange(gender);
                 }
               },
-              // UPDATED: Compacted chip style
               labelStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
                 fontWeight: FontWeight.w600,
                 color: isSelected
@@ -330,7 +436,6 @@ class _ProfileInnerScreenState extends State<ProfileInnerScreen> {
   Widget _buildCountryPicker() {
     return FormBuilderField<String>(
       name: 'country',
-      initialValue: 'UA',
       builder: (FormFieldState<String> field) {
         return InkWell(
           onTap: () {
@@ -355,7 +460,6 @@ class _ProfileInnerScreenState extends State<ProfileInnerScreen> {
           },
           child: InputDecorator(
             decoration: InputDecoration(
-              // UPDATED: Compacted field
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 12,
                 vertical: 12,
@@ -378,14 +482,18 @@ class _ProfileInnerScreenState extends State<ProfileInnerScreen> {
             child: Row(
               children: [
                 Text(
-                  Country.tryParse(field.value ?? 'UA')?.flagEmoji ?? '🇺🇦',
-                  style: const TextStyle(fontSize: 24),
+                  Country.tryParse(field.value ?? 'US')?.flagEmoji ?? '🇺🇸',
+                  style: const TextStyle(fontSize: 21),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    Country.tryParse(field.value ?? 'UA')?.name ?? 'Ukraine',
-                    style: const TextStyle(fontSize: 16),
+                    Country.tryParse(field.value ?? 'US')?.name ??
+                        'United States',
+                    style: const TextStyle(
+                      fontSize: 15,
+                      color: AppColors.textSecondary,
+                    ),
                   ),
                 ),
                 const Icon(
@@ -406,18 +514,11 @@ class _ProfileInnerScreenState extends State<ProfileInnerScreen> {
       children: [
         TextField(
           controller: _languageController,
-          decoration: InputDecoration(
+          decoration: const InputDecoration(
             hintText: 'Type a language and press enter',
-            // UPDATED: Compacted field
-            hintStyle: const TextStyle(
-              fontSize: 14,
-              color: AppColors.textSecondary,
-            ),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 20,
-              vertical: 14,
-            ),
-            prefixIcon: const Icon(
+            hintStyle: TextStyle(fontSize: 14, color: AppColors.textSecondary),
+            contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+            prefixIcon: Icon(
               Icons.translate,
               color: AppColors.textSecondary,
               size: 20,
@@ -429,37 +530,60 @@ class _ProfileInnerScreenState extends State<ProfileInnerScreen> {
         FormBuilderField<List<String>>(
           key: _languagesFieldKey,
           name: 'languages',
-          initialValue: const ['English', 'German'],
+          validator: (value) {
+            if (value == null || value.isEmpty) {
+              return 'Please add at least one language.';
+            }
+            return null;
+          },
           builder: (field) {
-            return Wrap(
-              spacing: 8.0,
-              runSpacing: 8.0,
-              children: (field.value ?? []).map((language) {
-                return Chip(
-                  label: Text(language),
-                  onDeleted: () {
-                    final currentLanguages = List<String>.from(field.value!);
-                    currentLanguages.remove(language);
-                    field.didChange(currentLanguages);
-                  },
-                  deleteIconColor: AppColors.primaryRed,
-                  backgroundColor: AppColors.secondaryBackground,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
-                    side: const BorderSide(color: Color(0xFFE9C5C5)),
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Wrap(
+                  spacing: 8.0,
+                  runSpacing: 8.0,
+                  children: (field.value ?? []).map((language) {
+                    return Chip(
+                      label: Text(language),
+                      onDeleted: () {
+                        final currentLanguages = List<String>.from(
+                          field.value!,
+                        );
+                        currentLanguages.remove(language);
+                        field.didChange(currentLanguages);
+                      },
+                      deleteIconColor: AppColors.primaryRed,
+                      backgroundColor: AppColors.secondaryBackground,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                        side: const BorderSide(color: Color(0xFFE9C5C5)),
+                      ),
+                      labelStyle: Theme.of(context).textTheme.bodySmall
+                          ?.copyWith(
+                            color: AppColors.primaryRed,
+                            fontWeight: FontWeight.w600,
+                          ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      deleteIcon: const Icon(Icons.close, size: 16),
+                    );
+                  }).toList(),
+                ),
+                if (field.hasError)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8.0, left: 12.0),
+                    child: Text(
+                      field.errorText!,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                        fontSize: 12,
+                      ),
+                    ),
                   ),
-                  // UPDATED: Compacted chip style
-                  labelStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppColors.primaryRed,
-                    fontWeight: FontWeight.w600,
-                  ),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  deleteIcon: const Icon(Icons.close, size: 16),
-                );
-              }).toList(),
+              ],
             );
           },
         ),

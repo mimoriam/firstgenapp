@@ -1,8 +1,14 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firstgenapp/screens/auth/signin/signin_screen.dart';
 import 'package:firstgenapp/screens/dashboard/navbar_content/profile/profile_inner/profile_inner_screen.dart';
+import 'package:firstgenapp/services/firebase_service.dart';
 import 'package:flutter/material.dart';
 import 'package:firstgenapp/constants/appColors.dart';
+import 'package:iconly/iconly.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:provider/provider.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -27,6 +33,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _showOnlineStatus = true;
   bool _showJoinedCommunities = true;
 
+  User? _user;
+  // MODIFICATION: Changed from Future to Stream.
+  late Stream<DocumentSnapshot<Map<String, dynamic>>> _userProfileStream;
+
+  @override
+  void initState() {
+    super.initState();
+    final firebaseService = Provider.of<FirebaseService>(
+      context,
+      listen: false,
+    );
+    _user = firebaseService.currentUser;
+    // MODIFICATION: Initialize the stream.
+    _userProfileStream = firebaseService.getUserProfileStream();
+  }
+
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
@@ -40,59 +62,81 @@ class _ProfileScreenState extends State<ProfileScreen> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'This Is You',
-              // UPDATED: Inherited from theme
-              style: textTheme.headlineSmall,
-            ),
+            Text('This Is You', style: textTheme.headlineSmall),
             const SizedBox(height: 4),
             Text(
               'View, update, and personalize your profile anytime.',
-              // UPDATED: Inherited from theme
               style: textTheme.bodySmall,
             ),
           ],
         ),
       ),
-      body: ListView(
-        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-        children: [
-          _buildProfileCard(),
-          const SizedBox(height: 10),
-          _buildConnectionPreferences(),
-          const SizedBox(height: 10),
-          _buildNotificationSettings(),
-          const SizedBox(height: 10),
-          _buildPrivacyControls(),
-          const SizedBox(height: 10),
-          _buildAboutApp(),
-          const SizedBox(height: 10),
-        ],
+      // MODIFICATION: Replaced FutureBuilder with StreamBuilder.
+      body: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+        stream: _userProfileStream,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          }
+          if (!snapshot.hasData || !snapshot.data!.exists) {
+            return const Center(child: Text('No profile data found.'));
+          }
+
+          final userData = snapshot.data!.data();
+
+          return ListView(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16.0,
+              vertical: 8.0,
+            ),
+            children: [
+              _buildProfileCard(userData),
+              const SizedBox(height: 10),
+              _buildConnectionPreferences(),
+              const SizedBox(height: 10),
+              _buildNotificationSettings(),
+              const SizedBox(height: 10),
+              _buildPrivacyControls(),
+              const SizedBox(height: 10),
+              _buildAboutApp(),
+              const SizedBox(height: 10),
+            ],
+          );
+        },
       ),
     );
   }
 
-  Widget _buildProfileCard() {
+  Widget _buildProfileCard(Map<String, dynamic>? userData) {
     final textTheme = Theme.of(context).textTheme;
+    final hasPhoto = _user?.photoURL != null && _user!.photoURL!.isNotEmpty;
+
     return _buildSectionCard(
       child: ListTile(
-        leading: const CircleAvatar(
+        leading: CircleAvatar(
           radius: 25,
-          backgroundImage: NetworkImage(
-            'https://randomuser.me/api/portraits/men/75.jpg',
-          ),
+          backgroundColor: AppColors.secondaryBackground,
+          backgroundImage: hasPhoto ? NetworkImage(_user!.photoURL!) : null,
+          child: !hasPhoto
+              ? const Icon(
+                  IconlyLight.profile,
+                  size: 25,
+                  color: AppColors.textSecondary,
+                )
+              : null,
         ),
         title: Text(
-          'Rana Utban',
-          // UPDATED: Inherited from theme
+          userData?['fullName'] ?? _user?.displayName ?? 'No Name',
           style: textTheme.labelLarge?.copyWith(
             fontWeight: FontWeight.bold,
             color: AppColors.textPrimary,
           ),
         ),
         subtitle: Text(
-          'ranautban007@gmail.com',
-          // UPDATED: Inherited from theme
+          userData?['email'] ?? _user?.email ?? 'No Email',
           style: textTheme.bodySmall,
         ),
         trailing: const Icon(
@@ -100,11 +144,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
           size: 16,
           color: AppColors.primaryOrange,
         ),
+        // MODIFICATION: Removed manual refresh logic as StreamBuilder handles it.
         onTap: () {
           if (context.mounted) {
             PersistentNavBarNavigator.pushNewScreen(
               context,
-              screen: ProfileInnerScreen(),
+              screen: const ProfileInnerScreen(),
               withNavBar: false,
             );
           }
@@ -120,7 +165,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         children: [
           Text(
             'Connection Preferences',
-            // UPDATED: Inherited from theme
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: 16),
@@ -163,7 +207,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         children: [
           Text(
             'Notification Settings',
-            // UPDATED: Inherited from theme
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: 8),
@@ -194,7 +237,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         children: [
           Text(
             'Privacy Controls',
-            // UPDATED: Inherited from theme
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: 8),
@@ -218,22 +260,37 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'About App',
-            // UPDATED: Inherited from theme
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
+          Text('About App', style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 8),
           _buildInfoRow('Terms of Use', onTap: () {}),
           _buildInfoRow('Privacy Policy', onTap: () {}),
           _buildInfoRow('Contact Support', onTap: () {}),
-          _buildInfoRow('Log Out'),
-          _buildInfoRow('Delete My Account'),
+          _buildInfoRow(
+            'Log Out',
+            onTap: () async {
+              await Provider.of<FirebaseService>(
+                context,
+                listen: false,
+              ).signOut();
+
+              if (mounted) {
+                // Navigator.of(context).pushAndRemoveUntil(
+                //     MaterialPageRoute(
+                //         builder: (context) => const SigninScreen()),
+                //         (route) => false);
+
+                Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (context) => const SigninScreen()),
+                  (route) =>
+                      false, // This predicate ensures all previous routes are removed.
+                );
+              }
+            },
+          ),
           _buildInfoRow(
             'App Version',
             trailing: Text(
               'v1.0.0',
-              // UPDATED: Inherited from theme
               style: Theme.of(context).textTheme.labelLarge?.copyWith(
                 color: AppColors.primaryRed,
                 fontWeight: FontWeight.bold,
@@ -286,7 +343,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
               label: Text(option),
               selected: isSelected,
               onSelected: (selected) => onChanged(selected ? option : null),
-              // UPDATED: Compacted chip style
               labelStyle: textTheme.bodySmall?.copyWith(
                 color: isSelected
                     ? AppColors.primaryRed
@@ -305,7 +361,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ),
               showCheckmark: false,
-              // UPDATED: Compacted chip padding
               padding: const EdgeInsets.symmetric(
                 horizontal: 14.0,
                 vertical: 8.0,
@@ -325,9 +380,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return ListTile(
       title: Text(
         title,
-        style: Theme.of(context).textTheme.labelLarge?.copyWith(
-          color: AppColors.textPrimary,
-        ),
+        style: Theme.of(
+          context,
+        ).textTheme.labelLarge?.copyWith(color: AppColors.textPrimary),
       ),
       trailing: CupertinoSwitch(
         value: value,
