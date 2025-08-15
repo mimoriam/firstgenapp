@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:country_picker/country_picker.dart';
 import 'package:firstgenapp/common/gradient_btn.dart';
-import 'package:firstgenapp/screens/dashboard/navbar_content/home/match_detail/match_detail_screen.dart';
+import 'package:firstgenapp/screens/dashboard/navbar_content/search/match_detail_for_search/match_detail_for_search_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firstgenapp/constants/appColors.dart';
 import 'package:flutter_keyboard_visibility/flutter_keyboard_visibility.dart';
@@ -189,7 +189,7 @@ class _SearchScreenState extends State<SearchScreen> {
                     if (context.mounted) {
                       PersistentNavBarNavigator.pushNewScreen(
                         context,
-                        screen: MatchDetailScreen(),
+                        screen: const MatchDetailForSearchScreen(),
                         withNavBar: false,
                       );
                     }

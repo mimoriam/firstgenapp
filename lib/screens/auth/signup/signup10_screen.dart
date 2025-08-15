@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:io';
-import 'package:firstgenapp/screens/dashboard/dashboard_screen.dart';
+import 'package:firstgenapp/auth_gate.dart';
 import 'package:firstgenapp/viewmodels/SignupViewModel.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -93,8 +93,10 @@ class _Signup10ScreenState extends State<Signup10Screen> {
         await viewModel.completeRegistration();
         if (mounted) {
           viewModel.reset();
+          // MODIFICATION: Navigate to AuthGate instead of DashboardScreen
+          // This ensures the AuthGate is always in the widget tree to handle auth state changes.
           Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (context) => const DashboardScreen()),
+            MaterialPageRoute(builder: (context) => const AuthGate()),
             (Route<dynamic> route) => false,
           );
         }
@@ -429,7 +431,7 @@ class _Signup10ScreenState extends State<Signup10Screen> {
       fontWeight: FontWeight.bold,
       decoration: TextDecoration.underline,
     );
-    
+
     return Transform.translate(
       offset: const Offset(-18, 0),
       child: FormBuilderCheckbox(

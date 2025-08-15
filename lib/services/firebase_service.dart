@@ -70,7 +70,7 @@ class FirebaseService {
       }
 
       final GoogleSignInAuthentication googleAuth =
-      await googleUser.authentication;
+          await googleUser.authentication;
 
       final AuthCredential credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
@@ -86,7 +86,6 @@ class FirebaseService {
       throw AuthException('An unexpected Google Sign-In error occurred.');
     }
   }
-
 
   // Links a pending credential (from Google) to an existing email/password account.
   // The UI should call this after catching the 'account-exists-with-different-credential'
@@ -172,8 +171,10 @@ class FirebaseService {
   // MODIFICATION: Added a method to check if the user's profile document exists in Firestore.
   Future<bool> isUserProfileComplete(String userId) async {
     try {
-      final docSnapshot =
-      await _firestore.collection(userCollection).doc(userId).get();
+      final docSnapshot = await _firestore
+          .collection(userCollection)
+          .doc(userId)
+          .get();
       return docSnapshot.exists;
     } catch (e) {
       log('Error checking user profile completeness: $e');
@@ -252,6 +253,40 @@ class FirebaseService {
       log('An unexpected error occurred in updateUserProfile', error: e);
       throw Exception(
         'An unexpected error occurred while updating your profile.',
+      );
+    }
+  }
+
+  Future<List<QueryDocumentSnapshot<Map<String, dynamic>>>>
+  getAllUsers() async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) return [];
+
+      final querySnapshot = await _firestore
+          .collection(userCollection)
+          // Optionally, you might want to exclude the current user from the list.
+          .where('uid', isNotEqualTo: user.uid)
+          .get();
+
+      return querySnapshot.docs;
+    } catch (e) {
+      log('Error getting all users: $e');
+      return [];
+    }
+  }
+
+  // Password Reset
+  Future<void> sendPasswordResetEmail(String email) async {
+    try {
+      await _auth.sendPasswordResetEmail(email: email);
+    } on FirebaseAuthException catch (e) {
+      log('FirebaseAuthException in password reset: ${e.code}', error: e);
+      throw _handleAuthException(e);
+    } catch (e) {
+      log('An unexpected error occurred in password reset', error: e);
+      throw AuthException(
+        'An unexpected error occurred. Please try again later.',
       );
     }
   }

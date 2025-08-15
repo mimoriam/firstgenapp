@@ -123,7 +123,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         handleAndroidBackButtonPress:
         true, // Note: PopScope is now the primary handler
         resizeToAvoidBottomInset: true,
-        stateManagement: false,
+        stateManagement: true,
         hideNavigationBarWhenKeyboardAppears: true,
         popBehaviorOnSelectedNavBarItemPress: PopBehavior.all,
         padding: const EdgeInsets.only(bottom: 12, top: 3),

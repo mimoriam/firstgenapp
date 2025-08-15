@@ -2,6 +2,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firstgenapp/auth_gate.dart';
 import 'package:firstgenapp/services/firebase_service.dart';
 import 'package:firstgenapp/viewmodels/SignupViewModel.dart';
+import 'package:firstgenapp/viewmodels/auth_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:firstgenapp/screens/onboarding/onboarding_screen.dart';
 import 'package:firstgenapp/utils/appTheme.dart';
@@ -38,6 +39,10 @@ class MyApp extends StatelessWidget {
 
         ChangeNotifierProvider<SignUpViewModel>(
           create: (context) => SignUpViewModel(context.read<FirebaseService>()),
+        ),
+
+        ChangeNotifierProvider<AuthProvider>(
+          create: (context) => AuthProvider(context.read<FirebaseService>()),
         ),
       ],
       child: MaterialApp(
