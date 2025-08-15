@@ -279,11 +279,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 //         builder: (context) => const SigninScreen()),
                 //         (route) => false);
 
-                Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (context) => const SigninScreen()),
-                  (route) =>
-                      false, // This predicate ensures all previous routes are removed.
-                );
+                // Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
+                //   MaterialPageRoute(builder: (context) => const SigninScreen()),
+                //   (route) =>
+                //       false, // This predicate ensures all previous routes are removed.
+                // );
               }
             },
           ),

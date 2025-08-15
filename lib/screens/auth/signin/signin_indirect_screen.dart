@@ -45,7 +45,9 @@ class _SigninIndirectScreenState extends State<SigninIndirectScreen> {
           password: formData?["password"],
         );
 
-        // AuthGate will handle navigation, so no need for pushAndRemoveUntil here.
+        if (mounted) {
+          Navigator.of(context, rootNavigator: true).popUntil((route) => route.isFirst);
+        }
       } on AuthException catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -91,7 +93,13 @@ class _SigninIndirectScreenState extends State<SigninIndirectScreen> {
 
     try {
       await firebaseService.signInWithGoogle();
-      // On success, AuthGate will navigate the user.
+
+      if (mounted) {
+        Navigator.of(
+          context,
+          rootNavigator: true,
+        ).popUntil((route) => route.isFirst);
+      }
     } on AuthException catch (e) {
       if (e.code == 'account-exists-with-different-credential' &&
           e.credential != null &&

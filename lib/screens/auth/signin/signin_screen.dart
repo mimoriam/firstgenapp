@@ -76,7 +76,7 @@ class _SigninScreenState extends State<SigninScreen> {
 
     try {
       await firebaseService.signInWithGoogle();
-      // On success, AuthGate will navigate the user.
+
     } on AuthException catch (e) {
       if (e.code == 'account-exists-with-different-credential' &&
           e.credential != null &&

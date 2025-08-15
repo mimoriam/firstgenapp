@@ -92,7 +92,11 @@ class _ProfileCheckGate extends StatelessWidget {
         } else {
           // Profile does not exist, it's a new user (or new Google Sign-In)
           // Pre-populate view model and start the rest of the signup flow
-          viewModel.populateFromUser(user);
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (context.mounted) {
+              viewModel.populateFromUser(user);
+            }
+          });
           // Start from the second step of the signup process
           return const Signup2Screen();
         }
