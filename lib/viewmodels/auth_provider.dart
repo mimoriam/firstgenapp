@@ -59,4 +59,24 @@ class AuthProvider extends ChangeNotifier {
     // Notify all listening widgets that the final state has been determined.
     notifyListeners();
   }
+
+  Future<void> recheckUserProfile() async {
+    if (_user != null) {
+      // Set status to authenticating to show a brief loading indicator
+      // and prevent UI flicker.
+      _status = AuthStatus.authenticating;
+      notifyListeners();
+
+      final bool isProfileComplete = await _firebaseService
+          .isUserProfileComplete(_user!.uid);
+
+      if (isProfileComplete) {
+        _status = AuthStatus.authenticated_complete_profile;
+      } else {
+        _status = AuthStatus.authenticated_incomplete_profile;
+      }
+      // Notify listeners with the final, correct state.
+      notifyListeners();
+    }
+  }
 }

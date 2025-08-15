@@ -3,6 +3,7 @@
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firstgenapp/services/continent_service.dart';
 import 'package:firstgenapp/services/firebase_service.dart';
 import 'package:flutter/material.dart';
 
@@ -170,10 +171,16 @@ class SignUpViewModel extends ChangeNotifier {
         );
       }
 
+      // MODIFICATION: Determine the continent from the country code.
+      final String continent = culturalHeritage != null
+          ? ContinentService.getContinent(culturalHeritage!)
+          : 'Unknown';
+
       // 2. Prepare the data for Firestore
       final Map<String, dynamic> userProfileData = {
         'uid': user.uid,
-        'fullName': fullName,
+        // 'fullName': fullName,
+        'fullName': user.displayName,
         'email': email,
         'profileImageUrl': imageUrl,
         'createdAt': FieldValue.serverTimestamp(),

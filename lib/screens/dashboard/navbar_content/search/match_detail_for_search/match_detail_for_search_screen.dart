@@ -9,7 +9,26 @@ import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:provider/provider.dart';
 
 class MatchDetailForSearchScreen extends StatefulWidget {
-  const MatchDetailForSearchScreen({super.key});
+  final String country;
+  final List<String> languages;
+  final String? generation;
+  final String? gender;
+  final int minAge;
+  final int maxAge;
+  final List<String> professions;
+  final List<String> interests;
+
+  const MatchDetailForSearchScreen({
+    super.key,
+    required this.country,
+    required this.languages,
+    this.generation,
+    this.gender,
+    required this.minAge,
+    required this.maxAge,
+    required this.professions,
+    required this.interests,
+  });
 
   @override
   State<MatchDetailForSearchScreen> createState() =>
@@ -22,7 +41,6 @@ class _MatchDetailForSearchScreenState
   final CardSwiperController _swiperController = CardSwiperController();
   List<Map<String, dynamic>> _users = [];
   int _currentIndex = 0;
-  // MODIFICATION: Add state to know when all cards have been swiped.
   bool _isFinished = false;
 
   @override
@@ -32,7 +50,16 @@ class _MatchDetailForSearchScreenState
       context,
       listen: false,
     );
-    _usersFuture = firebaseService.getAllUsers();
+    _usersFuture = firebaseService.searchUsersOR(
+      country: widget.country,
+      languages: widget.languages,
+      generation: widget.generation,
+      gender: widget.gender,
+      minAge: widget.minAge,
+      maxAge: widget.maxAge,
+      professions: widget.professions,
+      interests: widget.interests,
+    );
   }
 
   @override
@@ -65,19 +92,17 @@ class _MatchDetailForSearchScreenState
             return Center(child: Text('Error: ${snapshot.error}'));
           }
           if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return const Center(child: Text('No users found.'));
+            return const Center(child: Text('No users match your criteria.'));
           }
 
           _users = snapshot.data!.map((doc) => doc.data()).toList();
 
           return Material(
             color: AppColors.secondaryBackground,
-            // MODIFICATION: Wrap with ClipRect to contain the blur effect during navigation.
             child: ClipRect(
               child: Stack(
                 children: [
                   _buildBlurredBackground(),
-                  // Show the "No more users" text when finished.
                   if (_isFinished)
                     Center(
                       child: Text(
@@ -86,7 +111,6 @@ class _MatchDetailForSearchScreenState
                             ?.copyWith(color: Colors.white),
                       ),
                     ),
-                  // The swiper is still in the tree but invisible when finished.
                   CardSwiper(
                     controller: _swiperController,
                     cardsCount: _users.length,
@@ -120,9 +144,7 @@ class _MatchDetailForSearchScreenState
 
   Widget _buildBlurredBackground() {
     int backgroundIndex = _currentIndex;
-    // MODIFICATION: Adjust background logic to always show a valid image.
     if (!_isFinished) {
-      // If not finished, show the next card's image in the background.
       backgroundIndex = _currentIndex + 1;
       if (backgroundIndex >= _users.length) {
         backgroundIndex = _currentIndex;
@@ -161,7 +183,6 @@ class _MatchDetailForSearchScreenState
   ) {
     setState(() {
       _currentIndex = currentIndex ?? previousIndex;
-      // MODIFICATION: Set the finished state when the last card is swiped.
       if (currentIndex == null) {
         _isFinished = true;
       }
@@ -182,7 +203,6 @@ class _MatchDetailForSearchScreenState
   ) {
     setState(() {
       _currentIndex = currentIndex;
-      // MODIFICATION: If we undo, we are no longer in the finished state.
       _isFinished = false;
     });
     debugPrint('The card $currentIndex was undod from the ${direction.name}');

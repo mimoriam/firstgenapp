@@ -2,6 +2,7 @@ import 'dart:developer';
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firstgenapp/services/continent_service.dart';
 import 'package:firstgenapp/utils/authException.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
@@ -245,6 +246,13 @@ class FirebaseService {
           user.displayName != data['fullName']) {
         await user.updateDisplayName(data['fullName']);
       }
+
+      // MODIFICATION: If the country is being updated, also update the continent.
+      if (data.containsKey('culturalHeritage')) {
+        final countryCode = data['culturalHeritage'];
+        data['continent'] = ContinentService.getContinent(countryCode);
+      }
+
       await _firestore.collection(userCollection).doc(user.uid).update(data);
     } on FirebaseException catch (e) {
       log('FirebaseException in updateUserProfile: ${e.code}', error: e);
@@ -276,6 +284,68 @@ class FirebaseService {
     }
   }
 
+  Future<List<QueryDocumentSnapshot<Map<String, dynamic>>>> searchUsers({
+    required String country,
+    required List<String> languages,
+    String? generation,
+    String? gender,
+    required int minAge,
+    required int maxAge,
+    required List<String> professions,
+    required List<String> interests,
+  }) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) return [];
+
+      // Start with a base query
+      Query<Map<String, dynamic>> query = _firestore
+          .collection(userCollection)
+          .where('uid', isNotEqualTo: user.uid);
+
+      // Apply filters. Note: Firestore has limitations on complex queries.
+      // This implementation uses multiple 'where' clauses. For more complex
+      // scenarios, you might need to perform some filtering on the client-side.
+
+      query = query.where('culturalHeritage', isEqualTo: country);
+
+      if (generation != null) {
+        query = query.where('generation', isEqualTo: generation);
+      }
+      if (gender != null) {
+        query = query.where('gender', isEqualTo: gender);
+      }
+      if (languages.isNotEmpty) {
+        query = query.where('languages', arrayContainsAny: languages);
+      }
+      if (professions.isNotEmpty) {
+        query = query.where('profession', whereIn: professions);
+      }
+      if (interests.isNotEmpty) {
+        query = query.where('hobbies', whereIn: interests);
+      }
+
+      final querySnapshot = await query.get();
+
+      // Client-side filtering for age, as Firestore does not support range queries on different fields.
+      final now = DateTime.now();
+      final minDob = DateTime(now.year - maxAge, now.month, now.day);
+      final maxDob = DateTime(now.year - minAge, now.month, now.day);
+
+      final filteredDocs = querySnapshot.docs.where((doc) {
+        final dobTimestamp = doc.data()['dateOfBirth'] as Timestamp?;
+        if (dobTimestamp == null) return false;
+        final dob = dobTimestamp.toDate();
+        return dob.isAfter(minDob) && dob.isBefore(maxDob);
+      }).toList();
+
+      return filteredDocs;
+    } catch (e) {
+      log('Error searching users: $e');
+      return [];
+    }
+  }
+
   // Password Reset
   Future<void> sendPasswordResetEmail(String email) async {
     try {
@@ -289,6 +359,79 @@ class FirebaseService {
         'An unexpected error occurred. Please try again later.',
       );
     }
+  }
+
+  Future<List<QueryDocumentSnapshot<Map<String, dynamic>>>> searchUsersOR({
+    String? country,
+    List<String>? languages,
+    String? generation,
+    String? gender,
+    int? minAge,
+    int? maxAge,
+    List<String>? professions,
+    List<String>? interests,
+  }) async {
+    final user = _auth.currentUser;
+    if (user == null) return [];
+
+    final List<Future<QuerySnapshot<Map<String, dynamic>>>> queries = [];
+    final baseQuery = _firestore
+        .collection(userCollection)
+        .where('uid', isNotEqualTo: user.uid);
+
+    if (country != null) {
+      queries.add(
+        baseQuery.where('culturalHeritage', isEqualTo: country).get(),
+      );
+    }
+    if (generation != null) {
+      queries.add(baseQuery.where('generation', isEqualTo: generation).get());
+    }
+    if (gender != null) {
+      queries.add(baseQuery.where('gender', isEqualTo: gender).get());
+    }
+    if (languages != null && languages.isNotEmpty) {
+      queries.add(
+        baseQuery.where('languages', arrayContainsAny: languages).get(),
+      );
+    }
+    if (professions != null && professions.isNotEmpty) {
+      queries.add(baseQuery.where('profession', whereIn: professions).get());
+    }
+    if (interests != null && interests.isNotEmpty) {
+      queries.add(baseQuery.where('hobbies', whereIn: interests).get());
+    }
+
+    if (queries.isEmpty) {
+      return getAllUsers();
+    }
+
+    final List<QuerySnapshot<Map<String, dynamic>>> snapshots =
+        await Future.wait(queries);
+
+    final Map<String, QueryDocumentSnapshot<Map<String, dynamic>>> uniqueDocs =
+        {};
+    for (final snapshot in snapshots) {
+      for (final doc in snapshot.docs) {
+        uniqueDocs[doc.id] = doc;
+      }
+    }
+
+    // Perform age filtering on the client side
+    if (minAge != null && maxAge != null) {
+      final now = DateTime.now();
+      final minDob = DateTime(now.year - maxAge, now.month, now.day);
+      final maxDob = DateTime(now.year - minAge, now.month, now.day);
+
+      uniqueDocs.removeWhere((key, doc) {
+        final dobTimestamp = doc.data()['dateOfBirth'] as Timestamp?;
+        if (dobTimestamp == null) return true; // Remove if no DOB
+        final dob = dobTimestamp.toDate();
+        return dob.isBefore(minDob) || dob.isAfter(maxDob);
+      });
+    }
+
+    return uniqueDocs.values.toList();
   }
 
   /// Maps [FirebaseAuthException] codes to user-friendly [AuthException] objects.

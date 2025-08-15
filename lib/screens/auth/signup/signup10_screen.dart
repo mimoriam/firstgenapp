@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:firstgenapp/auth_gate.dart';
+import 'package:firstgenapp/screens/dashboard/dashboard_screen.dart';
 import 'package:firstgenapp/viewmodels/SignupViewModel.dart';
+import 'package:firstgenapp/viewmodels/auth_provider.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:firstgenapp/constants/appColors.dart';
@@ -92,13 +94,25 @@ class _Signup10ScreenState extends State<Signup10Screen> {
       try {
         await viewModel.completeRegistration();
         if (mounted) {
+          await Provider.of<AuthProvider>(
+            context,
+            listen: false,
+          ).recheckUserProfile();
+
           viewModel.reset();
-          // MODIFICATION: Navigate to AuthGate instead of DashboardScreen
-          // This ensures the AuthGate is always in the widget tree to handle auth state changes.
-          Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (context) => const AuthGate()),
-            (Route<dynamic> route) => false,
-          );
+          // FIX: Navigate directly to DashboardScreen instead of AuthGate.
+          // This ensures the user lands on the correct screen and
+          // rebuilds the navigation stack properly.
+          // Navigator.of(context).pushAndRemoveUntil(
+          //   MaterialPageRoute(builder: (context) => const DashboardScreen()),
+          //   (Route<dynamic> route) => false,
+          // );
+          if (mounted) {
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(builder: (context) => const AuthGate()),
+              (Route<dynamic> route) => false,
+            );
+          }
         }
       } catch (e) {
         if (mounted) {

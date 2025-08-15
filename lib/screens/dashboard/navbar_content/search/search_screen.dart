@@ -1,5 +1,4 @@
 import 'dart:async';
-
 import 'package:country_picker/country_picker.dart';
 import 'package:firstgenapp/common/gradient_btn.dart';
 import 'package:firstgenapp/screens/dashboard/navbar_content/search/match_detail_for_search/match_detail_for_search_screen.dart';
@@ -16,18 +15,16 @@ class SearchScreen extends StatefulWidget {
 }
 
 class _SearchScreenState extends State<SearchScreen> {
-  String _selectedCountry = 'UA'; // Default to Ukraine
+  String _selectedCountry = 'US';
   RangeValues _currentRangeValues = const RangeValues(25, 30);
 
-  // Controllers for text fields
   final TextEditingController _languageController = TextEditingController();
   final TextEditingController _professionController = TextEditingController();
   final TextEditingController _interestController = TextEditingController();
 
-  // Lists to hold the chip data
-  final List<String> _languages = ['English', 'German'];
-  final List<String> _professions = ['Doctor', 'Engineer'];
-  final List<String> _interests = ['Reading', 'Coffee'];
+  final List<String> _languages = ['English'];
+  final List<String> _professions = ['Doctor'];
+  final List<String> _interests = ['Reading'];
 
   String? _selectedGeneration;
   String? _selectedGender;
@@ -39,29 +36,23 @@ class _SearchScreenState extends State<SearchScreen> {
     'Mixed heritage',
     'Not sure',
   ];
-  final List<String> _genderOptions = [
-    'Male',
-    'Female',
-    'Other',
-    'Prefer Not to Say',
-  ];
+  final List<String> _genderOptions = ['Male', 'Female', 'Other'];
 
   late StreamSubscription<bool> keyboardSubscription;
-
   bool _isKeyboardVisible = false;
 
   @override
   void initState() {
     super.initState();
-
     var keyboardVisibilityController = KeyboardVisibilityController();
-
     keyboardSubscription = keyboardVisibilityController.onChange.listen((
       bool visible,
     ) {
-      setState(() {
-        _isKeyboardVisible = visible;
-      });
+      if (mounted) {
+        setState(() {
+          _isKeyboardVisible = visible;
+        });
+      }
     });
   }
 
@@ -86,6 +77,25 @@ class _SearchScreenState extends State<SearchScreen> {
         controller.clear();
       });
       FocusScope.of(context).unfocus();
+    }
+  }
+
+  void _onSearchPressed() {
+    if (context.mounted) {
+      PersistentNavBarNavigator.pushNewScreen(
+        context,
+        screen: MatchDetailForSearchScreen(
+          country: _selectedCountry,
+          languages: _languages,
+          generation: _selectedGeneration,
+          gender: _selectedGender,
+          minAge: _currentRangeValues.start.round(),
+          maxAge: _currentRangeValues.end.round(),
+          professions: _professions,
+          interests: _interests,
+        ),
+        withNavBar: false,
+      );
     }
   }
 
@@ -185,15 +195,7 @@ class _SearchScreenState extends State<SearchScreen> {
                 const SizedBox(height: 32),
                 GradientButton(
                   text: 'Search',
-                  onPressed: () {
-                    if (context.mounted) {
-                      PersistentNavBarNavigator.pushNewScreen(
-                        context,
-                        screen: const MatchDetailForSearchScreen(),
-                        withNavBar: false,
-                      );
-                    }
-                  },
+                  onPressed: _onSearchPressed,
                   fontSize: 15,
                   insets: 14,
                 ),
@@ -216,7 +218,6 @@ class _SearchScreenState extends State<SearchScreen> {
         showCountryPicker(
           context: context,
           showPhoneCode: false,
-          // UPDATED: Added theme to match sign up screen 2's picker
           countryListTheme: CountryListThemeData(
             bottomSheetHeight: 550,
             borderRadius: const BorderRadius.only(
@@ -249,13 +250,13 @@ class _SearchScreenState extends State<SearchScreen> {
         child: Row(
           children: [
             Text(
-              Country.tryParse(_selectedCountry)?.flagEmoji ?? '🇺🇦',
+              Country.tryParse(_selectedCountry)?.flagEmoji ?? '🇺🇸',
               style: const TextStyle(fontSize: 24),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                Country.tryParse(_selectedCountry)?.name ?? 'Ukraine',
+                Country.tryParse(_selectedCountry)?.name ?? 'United States',
                 style: const TextStyle(fontSize: 16),
               ),
             ),
@@ -331,7 +332,7 @@ class _SearchScreenState extends State<SearchScreen> {
                 values: _currentRangeValues,
                 min: 18,
                 max: 100,
-                divisions: 50,
+                divisions: 82,
                 activeColor: AppColors.primaryRed,
                 inactiveColor: AppColors.inputBorder,
                 labels: RangeLabels(
