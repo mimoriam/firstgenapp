@@ -186,6 +186,7 @@ class SignUpViewModel extends ChangeNotifier {
         'createdAt': FieldValue.serverTimestamp(),
         'culturalHeritage': culturalHeritage,
         'languages': languages,
+        'continent': continent,
         'generation': generation,
         'religion': religion,
         'religionImportance': religionImportance,

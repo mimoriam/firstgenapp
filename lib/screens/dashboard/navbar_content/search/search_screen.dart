@@ -1,11 +1,12 @@
 import 'dart:async';
-import 'package:country_picker/country_picker.dart';
 import 'package:firstgenapp/common/gradient_btn.dart';
 import 'package:firstgenapp/screens/dashboard/navbar_content/search/match_detail_for_search/match_detail_for_search_screen.dart';
+import 'package:firstgenapp/services/firebase_service.dart';
 import 'package:flutter/material.dart';
 import 'package:firstgenapp/constants/appColors.dart';
 import 'package:flutter_keyboard_visibility/flutter_keyboard_visibility.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
+import 'package:provider/provider.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
@@ -15,7 +16,6 @@ class SearchScreen extends StatefulWidget {
 }
 
 class _SearchScreenState extends State<SearchScreen> {
-  String _selectedCountry = 'US';
   RangeValues _currentRangeValues = const RangeValues(25, 30);
 
   final TextEditingController _languageController = TextEditingController();
@@ -26,16 +26,7 @@ class _SearchScreenState extends State<SearchScreen> {
   final List<String> _professions = ['Doctor'];
   final List<String> _interests = ['Reading'];
 
-  String? _selectedGeneration;
   String? _selectedGender;
-
-  final List<String> _generationOptions = [
-    'First generation',
-    'Second generation',
-    'Culture enthusiast',
-    'Mixed heritage',
-    'Not sure',
-  ];
   final List<String> _genderOptions = ['Male', 'Female', 'Other'];
 
   late StreamSubscription<bool> keyboardSubscription;
@@ -80,14 +71,49 @@ class _SearchScreenState extends State<SearchScreen> {
     }
   }
 
-  void _onSearchPressed() {
-    if (context.mounted) {
+  Future<void> _onSearchPressed() async {
+    final firebaseService = Provider.of<FirebaseService>(
+      context,
+      listen: false,
+    );
+    final userProfile = await firebaseService.getUserProfile();
+
+    if (userProfile == null || !userProfile.exists) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not load your profile.')),
+        );
+      }
+      return;
+    }
+
+    final userData = userProfile.data();
+    // MODIFICATION: Fetch search preferences from the user's profile data.
+    final String? continent = userData?['regionFocus'];
+    final String? generation = userData?['lookingForGeneration'];
+
+    if (continent == null || generation == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Please set your Region and Generation preferences in your profile.',
+            ),
+          ),
+        );
+      }
+      return;
+    }
+
+    if (mounted) {
       PersistentNavBarNavigator.pushNewScreen(
         context,
         screen: MatchDetailForSearchScreen(
-          country: _selectedCountry,
+          // MODIFICATION: Pass continent instead of country.
+          continent: continent,
           languages: _languages,
-          generation: _selectedGeneration,
+          // MODIFICATION: Pass generation from profile.
+          generation: generation,
           gender: _selectedGender,
           minAge: _currentRangeValues.start.round(),
           maxAge: _currentRangeValues.end.round(),
@@ -134,9 +160,10 @@ class _SearchScreenState extends State<SearchScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildSectionTitle('Country of origin', textTheme),
-                _buildCountryPicker(),
-                const SizedBox(height: 20),
+                // MODIFICATION: Country picker is now commented out.
+                // _buildSectionTitle('Country of origin', textTheme),
+                // _buildCountryPicker(),
+                // const SizedBox(height: 20),
                 _TitledChipInput(
                   title: 'Language',
                   hint: 'Type specific language',
@@ -149,15 +176,7 @@ class _SearchScreenState extends State<SearchScreen> {
                   ),
                 ),
                 const SizedBox(height: 20),
-                _buildChoiceChipSection(
-                  'Which generation are you looking for?',
-                  _generationOptions,
-                  _selectedGeneration,
-                  (val) {
-                    setState(() => _selectedGeneration = val);
-                  },
-                ),
-                const SizedBox(height: 20),
+                // MODIFICATION: Generation selection is removed from this screen.
                 _buildChoiceChipSection(
                   'Gender',
                   _genderOptions,
@@ -212,6 +231,7 @@ class _SearchScreenState extends State<SearchScreen> {
     return Text(title, style: textTheme.titleLarge?.copyWith(fontSize: 16));
   }
 
+  /* MODIFICATION: Country picker is no longer needed on this screen.
   Widget _buildCountryPicker() {
     return InkWell(
       onTap: () {
@@ -269,6 +289,7 @@ class _SearchScreenState extends State<SearchScreen> {
       ),
     );
   }
+  */
 
   Widget _buildChoiceChipSection(
     String title,

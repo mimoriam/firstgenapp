@@ -9,7 +9,8 @@ import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:provider/provider.dart';
 
 class MatchDetailForSearchScreen extends StatefulWidget {
-  final String country;
+  // MODIFICATION: Changed country to continent
+  final String continent;
   final List<String> languages;
   final String? generation;
   final String? gender;
@@ -20,7 +21,8 @@ class MatchDetailForSearchScreen extends StatefulWidget {
 
   const MatchDetailForSearchScreen({
     super.key,
-    required this.country,
+    // MODIFICATION: Changed country to continent
+    required this.continent,
     required this.languages,
     this.generation,
     this.gender,
@@ -50,8 +52,9 @@ class _MatchDetailForSearchScreenState
       context,
       listen: false,
     );
-    _usersFuture = firebaseService.searchUsersOR(
-      country: widget.country,
+    _usersFuture = firebaseService.searchUsersStrict(
+      // MODIFICATION: Pass continent to the search function
+      continent: widget.continent,
       languages: widget.languages,
       generation: widget.generation,
       gender: widget.gender,

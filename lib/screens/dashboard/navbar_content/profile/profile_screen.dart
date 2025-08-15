@@ -19,9 +19,16 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   // State variables for connection preferences
   String _seeProfileSelection = 'Only Communities I\'m In';
-  String _connectWithSelection = 'Connect With';
-  String _lookingForSelection = 'First Generation';
+  String _lookingForGenerationSelection = 'First generation';
   String _regionFocusSelection = 'Africa';
+
+  final List<String> _generationOptions = [
+    'First generation',
+    'Second generation',
+    'Culture enthusiast',
+    'Mixed heritage',
+    'Not sure',
+  ];
 
   // State variables for notification settings
   bool _appNotifications = true;
@@ -33,19 +40,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _showJoinedCommunities = true;
 
   User? _user;
-  // MODIFICATION: Changed from Future to Stream.
   late Stream<DocumentSnapshot<Map<String, dynamic>>> _userProfileStream;
+  late FirebaseService _firebaseService;
 
   @override
   void initState() {
     super.initState();
-    final firebaseService = Provider.of<FirebaseService>(
-      context,
-      listen: false,
-    );
-    _user = firebaseService.currentUser;
-    // MODIFICATION: Initialize the stream.
-    _userProfileStream = firebaseService.getUserProfileStream();
+    _firebaseService = Provider.of<FirebaseService>(context, listen: false);
+    _user = _firebaseService.currentUser;
+    _userProfileStream = _firebaseService.getUserProfileStream();
   }
 
   @override
@@ -70,7 +73,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ],
         ),
       ),
-      // MODIFICATION: Replaced FutureBuilder with StreamBuilder.
       body: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
         stream: _userProfileStream,
         builder: (context, snapshot) {
@@ -85,6 +87,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
           }
 
           final userData = snapshot.data!.data();
+
+          // Initialize state variables from Firestore data to ensure UI is up-to-date.
+          _seeProfileSelection =
+              userData?['seeProfile'] ?? 'Only Communities I\'m In';
+          _lookingForGenerationSelection =
+              userData?['lookingForGeneration'] ?? 'First generation';
+          _regionFocusSelection = userData?['regionFocus'] ?? 'Africa';
 
           return ListView(
             padding: const EdgeInsets.symmetric(
@@ -143,7 +152,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           size: 16,
           color: AppColors.primaryOrange,
         ),
-        // MODIFICATION: Removed manual refresh logic as StreamBuilder handles it.
         onTap: () {
           if (context.mounted) {
             PersistentNavBarNavigator.pushNewScreen(
@@ -169,30 +177,49 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const SizedBox(height: 16),
           _buildTitledChipGroup(
             'Who can see your profile?',
-            ['Everyone', 'Only Communities I\'m In'],
+            ['Everyone', 'Only Communities I\'m In', 'No Body'],
             _seeProfileSelection,
-            (newValue) => setState(() => _seeProfileSelection = newValue!),
+            (newValue) {
+              if (newValue != null) {
+                setState(() => _seeProfileSelection = newValue);
+                _firebaseService.updateUserProfile({'seeProfile': newValue});
+              }
+            },
           ),
           const SizedBox(height: 16),
           _buildTitledChipGroup(
-            '', // No title for this group
-            ['People', 'Connect With'],
-            _connectWithSelection,
-            (newValue) => setState(() => _connectWithSelection = newValue!),
+            'Which generation are you looking for?',
+            _generationOptions,
+            _lookingForGenerationSelection,
+            (newValue) {
+              if (newValue != null) {
+                setState(() => _lookingForGenerationSelection = newValue);
+                _firebaseService.updateUserProfile({
+                  'lookingForGeneration': newValue,
+                });
+              }
+            },
           ),
           const SizedBox(height: 16),
-          _buildTitledChipGroup(
-            'Looking to connect with',
-            ['First Generation', 'Culture Enthusiasts', 'Both'],
-            _lookingForSelection,
-            (newValue) => setState(() => _lookingForSelection = newValue!),
-          ),
-          const SizedBox(height: 16),
+          // MODIFICATION: Added more regions to the list.
           _buildTitledChipGroup(
             'Region Focus',
-            ['Africa', 'Asia', 'Europe', 'Global'],
+            [
+              'Africa',
+              'Asia',
+              'Europe',
+              'North America',
+              'South America',
+              'Oceania',
+              'Global',
+            ],
             _regionFocusSelection,
-            (newValue) => setState(() => _regionFocusSelection = newValue!),
+            (newValue) {
+              if (newValue != null) {
+                setState(() => _regionFocusSelection = newValue);
+                _firebaseService.updateUserProfile({'regionFocus': newValue});
+              }
+            },
           ),
         ],
       ),
@@ -267,23 +294,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _buildInfoRow(
             'Log Out',
             onTap: () async {
-              await Provider.of<FirebaseService>(
-                context,
-                listen: false,
-              ).signOut();
-
-              if (mounted) {
-                // Navigator.of(context).pushAndRemoveUntil(
-                //     MaterialPageRoute(
-                //         builder: (context) => const SigninScreen()),
-                //         (route) => false);
-
-                // Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
-                //   MaterialPageRoute(builder: (context) => const SigninScreen()),
-                //   (route) =>
-                //       false, // This predicate ensures all previous routes are removed.
-                // );
-              }
+              await _firebaseService.signOut();
             },
           ),
           _buildInfoRow(

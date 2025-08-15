@@ -361,8 +361,80 @@ class FirebaseService {
     }
   }
 
-  Future<List<QueryDocumentSnapshot<Map<String, dynamic>>>> searchUsersOR({
-    String? country,
+  // Future<List<QueryDocumentSnapshot<Map<String, dynamic>>>> searchUsersOR({
+  //   // MODIFICATION: Changed country to continent
+  //   String? continent,
+  //   List<String>? languages,
+  //   String? generation,
+  //   String? gender,
+  //   int? minAge,
+  //   int? maxAge,
+  //   List<String>? professions,
+  //   List<String>? interests,
+  // }) async {
+  //   final user = _auth.currentUser;
+  //   if (user == null) return [];
+  //
+  //   final List<Future<QuerySnapshot<Map<String, dynamic>>>> queries = [];
+  //   final baseQuery = _firestore
+  //       .collection(userCollection)
+  //       .where('uid', isNotEqualTo: user.uid);
+  //
+  //   // MODIFICATION: Query by continent instead of country
+  //   if (continent != null && continent != 'Global') {
+  //     queries.add(baseQuery.where('continent', isEqualTo: continent).get());
+  //   }
+  //   if (generation != null) {
+  //     queries.add(baseQuery.where('generation', isEqualTo: generation).get());
+  //   }
+  //   if (gender != null) {
+  //     queries.add(baseQuery.where('gender', isEqualTo: gender).get());
+  //   }
+  //   if (languages != null && languages.isNotEmpty) {
+  //     queries.add(
+  //       baseQuery.where('languages', arrayContainsAny: languages).get(),
+  //     );
+  //   }
+  //   if (professions != null && professions.isNotEmpty) {
+  //     queries.add(baseQuery.where('profession', whereIn: professions).get());
+  //   }
+  //   if (interests != null && interests.isNotEmpty) {
+  //     queries.add(baseQuery.where('hobbies', whereIn: interests).get());
+  //   }
+  //
+  //   if (queries.isEmpty) {
+  //     return getAllUsers();
+  //   }
+  //
+  //   final List<QuerySnapshot<Map<String, dynamic>>> snapshots =
+  //       await Future.wait(queries);
+  //
+  //   final Map<String, QueryDocumentSnapshot<Map<String, dynamic>>> uniqueDocs =
+  //       {};
+  //   for (final snapshot in snapshots) {
+  //     for (final doc in snapshot.docs) {
+  //       uniqueDocs[doc.id] = doc;
+  //     }
+  //   }
+  //
+  //   if (minAge != null && maxAge != null) {
+  //     final now = DateTime.now();
+  //     final minDob = DateTime(now.year - maxAge, now.month, now.day);
+  //     final maxDob = DateTime(now.year - minAge, now.month, now.day);
+  //
+  //     uniqueDocs.removeWhere((key, doc) {
+  //       final dobTimestamp = doc.data()['dateOfBirth'] as Timestamp?;
+  //       if (dobTimestamp == null) return true;
+  //       final dob = dobTimestamp.toDate();
+  //       return dob.isBefore(minDob) || dob.isAfter(maxDob);
+  //     });
+  //   }
+  //
+  //   return uniqueDocs.values.toList();
+  // }
+
+  Future<List<QueryDocumentSnapshot<Map<String, dynamic>>>> searchUsersStrict({
+    String? continent,
     List<String>? languages,
     String? generation,
     String? gender,
@@ -374,64 +446,98 @@ class FirebaseService {
     final user = _auth.currentUser;
     if (user == null) return [];
 
-    final List<Future<QuerySnapshot<Map<String, dynamic>>>> queries = [];
-    final baseQuery = _firestore
+    // Start with a base query that excludes the current user.
+    Query<Map<String, dynamic>> query = _firestore
         .collection(userCollection)
         .where('uid', isNotEqualTo: user.uid);
 
-    if (country != null) {
-      queries.add(
-        baseQuery.where('culturalHeritage', isEqualTo: country).get(),
-      );
+    // Apply strict AND filters for core preferences on the server-side.
+    if (continent != null && continent != 'Global') {
+      query = query.where('continent', isEqualTo: continent);
     }
     if (generation != null) {
-      queries.add(baseQuery.where('generation', isEqualTo: generation).get());
+      query = query.where('generation', isEqualTo: generation);
     }
-    if (gender != null) {
-      queries.add(baseQuery.where('gender', isEqualTo: gender).get());
-    }
-    if (languages != null && languages.isNotEmpty) {
-      queries.add(
-        baseQuery.where('languages', arrayContainsAny: languages).get(),
-      );
-    }
-    if (professions != null && professions.isNotEmpty) {
-      queries.add(baseQuery.where('profession', whereIn: professions).get());
-    }
-    if (interests != null && interests.isNotEmpty) {
-      queries.add(baseQuery.where('hobbies', whereIn: interests).get());
+    // FIX: Check for 'Other' and skip the gender filter if it's selected.
+    if (gender != null && gender != 'Other') {
+      query = query.where('gender', isEqualTo: gender);
     }
 
-    if (queries.isEmpty) {
-      return getAllUsers();
-    }
+    try {
+      final querySnapshot = await query.get();
+      List<QueryDocumentSnapshot<Map<String, dynamic>>> results =
+          querySnapshot.docs;
 
-    final List<QuerySnapshot<Map<String, dynamic>>> snapshots =
-        await Future.wait(queries);
+      // === Start Client-Side Filtering for remaining AND conditions ===
 
-    final Map<String, QueryDocumentSnapshot<Map<String, dynamic>>> uniqueDocs =
-        {};
-    for (final snapshot in snapshots) {
-      for (final doc in snapshot.docs) {
-        uniqueDocs[doc.id] = doc;
+      // 1. Filter by Age (Strict AND)
+      if (minAge != null && maxAge != null) {
+        final now = DateTime.now();
+        final minDob = DateTime(now.year - maxAge, now.month, now.day);
+        final maxDob = DateTime(now.year - minAge, now.month, now.day);
+
+        results = results.where((doc) {
+          final dobTimestamp = doc.data()['dateOfBirth'] as Timestamp?;
+          if (dobTimestamp == null) return false;
+          final dob = dobTimestamp.toDate();
+          return dob.isAfter(minDob) && dob.isBefore(maxDob);
+        }).toList();
       }
+
+      // 2. Filter by Languages (Strict AND)
+      if (languages != null && languages.isNotEmpty) {
+        results = results.where((doc) {
+          final userLanguages = List<String>.from(
+            doc.data()['languages'] ?? [],
+          );
+          return languages.every((lang) => userLanguages.contains(lang));
+        }).toList();
+      }
+
+      // === End Client-Side AND Filtering ===
+
+      // === Start Client-Side OR Filtering for optional criteria ===
+
+      final bool hasOrFilters =
+          (professions?.isNotEmpty ?? false) ||
+          (interests?.isNotEmpty ?? false);
+
+      if (hasOrFilters) {
+        results = results.where((doc) {
+          final data = doc.data();
+
+          if (professions?.isNotEmpty ?? false) {
+            final userProfession = data['profession'] as String?;
+            if (userProfession != null &&
+                professions!.contains(userProfession)) {
+              return true;
+            }
+          }
+
+          if (interests?.isNotEmpty ?? false) {
+            final userHobbiesString = data['hobbies'] as String?;
+            if (userHobbiesString != null) {
+              final userInterests = userHobbiesString
+                  .split(',')
+                  .map((e) => e.trim())
+                  .toList();
+              if (interests!.any(
+                (interest) => userInterests.contains(interest),
+              )) {
+                return true;
+              }
+            }
+          }
+
+          return false;
+        }).toList();
+      }
+
+      return results;
+    } catch (e) {
+      log('Error searching users: $e');
+      return [];
     }
-
-    // Perform age filtering on the client side
-    if (minAge != null && maxAge != null) {
-      final now = DateTime.now();
-      final minDob = DateTime(now.year - maxAge, now.month, now.day);
-      final maxDob = DateTime(now.year - minAge, now.month, now.day);
-
-      uniqueDocs.removeWhere((key, doc) {
-        final dobTimestamp = doc.data()['dateOfBirth'] as Timestamp?;
-        if (dobTimestamp == null) return true; // Remove if no DOB
-        final dob = dobTimestamp.toDate();
-        return dob.isBefore(minDob) || dob.isAfter(maxDob);
-      });
-    }
-
-    return uniqueDocs.values.toList();
   }
 
   /// Maps [FirebaseAuthException] codes to user-friendly [AuthException] objects.

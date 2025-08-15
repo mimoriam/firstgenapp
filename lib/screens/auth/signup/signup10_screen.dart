@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:firstgenapp/auth_gate.dart';
-import 'package:firstgenapp/screens/dashboard/dashboard_screen.dart';
 import 'package:firstgenapp/viewmodels/SignupViewModel.dart';
 import 'package:firstgenapp/viewmodels/auth_provider.dart';
 import 'package:flutter/gestures.dart';
