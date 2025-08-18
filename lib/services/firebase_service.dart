@@ -478,7 +478,7 @@ class FirebaseService {
     final currentUser = await getCurrentChatUser();
     if (currentUser == null) return;
 
-    final conversationId = _getConversationId(currentUser.uid, otherUser.uid);
+    final conversationId = getConversationId(currentUser.uid, otherUser.uid);
     final now = DateTime.now().toUtc().toIso8601String();
 
     final conversationData = {
@@ -570,8 +570,15 @@ class FirebaseService {
     await recentMatchesRef.set(recentMatches);
   }
 
-  Future<List<QueryDocumentSnapshot<Map<String, dynamic>>>>
-  getRecentUsers() async {
+  Future<void> addRecentUser(String userId) async {
+    final currentUser = _auth.currentUser;
+    if (currentUser == null) {
+      return;
+    }
+    await addRecentMatch(userId);
+  }
+
+  Future<List<Map<String, String>>> getRecentUsers() async {
     final user = _auth.currentUser;
     if (user == null) return [];
 
@@ -600,15 +607,16 @@ class FirebaseService {
           .get();
 
       // To maintain the order from recent_matches
-      final orderedDocs = <QueryDocumentSnapshot<Map<String, dynamic>>>[];
+      final orderedDocs = <Map<String, String>>[];
       // We iterate in reverse to get the most recent matches first.
       for (final userId in recentMatchIds.reversed) {
-        final doc = querySnapshot.docs.firstWhere(
-          (d) => d.id == userId,
-          orElse: () =>
-              throw Exception("User not found"), // Or handle it gracefully
-        );
-        orderedDocs.add(doc);
+        final doc = querySnapshot.docs.firstWhere((d) => d.id == userId);
+        orderedDocs.add({
+          'name': doc.data()['fullName'] as String? ?? 'No Name',
+          'avatar':
+              doc.data()['profileImageUrl'] as String? ??
+              'https://picsum.photos/seed/${doc.data()['uid']}/200/200',
+        });
       }
 
       return orderedDocs;
@@ -705,7 +713,7 @@ class FirebaseService {
     );
   }
 
-  String _getConversationId(String uid1, String uid2) {
+  String getConversationId(String uid1, String uid2) {
     return uid1.hashCode <= uid2.hashCode ? '$uid1-$uid2' : '$uid2-$uid1';
   }
 

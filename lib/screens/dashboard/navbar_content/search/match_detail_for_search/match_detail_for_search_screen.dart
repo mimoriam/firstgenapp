@@ -1,6 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firstgenapp/models/chat_models.dart';
-import 'package:firstgenapp/screens/dashboard/navbar_content/chats/chats_screen.dart';
 import 'package:firstgenapp/services/firebase_service.dart';
 import 'package:flutter/material.dart';
 import 'package:firstgenapp/constants/appColors.dart';
@@ -8,11 +7,9 @@ import 'package:flutter_card_swiper/flutter_card_swiper.dart';
 import 'package:iconly/iconly.dart';
 import 'dart:ui';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
-import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 import 'package:provider/provider.dart';
 
 class MatchDetailForSearchScreen extends StatefulWidget {
-  // MODIFICATION: Changed country to continent
   final String continent;
   final List<String> languages;
   final String? generation;
@@ -21,10 +18,10 @@ class MatchDetailForSearchScreen extends StatefulWidget {
   final int maxAge;
   final List<String> professions;
   final List<String> interests;
+  final Function(ChatUser user) onUserSelected;
 
   const MatchDetailForSearchScreen({
     super.key,
-    // MODIFICATION: Changed country to continent
     required this.continent,
     required this.languages,
     this.generation,
@@ -33,6 +30,7 @@ class MatchDetailForSearchScreen extends StatefulWidget {
     required this.maxAge,
     required this.professions,
     required this.interests,
+    required this.onUserSelected,
   });
 
   @override
@@ -56,7 +54,6 @@ class _MatchDetailForSearchScreenState
       listen: false,
     );
     _usersFuture = firebaseService.searchUsersStrict(
-      // MODIFICATION: Pass continent to the search function
       continent: widget.continent,
       languages: widget.languages,
       generation: widget.generation,
@@ -89,21 +86,14 @@ class _MatchDetailForSearchScreenState
     debugPrint("Discarded ${user['fullName']}");
   }
 
-  void _onMessage(int index) async {
+  void _onMessage(int index) {
     final user = _users[index];
-    final firebaseService = Provider.of<FirebaseService>(
-      context,
-      listen: false,
-    );
     final otherUser = ChatUser(
       uid: user['uid'],
       name: user['fullName'],
       avatarUrl: user['profileImageUrl'] ?? '',
     );
-    await firebaseService.createChat(otherUser);
-    if (mounted) {
-      PersistentNavBarNavigator.pushNewScreen(context, screen: ChatsScreen());
-    }
+    widget.onUserSelected(otherUser);
   }
 
   @override

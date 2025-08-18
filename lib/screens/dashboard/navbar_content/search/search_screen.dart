@@ -1,4 +1,6 @@
 import 'package:firstgenapp/constants/appColors.dart';
+import 'package:firstgenapp/models/chat_models.dart';
+import 'package:firstgenapp/screens/dashboard/navbar_content/chats/conversation/conversation_screen.dart';
 import 'package:firstgenapp/screens/dashboard/navbar_content/search/match_detail_for_search/match_detail_for_search_screen.dart';
 import 'package:firstgenapp/services/firebase_service.dart';
 import 'package:flutter/material.dart';
@@ -101,6 +103,31 @@ class _SearchScreenState extends State<SearchScreen> {
           languages: searchParams['languages'],
           professions: searchParams['professions'],
           interests: searchParams['interests'],
+          onUserSelected: (user) {
+            final firebaseService = Provider.of<FirebaseService>(
+              context,
+              listen: false,
+            );
+            firebaseService.addRecentUser(user.uid);
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ConversationScreen(
+                  conversation: Conversation(
+                    id: firebaseService.getConversationId(
+                      firebaseService.currentUser!.uid,
+                      user.uid,
+                    ),
+                    otherUser: user,
+                    lastMessage: '',
+                    lastMessageTimestamp: DateTime.now().toIso8601String(),
+                    unreadCount: 0,
+                    lastMessageSenderId: '',
+                  ),
+                ),
+              ),
+            );
+          },
         );
       },
     );

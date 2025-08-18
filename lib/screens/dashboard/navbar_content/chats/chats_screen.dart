@@ -9,14 +9,70 @@ import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 import 'package:provider/provider.dart';
 
-class ChatsScreen extends StatefulWidget {
+class ChatsScreen extends StatelessWidget {
   const ChatsScreen({super.key});
 
   @override
-  State<ChatsScreen> createState() => _ChatsScreenState();
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+
+    return Scaffold(
+      backgroundColor: AppColors.primaryBackground,
+      appBar: AppBar(
+        backgroundColor: AppColors.primaryBackground,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Talk Time!', style: textTheme.headlineSmall),
+            const SizedBox(height: 4),
+            Text(
+              'Catch up, connect, and keep the story going.',
+              style: textTheme.bodySmall,
+            ),
+          ],
+        ),
+        actions: [
+          IconButton(
+            onPressed: () {},
+            icon: const Icon(
+              IconlyLight.search,
+              color: AppColors.textSecondary,
+              size: 24,
+            ),
+          ),
+        ],
+      ),
+      body: ListView(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+        children: [
+          const SizedBox(height: 16),
+          _buildSectionHeader('Recent match', textTheme),
+          const SizedBox(height: 12),
+          const RecentMatchesList(),
+          const SizedBox(height: 20),
+          _buildSectionHeader('Messages', textTheme),
+          const SizedBox(height: 12),
+          const ConversationsList(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(String title, TextTheme textTheme) {
+    return Text(title, style: textTheme.titleLarge);
+  }
 }
 
-class _ChatsScreenState extends State<ChatsScreen> {
+class RecentMatchesList extends StatefulWidget {
+  const RecentMatchesList({super.key});
+
+  @override
+  State<RecentMatchesList> createState() => _RecentMatchesListState();
+}
+
+class _RecentMatchesListState extends State<RecentMatchesList> {
   late Future<List<Map<String, String>>> _recentMatchesFuture;
 
   @override
@@ -30,107 +86,11 @@ class _ChatsScreenState extends State<ChatsScreen> {
       context,
       listen: false,
     );
-    final users = await firebaseService.getRecentUsers();
-    return users.map((user) {
-      final data = user.data();
-      return {
-        'name': data['fullName'] as String? ?? 'No Name',
-        'avatar':
-            data['profileImageUrl'] as String? ??
-            'https://picsum.photos/seed/${data['uid']}/200/200',
-      };
-    }).toList();
+    return await firebaseService.getRecentUsers();
   }
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    final firebaseService = Provider.of<FirebaseService>(context);
-
-    return Scaffold(
-      backgroundColor: AppColors.primaryBackground,
-      appBar: AppBar(
-        backgroundColor: AppColors.primaryBackground,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Talk Time!',
-              // UPDATED: Inherited from theme
-              style: textTheme.headlineSmall,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Catch up, connect, and keep the story going.',
-              // UPDATED: Inherited from theme
-              style: textTheme.bodySmall,
-            ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            onPressed: () {},
-            icon: const Icon(
-              // Icons.search,
-              IconlyLight.search,
-              color: AppColors.textSecondary,
-              size: 24,
-            ),
-          ),
-        ],
-      ),
-      body: StreamBuilder<List<Conversation>>(
-        stream: firebaseService.getConversations(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          }
-          if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return const Center(child: Text('No conversations yet.'));
-          }
-
-          final conversations = snapshot.data!;
-
-          return ListView(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            children: [
-              // UPDATED: Reduced spacing
-              const SizedBox(height: 16),
-              _buildSectionHeader('Recent match', textTheme),
-              const SizedBox(height: 12),
-              _buildRecentMatchesList(),
-              // UPDATED: Reduced spacing
-              const SizedBox(height: 20),
-              _buildSectionHeader('Messages', textTheme),
-              const SizedBox(height: 12),
-              ...conversations.map(
-                (conversation) => Padding(
-                  // UPDATED: Reduced padding
-                  padding: const EdgeInsets.only(bottom: 12.0),
-                  child: _buildChatItem(conversation),
-                ),
-              ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildSectionHeader(String title, TextTheme textTheme) {
-    return Text(
-      title,
-      // UPDATED: Inherited from theme
-      style: textTheme.titleLarge,
-    );
-  }
-
-  Widget _buildRecentMatchesList() {
     return FutureBuilder<List<Map<String, String>>>(
       future: _recentMatchesFuture,
       builder: (context, snapshot) {
@@ -142,7 +102,6 @@ class _ChatsScreenState extends State<ChatsScreen> {
         }
         final matches = snapshot.data!;
         return SizedBox(
-          // UPDATED: Reduced height for compactness
           height: 75,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
@@ -154,14 +113,12 @@ class _ChatsScreenState extends State<ChatsScreen> {
                 child: Column(
                   children: [
                     CircleAvatar(
-                      // UPDATED: Reduced size
                       radius: 26,
                       backgroundImage: NetworkImage(match['avatar']!),
                     ),
                     const SizedBox(height: 6),
                     Text(
                       match['name']!,
-                      // UPDATED: Inherited from theme
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ],
@@ -173,28 +130,61 @@ class _ChatsScreenState extends State<ChatsScreen> {
       },
     );
   }
+}
 
-  Widget _buildChatItem(Conversation conversation) {
+class ConversationsList extends StatelessWidget {
+  const ConversationsList({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final firebaseService = Provider.of<FirebaseService>(context);
+    return StreamBuilder<List<Conversation>>(
+      stream: firebaseService.getConversations(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return Center(child: Text('Error: ${snapshot.error}'));
+        }
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return const Center(child: Text('No conversations yet.'));
+        }
+
+        final conversations = snapshot.data!;
+        return ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: conversations.length,
+          itemBuilder: (context, index) {
+            final conversation = conversations[index];
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12.0),
+              child: _buildChatItem(context, conversation),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildChatItem(BuildContext context, Conversation conversation) {
     final textTheme = Theme.of(context).textTheme;
 
     return GestureDetector(
       onTap: () {
-        if (context.mounted) {
-          PersistentNavBarNavigator.pushNewScreen(
-            context,
-            screen: ConversationScreen(conversation: conversation),
-            withNavBar: false,
-          );
-        }
+        PersistentNavBarNavigator.pushNewScreen(
+          context,
+          screen: ConversationScreen(conversation: conversation),
+          withNavBar: false,
+        );
       },
       child: Row(
         children: [
           CircleAvatar(
-            // UPDATED: Reduced size
             radius: 26,
             backgroundImage: NetworkImage(conversation.otherUser.avatarUrl),
           ),
-          // UPDATED: Reduced spacing
           const SizedBox(width: 10),
           Expanded(
             child: Column(
@@ -202,7 +192,6 @@ class _ChatsScreenState extends State<ChatsScreen> {
               children: [
                 Text(
                   conversation.otherUser.name,
-                  // UPDATED: Inherited from theme
                   style: textTheme.bodyMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
@@ -213,7 +202,6 @@ class _ChatsScreenState extends State<ChatsScreen> {
                 Row(
                   children: [
                     const Icon(
-                      // Icons.history,
                       Iconsax.export_2_copy,
                       size: 14,
                       color: AppColors.textSecondary,
@@ -222,7 +210,6 @@ class _ChatsScreenState extends State<ChatsScreen> {
                     Expanded(
                       child: Text(
                         conversation.lastMessage,
-                        // UPDATED: Inherited from theme
                         style: textTheme.bodySmall,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -233,18 +220,16 @@ class _ChatsScreenState extends State<ChatsScreen> {
               ],
             ),
           ),
-          // UPDATED: Reduced spacing
           const SizedBox(width: 10),
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
                 TimeAgo.format(conversation.lastMessageTimestamp),
-                // UPDATED: Inherited from theme
                 style: textTheme.bodySmall,
               ),
               const SizedBox(height: 6),
-              _buildStatusIndicator(conversation, textTheme),
+              _buildStatusIndicator(context, conversation, textTheme),
             ],
           ),
         ],
@@ -252,7 +237,11 @@ class _ChatsScreenState extends State<ChatsScreen> {
     );
   }
 
-  Widget _buildStatusIndicator(Conversation conversation, TextTheme textTheme) {
+  Widget _buildStatusIndicator(
+    BuildContext context,
+    Conversation conversation,
+    TextTheme textTheme,
+  ) {
     final currentUser = Provider.of<FirebaseService>(
       context,
       listen: false,
@@ -269,7 +258,6 @@ class _ChatsScreenState extends State<ChatsScreen> {
         child: Center(
           child: Text(
             conversation.unreadCount.toString(),
-            // UPDATED: Inherited from theme
             style: textTheme.bodySmall?.copyWith(
               color: Colors.white,
               fontWeight: FontWeight.bold,
