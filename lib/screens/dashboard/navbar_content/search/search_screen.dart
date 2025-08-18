@@ -1,3 +1,4 @@
+import 'package:firstgenapp/constants/appColors.dart';
 import 'package:firstgenapp/screens/dashboard/navbar_content/search/match_detail_for_search/match_detail_for_search_screen.dart';
 import 'package:firstgenapp/services/firebase_service.dart';
 import 'package:flutter/material.dart';
@@ -11,8 +12,6 @@ class SearchScreen extends StatefulWidget {
 }
 
 class _SearchScreenState extends State<SearchScreen> {
-  // FIX: Use a Future variable in the state to prevent re-fetching on simple rebuilds.
-  // The key change in DashboardScreen will re-create this state, thus re-running the future.
   late Future<Map<String, dynamic>> _searchFuture;
 
   @override
@@ -22,7 +21,6 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   Future<Map<String, dynamic>> _fetchPreferencesAndSearch() async {
-    // Ensure the widget is still mounted before accessing context.
     if (!mounted) return {};
 
     final firebaseService = Provider.of<FirebaseService>(
@@ -37,7 +35,6 @@ class _SearchScreenState extends State<SearchScreen> {
 
     final userData = userProfile.data()!;
 
-    // Fetch all preferences from the user's document
     final String? continent = userData['regionFocus'];
     final String? generation = userData['lookingForGeneration'];
     final String? gender = userData['searchGender'];
@@ -71,7 +68,10 @@ class _SearchScreenState extends State<SearchScreen> {
       future: _searchFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+          return Scaffold(
+            backgroundColor: AppColors.secondaryBackground,
+            body: const Center(child: CircularProgressIndicator()),
+          );
         }
 
         if (snapshot.hasError) {

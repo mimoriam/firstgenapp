@@ -1,7 +1,11 @@
+import 'dart:convert';
 import 'dart:developer';
 import 'dart:io';
+import 'dart:math' hide log;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_database/firebase_database.dart' hide Query;
+import 'package:firstgenapp/models/chat_models.dart';
 import 'package:firstgenapp/services/continent_service.dart';
 import 'package:firstgenapp/utils/authException.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -10,6 +14,7 @@ class FirebaseService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseDatabase _database = FirebaseDatabase.instance;
 
   Stream<User?> get authStateChanges => _auth.authStateChanges();
   User? get currentUser => _auth.currentUser;
@@ -361,78 +366,6 @@ class FirebaseService {
     }
   }
 
-  // Future<List<QueryDocumentSnapshot<Map<String, dynamic>>>> searchUsersOR({
-  //   // MODIFICATION: Changed country to continent
-  //   String? continent,
-  //   List<String>? languages,
-  //   String? generation,
-  //   String? gender,
-  //   int? minAge,
-  //   int? maxAge,
-  //   List<String>? professions,
-  //   List<String>? interests,
-  // }) async {
-  //   final user = _auth.currentUser;
-  //   if (user == null) return [];
-  //
-  //   final List<Future<QuerySnapshot<Map<String, dynamic>>>> queries = [];
-  //   final baseQuery = _firestore
-  //       .collection(userCollection)
-  //       .where('uid', isNotEqualTo: user.uid);
-  //
-  //   // MODIFICATION: Query by continent instead of country
-  //   if (continent != null && continent != 'Global') {
-  //     queries.add(baseQuery.where('continent', isEqualTo: continent).get());
-  //   }
-  //   if (generation != null) {
-  //     queries.add(baseQuery.where('generation', isEqualTo: generation).get());
-  //   }
-  //   if (gender != null) {
-  //     queries.add(baseQuery.where('gender', isEqualTo: gender).get());
-  //   }
-  //   if (languages != null && languages.isNotEmpty) {
-  //     queries.add(
-  //       baseQuery.where('languages', arrayContainsAny: languages).get(),
-  //     );
-  //   }
-  //   if (professions != null && professions.isNotEmpty) {
-  //     queries.add(baseQuery.where('profession', whereIn: professions).get());
-  //   }
-  //   if (interests != null && interests.isNotEmpty) {
-  //     queries.add(baseQuery.where('hobbies', whereIn: interests).get());
-  //   }
-  //
-  //   if (queries.isEmpty) {
-  //     return getAllUsers();
-  //   }
-  //
-  //   final List<QuerySnapshot<Map<String, dynamic>>> snapshots =
-  //       await Future.wait(queries);
-  //
-  //   final Map<String, QueryDocumentSnapshot<Map<String, dynamic>>> uniqueDocs =
-  //       {};
-  //   for (final snapshot in snapshots) {
-  //     for (final doc in snapshot.docs) {
-  //       uniqueDocs[doc.id] = doc;
-  //     }
-  //   }
-  //
-  //   if (minAge != null && maxAge != null) {
-  //     final now = DateTime.now();
-  //     final minDob = DateTime(now.year - maxAge, now.month, now.day);
-  //     final maxDob = DateTime(now.year - minAge, now.month, now.day);
-  //
-  //     uniqueDocs.removeWhere((key, doc) {
-  //       final dobTimestamp = doc.data()['dateOfBirth'] as Timestamp?;
-  //       if (dobTimestamp == null) return true;
-  //       final dob = dobTimestamp.toDate();
-  //       return dob.isBefore(minDob) || dob.isAfter(maxDob);
-  //     });
-  //   }
-  //
-  //   return uniqueDocs.values.toList();
-  // }
-
   Future<List<QueryDocumentSnapshot<Map<String, dynamic>>>> searchUsersStrict({
     String? continent,
     List<String>? languages,
@@ -538,6 +471,179 @@ class FirebaseService {
       log('Error searching users: $e');
       return [];
     }
+  }
+
+  // CHAT FUNCTIONALITY
+  Future<void> createChat(ChatUser otherUser) async {
+    final currentUser = await getCurrentChatUser();
+    if (currentUser == null) return;
+
+    final conversationId = _getConversationId(currentUser.uid, otherUser.uid);
+    final now = DateTime.now().toUtc().toIso8601String();
+
+    final conversationData = {
+      'participants': {currentUser.uid: true, otherUser.uid: true},
+      'lastMessage': '',
+      'lastMessageTimestamp': now,
+      'users': {
+        currentUser.uid: currentUser.toJson(),
+        otherUser.uid: otherUser.toJson(),
+      },
+      'unreadCount': {currentUser.uid: 0, otherUser.uid: 0},
+      'lastMessageSenderId': '',
+    };
+
+    await _database.ref('conversations/$conversationId').set(conversationData);
+    await _database
+        .ref('users/${currentUser.uid}/conversations/$conversationId')
+        .set(true);
+    await _database
+        .ref('users/${otherUser.uid}/conversations/$conversationId')
+        .set(true);
+  }
+
+  Stream<List<Conversation>> getConversations() {
+    final currentUser = _auth.currentUser;
+    if (currentUser == null) return Stream.value([]);
+
+    return _database
+        .ref('users/${currentUser.uid}/conversations')
+        .onValue
+        .asyncMap((event) async {
+          if (event.snapshot.value == null) {
+            return [];
+          }
+          final conversationIdsMap = event.snapshot.value as Map;
+          final conversationIds = conversationIdsMap.keys.toList();
+          final conversations = <Conversation>[];
+          for (var id in conversationIds) {
+            final snapshot = await _database.ref('conversations/$id').get();
+            if (snapshot.exists && snapshot.value != null) {
+              // FIX: Use jsonEncode/Decode to safely convert the map
+              final encodedData = jsonEncode(snapshot.value);
+              final data = jsonDecode(encodedData) as Map<String, dynamic>;
+              conversations.add(
+                Conversation.fromJson(data, id.toString(), currentUser.uid),
+              );
+            }
+          }
+          // Sort conversations to show the most recent first
+          conversations.sort(
+            (a, b) => b.lastMessageTimestamp.compareTo(a.lastMessageTimestamp),
+          );
+          return conversations;
+        });
+  }
+
+  Future<List<QueryDocumentSnapshot<Map<String, dynamic>>>>
+  getRecentUsers() async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) return [];
+
+      final querySnapshot = await _firestore
+          .collection(userCollection)
+          .where('uid', isNotEqualTo: user.uid)
+          .orderBy('createdAt', descending: true)
+          .limit(6)
+          .get();
+
+      return querySnapshot.docs;
+    } catch (e) {
+      log('Error getting recent users: $e');
+      return [];
+    }
+  }
+
+  Stream<List<ChatMessage>> getMessages(String conversationId) {
+    return _database
+        .ref('messages/$conversationId')
+        .orderByChild('timestamp')
+        .onValue
+        .map((event) {
+          if (event.snapshot.value == null) {
+            return [];
+          }
+          // FIX: Use jsonEncode/Decode here as well
+          final encodedData = jsonEncode(event.snapshot.value);
+          final messagesMap = jsonDecode(encodedData) as Map<String, dynamic>;
+          final messages = messagesMap.entries
+              .map(
+                (e) => ChatMessage.fromJson(
+                  Map<String, dynamic>.from(e.value as Map),
+                  e.key,
+                ),
+              )
+              .toList();
+          messages.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+          return messages;
+        });
+  }
+
+  Future<void> sendMessage(String conversationId, String text) async {
+    final currentUser = _auth.currentUser;
+    if (currentUser == null) return;
+
+    final messageId = _database.ref().push().key;
+    final now = DateTime.now().toUtc().toIso8601String();
+
+    final message = ChatMessage(
+      id: messageId!,
+      text: text,
+      senderId: currentUser.uid,
+      timestamp: now,
+    );
+
+    await _database
+        .ref('messages/$conversationId/$messageId')
+        .set(message.toJson());
+
+    final conversationRef = _database.ref('conversations/$conversationId');
+    final snapshot = await conversationRef.get();
+    if (snapshot.exists) {
+      final data = Map<String, dynamic>.from(snapshot.value as Map);
+      final participants = Map<String, dynamic>.from(
+        data['participants'] as Map,
+      );
+      final otherUserId = participants.keys.firstWhere(
+        (id) => id != currentUser.uid,
+      );
+
+      conversationRef.update({
+        'lastMessage': text,
+        'lastMessageTimestamp': now,
+        'lastMessageSenderId': currentUser.uid,
+      });
+      conversationRef
+          .child('unreadCount/$otherUserId')
+          .set(ServerValue.increment(1));
+    }
+  }
+
+  Future<void> markAsRead(String conversationId) async {
+    final currentUser = _auth.currentUser;
+    if (currentUser == null) return;
+    await _database
+        .ref('conversations/$conversationId/unreadCount/${currentUser.uid}')
+        .set(0);
+  }
+
+  Future<ChatUser?> getCurrentChatUser() async {
+    final user = _auth.currentUser;
+    if (user == null) return null;
+    final profile = await getUserProfile();
+    if (profile == null) return null;
+    return ChatUser(
+      uid: user.uid,
+      name: profile.data()?['fullName'] ?? 'No Name',
+      avatarUrl:
+          profile.data()?['profileImageUrl'] ??
+          'https://picsum.photos/seed/${Random().nextInt(1000)}/200/200',
+    );
+  }
+
+  String _getConversationId(String uid1, String uid2) {
+    return uid1.hashCode <= uid2.hashCode ? '$uid1-$uid2' : '$uid2-$uid1';
   }
 
   /// Maps [FirebaseAuthException] codes to user-friendly [AuthException] objects.

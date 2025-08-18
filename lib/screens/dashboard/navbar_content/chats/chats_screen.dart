@@ -1,9 +1,13 @@
+import 'package:firstgenapp/models/chat_models.dart';
 import 'package:firstgenapp/screens/dashboard/navbar_content/chats/conversation/conversation_screen.dart';
+import 'package:firstgenapp/services/firebase_service.dart';
+import 'package:firstgenapp/utils/time_ago.dart';
 import 'package:flutter/material.dart';
 import 'package:firstgenapp/constants/appColors.dart';
 import 'package:iconly/iconly.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
+import 'package:provider/provider.dart';
 
 class ChatsScreen extends StatefulWidget {
   const ChatsScreen({super.key});
@@ -13,83 +17,35 @@ class ChatsScreen extends StatefulWidget {
 }
 
 class _ChatsScreenState extends State<ChatsScreen> {
-  // Mock data based on the screenshot
-  final List<Map<String, String>> _recentMatches = [
-    {
-      'name': 'Ariana',
-      'avatar': 'https://randomuser.me/api/portraits/women/1.jpg',
-    },
-    {
-      'name': 'Jenny',
-      'avatar': 'https://randomuser.me/api/portraits/women/2.jpg',
-    },
-    {'name': 'Jame', 'avatar': 'https://randomuser.me/api/portraits/men/1.jpg'},
-    {
-      'name': 'Nalli',
-      'avatar': 'https://randomuser.me/api/portraits/women/3.jpg',
-    },
-    {'name': 'Ken', 'avatar': 'https://randomuser.me/api/portraits/men/2.jpg'},
-    {'name': 'Jam', 'avatar': 'https://randomuser.me/api/portraits/men/3.jpg'},
-  ];
+  late Future<List<Map<String, String>>> _recentMatchesFuture;
 
-  final List<Map<String, dynamic>> _todayMessages = [
-    {
-      'name': 'Ariana',
-      'avatar': 'https://randomuser.me/api/portraits/women/1.jpg',
-      'lastMessage': 'Nice to meet you, darling. How has your day been so far?',
-      'time': '7:09 pm',
-      'status': 'read',
-      'unreadCount': 0,
-    },
-    {
-      'name': 'Jame',
-      'avatar': 'https://randomuser.me/api/portraits/men/1.jpg',
-      'lastMessage': 'Hey bro, do you want to catch up later this week?',
-      'time': '5:35 pm',
-      'status': 'unread',
-      'unreadCount': 1,
-    },
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _recentMatchesFuture = _fetchRecentMatches();
+  }
 
-  final List<Map<String, dynamic>> _yesterdayMessages = [
-    {
-      'name': 'Kensington Montgomery III',
-      'avatar': 'https://randomuser.me/api/portraits/men/2.jpg',
-      'lastMessage': 'I absolutely agree with your opinion on that matter.',
-      'time': '10:09 pm',
-      'status': 'read',
-      'unreadCount': 0,
-    },
-    {
-      'name': 'Ken',
-      'avatar': 'https://randomuser.me/api/portraits/women/4.jpg',
-      'lastMessage': 'Your voice is so attractive!',
-      'time': '8:00 pm',
-      'status': 'unread',
-      'unreadCount': 8,
-    },
-    {
-      'name': 'Jenny',
-      'avatar': 'https://randomuser.me/api/portraits/women/2.jpg',
-      'lastMessage':
-          'Yesterday I went to the most amazing concert, you would have loved it!',
-      'time': '8:00 pm',
-      'status': 'unread',
-      'unreadCount': 8,
-    },
-    {
-      'name': 'Jan',
-      'avatar': 'https://randomuser.me/api/portraits/women/5.jpg',
-      'lastMessage': 'Unfortunately I\'m not at the office today.',
-      'time': '8:00 pm',
-      'status': 'read',
-      'unreadCount': 0,
-    },
-  ];
+  Future<List<Map<String, String>>> _fetchRecentMatches() async {
+    final firebaseService = Provider.of<FirebaseService>(
+      context,
+      listen: false,
+    );
+    final users = await firebaseService.getRecentUsers();
+    return users.map((user) {
+      final data = user.data();
+      return {
+        'name': data['fullName'] as String? ?? 'No Name',
+        'avatar':
+            data['profileImageUrl'] as String? ??
+            'https://picsum.photos/seed/${data['uid']}/200/200',
+      };
+    }).toList();
+  }
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final firebaseService = Provider.of<FirebaseService>(context);
 
     return Scaffold(
       backgroundColor: AppColors.primaryBackground,
@@ -125,35 +81,43 @@ class _ChatsScreenState extends State<ChatsScreen> {
           ),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.symmetric(horizontal: 16.0),
-        children: [
-          // UPDATED: Reduced spacing
-          const SizedBox(height: 16),
-          _buildSectionHeader('Recent match', textTheme),
-          const SizedBox(height: 12),
-          _buildRecentMatchesList(),
-          // UPDATED: Reduced spacing
-          const SizedBox(height: 20),
-          _buildSectionHeader('Today Message', textTheme),
-          const SizedBox(height: 12),
-          ..._todayMessages.map(
-            (msg) => Padding(
-              // UPDATED: Reduced padding
-              padding: const EdgeInsets.only(bottom: 12.0),
-              child: _buildChatItem(msg),
-            ),
-          ),
-          _buildSectionHeader('Yesterday', textTheme),
-          const SizedBox(height: 12),
-          ..._yesterdayMessages.map(
-            (msg) => Padding(
-              // UPDATED: Reduced padding
-              padding: const EdgeInsets.only(bottom: 12.0),
-              child: _buildChatItem(msg),
-            ),
-          ),
-        ],
+      body: StreamBuilder<List<Conversation>>(
+        stream: firebaseService.getConversations(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          }
+          if (!snapshot.hasData || snapshot.data!.isEmpty) {
+            return const Center(child: Text('No conversations yet.'));
+          }
+
+          final conversations = snapshot.data!;
+
+          return ListView(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            children: [
+              // UPDATED: Reduced spacing
+              const SizedBox(height: 16),
+              _buildSectionHeader('Recent match', textTheme),
+              const SizedBox(height: 12),
+              _buildRecentMatchesList(),
+              // UPDATED: Reduced spacing
+              const SizedBox(height: 20),
+              _buildSectionHeader('Messages', textTheme),
+              const SizedBox(height: 12),
+              ...conversations.map(
+                (conversation) => Padding(
+                  // UPDATED: Reduced padding
+                  padding: const EdgeInsets.only(bottom: 12.0),
+                  child: _buildChatItem(conversation),
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -167,38 +131,50 @@ class _ChatsScreenState extends State<ChatsScreen> {
   }
 
   Widget _buildRecentMatchesList() {
-    return SizedBox(
-      // UPDATED: Reduced height for compactness
-      height: 75,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        itemCount: _recentMatches.length,
-        itemBuilder: (context, index) {
-          final match = _recentMatches[index];
-          return Padding(
-            padding: const EdgeInsets.only(right: 16.0),
-            child: Column(
-              children: [
-                CircleAvatar(
-                  // UPDATED: Reduced size
-                  radius: 26,
-                  backgroundImage: NetworkImage(match['avatar']!),
+    return FutureBuilder<List<Map<String, String>>>(
+      future: _recentMatchesFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return const Center(child: Text("No recent matches"));
+        }
+        final matches = snapshot.data!;
+        return SizedBox(
+          // UPDATED: Reduced height for compactness
+          height: 75,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            itemCount: matches.length,
+            itemBuilder: (context, index) {
+              final match = matches[index];
+              return Padding(
+                padding: const EdgeInsets.only(right: 16.0),
+                child: Column(
+                  children: [
+                    CircleAvatar(
+                      // UPDATED: Reduced size
+                      radius: 26,
+                      backgroundImage: NetworkImage(match['avatar']!),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      match['name']!,
+                      // UPDATED: Inherited from theme
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 6),
-                Text(
-                  match['name']!,
-                  // UPDATED: Inherited from theme
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-              ],
-            ),
-          );
-        },
-      ),
+              );
+            },
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildChatItem(Map<String, dynamic> message) {
+  Widget _buildChatItem(Conversation conversation) {
     final textTheme = Theme.of(context).textTheme;
 
     return GestureDetector(
@@ -206,7 +182,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
         if (context.mounted) {
           PersistentNavBarNavigator.pushNewScreen(
             context,
-            screen: ConversationScreen(),
+            screen: ConversationScreen(conversation: conversation),
             withNavBar: false,
           );
         }
@@ -216,7 +192,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
           CircleAvatar(
             // UPDATED: Reduced size
             radius: 26,
-            backgroundImage: NetworkImage(message['avatar']),
+            backgroundImage: NetworkImage(conversation.otherUser.avatarUrl),
           ),
           // UPDATED: Reduced spacing
           const SizedBox(width: 10),
@@ -225,7 +201,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  message['name'],
+                  conversation.otherUser.name,
                   // UPDATED: Inherited from theme
                   style: textTheme.bodyMedium?.copyWith(
                     fontWeight: FontWeight.bold,
@@ -245,7 +221,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
                     const SizedBox(width: 4),
                     Expanded(
                       child: Text(
-                        message['lastMessage'],
+                        conversation.lastMessage,
                         // UPDATED: Inherited from theme
                         style: textTheme.bodySmall,
                         maxLines: 1,
@@ -263,16 +239,12 @@ class _ChatsScreenState extends State<ChatsScreen> {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                message['time'],
+                TimeAgo.format(conversation.lastMessageTimestamp),
                 // UPDATED: Inherited from theme
                 style: textTheme.bodySmall,
               ),
               const SizedBox(height: 6),
-              _buildStatusIndicator(
-                message['status'],
-                message['unreadCount'],
-                textTheme,
-              ),
+              _buildStatusIndicator(conversation, textTheme),
             ],
           ),
         ],
@@ -280,12 +252,13 @@ class _ChatsScreenState extends State<ChatsScreen> {
     );
   }
 
-  Widget _buildStatusIndicator(
-    String status,
-    int unreadCount,
-    TextTheme textTheme,
-  ) {
-    if (status == 'unread' && unreadCount > 0) {
+  Widget _buildStatusIndicator(Conversation conversation, TextTheme textTheme) {
+    final currentUser = Provider.of<FirebaseService>(
+      context,
+      listen: false,
+    ).currentUser;
+    if (conversation.lastMessageSenderId != currentUser?.uid &&
+        conversation.unreadCount > 0) {
       return Container(
         width: 20,
         height: 20,
@@ -295,7 +268,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
         ),
         child: Center(
           child: Text(
-            unreadCount.toString(),
+            conversation.unreadCount.toString(),
             // UPDATED: Inherited from theme
             style: textTheme.bodySmall?.copyWith(
               color: Colors.white,

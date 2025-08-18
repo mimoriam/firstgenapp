@@ -1,4 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firstgenapp/models/chat_models.dart';
+import 'package:firstgenapp/screens/dashboard/navbar_content/chats/chats_screen.dart';
 import 'package:firstgenapp/services/firebase_service.dart';
 import 'package:flutter/material.dart';
 import 'package:firstgenapp/constants/appColors.dart';
@@ -6,6 +8,7 @@ import 'package:flutter_card_swiper/flutter_card_swiper.dart';
 import 'package:iconly/iconly.dart';
 import 'dart:ui';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
+import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 import 'package:provider/provider.dart';
 
 class MatchDetailForSearchScreen extends StatefulWidget {
@@ -81,6 +84,23 @@ class _MatchDetailForSearchScreenState
     debugPrint("Discarded ${user['fullName']}");
   }
 
+  void _onMessage(int index) async {
+    final user = _users[index];
+    final firebaseService = Provider.of<FirebaseService>(
+      context,
+      listen: false,
+    );
+    final otherUser = ChatUser(
+      uid: user['uid'],
+      name: user['fullName'],
+      avatarUrl: user['profileImageUrl'] ?? '',
+    );
+    await firebaseService.createChat(otherUser);
+    if (mounted) {
+      PersistentNavBarNavigator.pushNewScreen(context, screen: ChatsScreen());
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -133,7 +153,7 @@ class _MatchDetailForSearchScreenState
                           verticalThresholdPercentage,
                         ) {
                           final userProfile = _users[index];
-                          return _buildMatchCard(userProfile);
+                          return _buildMatchCard(userProfile, index);
                         },
                   ),
                 ],
@@ -226,7 +246,7 @@ class _MatchDetailForSearchScreenState
     return [];
   }
 
-  Widget _buildMatchCard(Map<String, dynamic> userProfile) {
+  Widget _buildMatchCard(Map<String, dynamic> userProfile, int index) {
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: Stack(
@@ -235,7 +255,7 @@ class _MatchDetailForSearchScreenState
           _buildBottomInfoCard(userProfile),
           _buildOverlayContent(userProfile),
           _buildTopBar(userProfile),
-          _buildActionButtons(),
+          _buildActionButtons(index),
         ],
       ),
     );
@@ -436,7 +456,7 @@ class _MatchDetailForSearchScreenState
     );
   }
 
-  Widget _buildActionButtons() {
+  Widget _buildActionButtons(int index) {
     return Positioned(
       bottom: 30,
       left: 0,
@@ -470,7 +490,7 @@ class _MatchDetailForSearchScreenState
                     bgColor: AppColors.textPrimary,
                     iconColor: AppColors.primaryBackground,
                     size: 62,
-                    onPressed: () {},
+                    onPressed: () => _onMessage(index),
                   ),
                   const SizedBox(width: 12),
                   _buildCircleButton(
