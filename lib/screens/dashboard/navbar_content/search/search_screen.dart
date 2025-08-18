@@ -1,11 +1,6 @@
-import 'dart:async';
-import 'package:firstgenapp/common/gradient_btn.dart';
 import 'package:firstgenapp/screens/dashboard/navbar_content/search/match_detail_for_search/match_detail_for_search_screen.dart';
 import 'package:firstgenapp/services/firebase_service.dart';
 import 'package:flutter/material.dart';
-import 'package:firstgenapp/constants/appColors.dart';
-import 'package:flutter_keyboard_visibility/flutter_keyboard_visibility.dart';
-import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 import 'package:provider/provider.dart';
 
 class SearchScreen extends StatefulWidget {
@@ -16,62 +11,20 @@ class SearchScreen extends StatefulWidget {
 }
 
 class _SearchScreenState extends State<SearchScreen> {
-  RangeValues _currentRangeValues = const RangeValues(25, 30);
-
-  final TextEditingController _languageController = TextEditingController();
-  final TextEditingController _professionController = TextEditingController();
-  final TextEditingController _interestController = TextEditingController();
-
-  final List<String> _languages = ['English'];
-  final List<String> _professions = ['Doctor'];
-  final List<String> _interests = ['Reading'];
-
-  String? _selectedGender;
-  final List<String> _genderOptions = ['Male', 'Female', 'Other'];
-
-  late StreamSubscription<bool> keyboardSubscription;
-  bool _isKeyboardVisible = false;
+  // FIX: Use a Future variable in the state to prevent re-fetching on simple rebuilds.
+  // The key change in DashboardScreen will re-create this state, thus re-running the future.
+  late Future<Map<String, dynamic>> _searchFuture;
 
   @override
   void initState() {
     super.initState();
-    var keyboardVisibilityController = KeyboardVisibilityController();
-    keyboardSubscription = keyboardVisibilityController.onChange.listen((
-      bool visible,
-    ) {
-      if (mounted) {
-        setState(() {
-          _isKeyboardVisible = visible;
-        });
-      }
-    });
+    _searchFuture = _fetchPreferencesAndSearch();
   }
 
-  @override
-  void dispose() {
-    _languageController.dispose();
-    _professionController.dispose();
-    _interestController.dispose();
-    keyboardSubscription.cancel();
-    super.dispose();
-  }
+  Future<Map<String, dynamic>> _fetchPreferencesAndSearch() async {
+    // Ensure the widget is still mounted before accessing context.
+    if (!mounted) return {};
 
-  void _addItemToList(
-    String item,
-    List<String> list,
-    TextEditingController controller,
-  ) {
-    final trimmedItem = item.trim();
-    if (trimmedItem.isNotEmpty && !list.contains(trimmedItem)) {
-      setState(() {
-        list.add(trimmedItem);
-        controller.clear();
-      });
-      FocusScope.of(context).unfocus();
-    }
-  }
-
-  Future<void> _onSearchPressed() async {
     final firebaseService = Provider.of<FirebaseService>(
       context,
       listen: false,
@@ -79,423 +32,77 @@ class _SearchScreenState extends State<SearchScreen> {
     final userProfile = await firebaseService.getUserProfile();
 
     if (userProfile == null || !userProfile.exists) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not load your profile.')),
-        );
-      }
-      return;
+      throw Exception('Could not load your profile to perform search.');
     }
 
-    final userData = userProfile.data();
-    // MODIFICATION: Fetch search preferences from the user's profile data.
-    final String? continent = userData?['regionFocus'];
-    final String? generation = userData?['lookingForGeneration'];
+    final userData = userProfile.data()!;
 
-    if (continent == null || generation == null) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Please set your Region and Generation preferences in your profile.',
-            ),
-          ),
-        );
-      }
-      return;
-    }
+    // Fetch all preferences from the user's document
+    final String? continent = userData['regionFocus'];
+    final String? generation = userData['lookingForGeneration'];
+    final String? gender = userData['searchGender'];
+    final int minAge = userData['searchMinAge'] ?? 18;
+    final int maxAge = userData['searchMaxAge'] ?? 100;
+    final List<String> languages = List<String>.from(
+      userData['searchLanguages'] ?? [],
+    );
+    final List<String> professions = List<String>.from(
+      userData['searchProfessions'] ?? [],
+    );
+    final List<String> interests = List<String>.from(
+      userData['searchInterests'] ?? [],
+    );
 
-    if (mounted) {
-      PersistentNavBarNavigator.pushNewScreen(
-        context,
-        screen: MatchDetailForSearchScreen(
-          // MODIFICATION: Pass continent instead of country.
-          continent: continent,
-          languages: _languages,
-          // MODIFICATION: Pass generation from profile.
-          generation: generation,
-          gender: _selectedGender,
-          minAge: _currentRangeValues.start.round(),
-          maxAge: _currentRangeValues.end.round(),
-          professions: _professions,
-          interests: _interests,
-        ),
-        withNavBar: false,
-      );
-    }
+    return {
+      'continent': continent,
+      'generation': generation,
+      'gender': gender,
+      'minAge': minAge,
+      'maxAge': maxAge,
+      'languages': languages,
+      'professions': professions,
+      'interests': interests,
+    };
   }
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
+    return FutureBuilder<Map<String, dynamic>>(
+      future: _searchFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
 
-    return KeyboardDismissOnTap(
-      dismissOnCapturedTaps: true,
-      child: Scaffold(
-        resizeToAvoidBottomInset: true,
-        backgroundColor: AppColors.primaryBackground,
-        appBar: AppBar(
-          title: const Text("Who's Out There?"),
-          titleTextStyle: textTheme.headlineSmall,
-          backgroundColor: AppColors.primaryBackground,
-          elevation: 0,
-          scrolledUnderElevation: 0,
-          bottom: PreferredSize(
-            preferredSize: const Size.fromHeight(20.0),
+        if (snapshot.hasError) {
+          return Center(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  "Let's find someone you'd love to connect with.",
-                  style: textTheme.bodySmall,
-                ),
-              ),
-            ),
-          ),
-        ),
-        body: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // MODIFICATION: Country picker is now commented out.
-                // _buildSectionTitle('Country of origin', textTheme),
-                // _buildCountryPicker(),
-                // const SizedBox(height: 20),
-                _TitledChipInput(
-                  title: 'Language',
-                  hint: 'Type specific language',
-                  items: _languages,
-                  controller: _languageController,
-                  onSubmitted: () => _addItemToList(
-                    _languageController.text,
-                    _languages,
-                    _languageController,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                // MODIFICATION: Generation selection is removed from this screen.
-                _buildChoiceChipSection(
-                  'Gender',
-                  _genderOptions,
-                  _selectedGender,
-                  (val) {
-                    setState(() => _selectedGender = val);
-                  },
-                ),
-                const SizedBox(height: 20),
-                _buildAgeRangeSlider(),
-                const SizedBox(height: 20),
-                _TitledChipInput(
-                  title: 'Which profession are you looking for?',
-                  hint: 'Type specific profession',
-                  items: _professions,
-                  controller: _professionController,
-                  onSubmitted: () => _addItemToList(
-                    _professionController.text,
-                    _professions,
-                    _professionController,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                _TitledChipInput(
-                  title: 'Interest',
-                  hint: 'Type specific interest',
-                  items: _interests,
-                  controller: _interestController,
-                  onSubmitted: () => _addItemToList(
-                    _interestController.text,
-                    _interests,
-                    _interestController,
-                  ),
-                ),
-                const SizedBox(height: 32),
-                GradientButton(
-                  text: 'Search',
-                  onPressed: _onSearchPressed,
-                  fontSize: 15,
-                  insets: 14,
-                ),
-                if (_isKeyboardVisible) const SizedBox(height: 260),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSectionTitle(String title, TextTheme textTheme) {
-    return Text(title, style: textTheme.titleLarge?.copyWith(fontSize: 16));
-  }
-
-  /* MODIFICATION: Country picker is no longer needed on this screen.
-  Widget _buildCountryPicker() {
-    return InkWell(
-      onTap: () {
-        showCountryPicker(
-          context: context,
-          showPhoneCode: false,
-          countryListTheme: CountryListThemeData(
-            bottomSheetHeight: 550,
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(20.0),
-              topRight: Radius.circular(20.0),
-            ),
-            inputDecoration: InputDecoration(
-              hintText: 'Search your heritage',
-              prefixIcon: const Icon(Icons.search),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: AppColors.inputBorder),
-              ),
-            ),
-          ),
-          onSelect: (Country country) {
-            setState(() {
-              _selectedCountry = country.countryCode;
-            });
-          },
-        );
-      },
-      child: Container(
-        margin: const EdgeInsets.only(top: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-        decoration: BoxDecoration(
-          border: Border.all(color: AppColors.inputBorder, width: 1.5),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          children: [
-            Text(
-              Country.tryParse(_selectedCountry)?.flagEmoji ?? '🇺🇸',
-              style: const TextStyle(fontSize: 24),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
+              padding: const EdgeInsets.all(16.0),
               child: Text(
-                Country.tryParse(_selectedCountry)?.name ?? 'United States',
-                style: const TextStyle(fontSize: 16),
+                'Error: ${snapshot.error}\nPlease ensure your search preferences are set in your profile.',
+                textAlign: TextAlign.center,
               ),
             ),
-            const Icon(
-              Icons.keyboard_arrow_down,
-              color: AppColors.textSecondary,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-  */
-
-  Widget _buildChoiceChipSection(
-    String title,
-    List<String> options,
-    String? selectedValue,
-    ValueChanged<String?> onChanged,
-  ) {
-    final textTheme = Theme.of(context).textTheme;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildSectionTitle(title, textTheme),
-        const SizedBox(height: 12),
-        Wrap(
-          spacing: 6.0,
-          runSpacing: 6.0,
-          children: options.map((option) {
-            final isSelected = selectedValue == option;
-            return ChoiceChip(
-              label: Text(option),
-              selected: isSelected,
-              onSelected: (bool selected) {
-                onChanged(selected ? option : null);
-              },
-              selectedColor: AppColors.primaryRed.withOpacity(0.1),
-              backgroundColor: Colors.white,
-              labelStyle: textTheme.bodySmall?.copyWith(
-                color: isSelected
-                    ? AppColors.primaryRed
-                    : AppColors.textSecondary,
-                fontWeight: FontWeight.w600,
-              ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-                side: BorderSide(
-                  color: isSelected
-                      ? AppColors.primaryRed
-                      : AppColors.inputBorder,
-                ),
-              ),
-              showCheckmark: false,
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-            );
-          }).toList(),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildAgeRangeSlider() {
-    final textTheme = Theme.of(context).textTheme;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildSectionTitle('Age range', textTheme),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(
-              child: RangeSlider(
-                values: _currentRangeValues,
-                min: 18,
-                max: 100,
-                divisions: 82,
-                activeColor: AppColors.primaryRed,
-                inactiveColor: AppColors.inputBorder,
-                labels: RangeLabels(
-                  _currentRangeValues.start.round().toString(),
-                  _currentRangeValues.end.round().toString(),
-                ),
-                onChanged: (RangeValues values) {
-                  setState(() {
-                    _currentRangeValues = values;
-                  });
-                },
-              ),
-            ),
-            Container(
-              width: 80,
-              padding: const EdgeInsets.symmetric(vertical: 6),
-              decoration: BoxDecoration(
-                border: Border.all(color: AppColors.inputBorder, width: 1.5),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Center(
-                child: Text(
-                  '${_currentRangeValues.start.round()}-${_currentRangeValues.end.round()}',
-                  style: textTheme.bodySmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-class _TitledChipInput extends StatefulWidget {
-  final String title;
-  final String hint;
-  final List<String> items;
-  final TextEditingController controller;
-  final VoidCallback onSubmitted;
-
-  const _TitledChipInput({
-    required this.title,
-    required this.hint,
-    required this.items,
-    required this.controller,
-    required this.onSubmitted,
-  });
-
-  @override
-  State<_TitledChipInput> createState() => _TitledChipInputState();
-}
-
-class _TitledChipInputState extends State<_TitledChipInput> {
-  final FocusNode _focusNode = FocusNode();
-
-  @override
-  void initState() {
-    super.initState();
-    _focusNode.addListener(_onFocusChange);
-  }
-
-  @override
-  void dispose() {
-    _focusNode.removeListener(_onFocusChange);
-    _focusNode.dispose();
-    super.dispose();
-  }
-
-  void _onFocusChange() {
-    if (_focusNode.hasFocus) {
-      Future.delayed(const Duration(milliseconds: 300), () {
-        if (mounted) {
-          Scrollable.ensureVisible(
-            _focusNode.context!,
-            alignment: 0.1,
-            duration: const Duration(milliseconds: 200),
           );
         }
-      });
-    }
-  }
 
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(widget.title, style: textTheme.titleLarge?.copyWith(fontSize: 16)),
-        const SizedBox(height: 8),
-        TextField(
-          focusNode: _focusNode,
-          controller: widget.controller,
-          decoration: InputDecoration(
-            hintText: widget.hint,
-            hintStyle: const TextStyle(
-              fontSize: 14,
-              color: AppColors.textSecondary,
-            ),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 20,
-              vertical: 12,
-            ),
-          ),
-          onSubmitted: (_) => widget.onSubmitted(),
-        ),
-        const SizedBox(height: 12),
-        Wrap(
-          spacing: 8.0,
-          runSpacing: 8.0,
-          children: widget.items
-              .map(
-                (item) => Chip(
-                  label: Text(item),
-                  onDeleted: () {
-                    setState(() {
-                      widget.items.remove(item);
-                    });
-                  },
-                  deleteIconColor: AppColors.primaryRed,
-                  backgroundColor: AppColors.secondaryBackground,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
-                    side: const BorderSide(color: Color(0xFFE9C5C5)),
-                  ),
-                  labelStyle: textTheme.bodySmall?.copyWith(
-                    color: AppColors.primaryRed,
-                    fontWeight: FontWeight.w600,
-                  ),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  deleteIcon: const Icon(Icons.close, size: 16),
-                ),
-              )
-              .toList(),
-        ),
-      ],
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return const Center(child: Text('Could not load preferences.'));
+        }
+
+        final searchParams = snapshot.data!;
+
+        return MatchDetailForSearchScreen(
+          continent: searchParams['continent'],
+          generation: searchParams['generation'],
+          gender: searchParams['gender'],
+          minAge: searchParams['minAge'],
+          maxAge: searchParams['maxAge'],
+          languages: searchParams['languages'],
+          professions: searchParams['professions'],
+          interests: searchParams['interests'],
+        );
+      },
     );
   }
 }

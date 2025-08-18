@@ -18,8 +18,9 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   late PersistentTabController _controller;
-  // State to hold the desired starting tab for CommunityScreen
   int _communityScreenInitialIndex = 0;
+  // FIX: Add a key to force the SearchScreen to rebuild.
+  Key _searchScreenKey = UniqueKey();
 
   @override
   void initState() {
@@ -27,25 +28,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _controller = PersistentTabController(initialIndex: 0);
   }
 
-  // This function will be passed to HomeScreen to handle the tab switch
   void _handleSwitchTab(int tabIndex, {int? communitySubTabIndex}) {
     setState(() {
-      // If a sub-tab index is provided, update the state
       if (communitySubTabIndex != null) {
         _communityScreenInitialIndex = communitySubTabIndex;
       }
     });
-    // Switch the main bottom navigation tab
     _controller.jumpToTab(tabIndex);
   }
 
   List<Widget> _buildScreens() {
     return [
       HomeScreen(onSwitchTab: _handleSwitchTab),
-      const SearchScreen(),
+      // FIX: Apply the key to the SearchScreen.
+      SearchScreen(key: _searchScreenKey),
       const ChatsScreen(),
       CommunityScreen(
-        // Use a ValueKey to ensure CommunityScreen rebuilds when the index changes
         key: ValueKey(_communityScreenInitialIndex),
         initialIndex: _communityScreenInitialIndex,
       ),
@@ -120,8 +118,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         items: _navBarsItems(),
         confineToSafeArea: true,
         backgroundColor: AppColors.primaryBackground,
-        handleAndroidBackButtonPress:
-        true, // Note: PopScope is now the primary handler
+        handleAndroidBackButtonPress: true,
         resizeToAvoidBottomInset: true,
         stateManagement: true,
         hideNavigationBarWhenKeyboardAppears: true,
@@ -131,6 +128,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
           colorBehindNavBar: AppColors.primaryBackground,
         ),
         navBarStyle: NavBarStyle.style6,
+        // FIX: Add the onItemSelected callback to update the key.
+        onItemSelected: (index) {
+          // If the search tab (index 1) is selected, generate a new key.
+          if (index == 1) {
+            setState(() {
+              _searchScreenKey = UniqueKey();
+            });
+          }
+        },
       ),
     );
   }

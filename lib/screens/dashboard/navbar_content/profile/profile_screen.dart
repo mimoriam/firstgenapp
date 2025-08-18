@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firstgenapp/common/gradient_btn.dart';
 import 'package:firstgenapp/screens/dashboard/navbar_content/profile/profile_inner/profile_inner_screen.dart';
 import 'package:firstgenapp/services/firebase_service.dart';
 import 'package:flutter/material.dart';
@@ -20,8 +21,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
   // State variables for connection preferences
   String _seeProfileSelection = 'Only Communities I\'m In';
   String _lookingForGenerationSelection = 'First generation';
-  String _regionFocusSelection = 'Africa';
+  String _regionFocusSelection = 'Global';
 
+  // State variables for advanced search filters (moved from search_screen)
+  RangeValues _currentRangeValues = const RangeValues(25, 30);
+  final List<String> _languages = [];
+  final List<String> _professions = [];
+  final List<String> _interests = [];
+  String? _selectedGender;
+
+  // Options lists
   final List<String> _generationOptions = [
     'First generation',
     'Second generation',
@@ -29,6 +38,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
     'Mixed heritage',
     'Not sure',
   ];
+  final List<String> _genderOptions = ['Male', 'Female', 'Other'];
+
+  // Controllers
+  final TextEditingController _languageController = TextEditingController();
+  final TextEditingController _professionController = TextEditingController();
+  final TextEditingController _interestController = TextEditingController();
 
   // State variables for notification settings
   bool _appNotifications = true;
@@ -49,6 +64,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _firebaseService = Provider.of<FirebaseService>(context, listen: false);
     _user = _firebaseService.currentUser;
     _userProfileStream = _firebaseService.getUserProfileStream();
+  }
+
+  @override
+  void dispose() {
+    _languageController.dispose();
+    _professionController.dispose();
+    _interestController.dispose();
+    super.dispose();
   }
 
   @override
@@ -87,13 +110,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           }
 
           final userData = snapshot.data!.data();
-
-          // Initialize state variables from Firestore data to ensure UI is up-to-date.
-          _seeProfileSelection =
-              userData?['seeProfile'] ?? 'Only Communities I\'m In';
-          _lookingForGenerationSelection =
-              userData?['lookingForGeneration'] ?? 'First generation';
-          _regionFocusSelection = userData?['regionFocus'] ?? 'Africa';
+          _loadPreferences(userData);
 
           return ListView(
             padding: const EdgeInsets.symmetric(
@@ -116,6 +133,35 @@ class _ProfileScreenState extends State<ProfileScreen> {
         },
       ),
     );
+  }
+
+  void _loadPreferences(Map<String, dynamic>? userData) {
+    if (userData == null) return;
+
+    // Load basic preferences
+    _seeProfileSelection = userData['seeProfile'] ?? 'Only Communities I\'m In';
+    _lookingForGenerationSelection =
+        userData['lookingForGeneration'] ?? 'First generation';
+    _regionFocusSelection = userData['regionFocus'] ?? 'Global';
+
+    // Load advanced search preferences
+    _selectedGender = userData['searchGender'];
+    final startAge = userData['searchMinAge']?.toDouble() ?? 25.0;
+    final endAge = userData['searchMaxAge']?.toDouble() ?? 30.0;
+    _currentRangeValues = RangeValues(startAge, endAge);
+
+    if (userData['searchLanguages'] != null) {
+      _languages.clear();
+      _languages.addAll(List<String>.from(userData['searchLanguages']));
+    }
+    if (userData['searchProfessions'] != null) {
+      _professions.clear();
+      _professions.addAll(List<String>.from(userData['searchProfessions']));
+    }
+    if (userData['searchInterests'] != null) {
+      _interests.clear();
+      _interests.addAll(List<String>.from(userData['searchInterests']));
+    }
   }
 
   Widget _buildProfileCard(Map<String, dynamic>? userData) {
@@ -170,11 +216,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Connection Preferences',
-            style: Theme.of(context).textTheme.titleLarge,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Connection Preferences',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              SizedBox(
+                // width: 120,
+                child: TextButton(
+                  onPressed: _showAdvancedFilters,
+                  // fontSize: 12,
+                  // insets: 8,
+                  child: Row(
+                    children: [
+                      const Text('More ', style: TextStyle(fontSize: 14),),
+                      Icon(Icons.arrow_forward_ios, size: 14),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 4),
           _buildTitledChipGroup(
             'Who can see your profile?',
             ['Everyone', 'Only Communities I\'m In', 'No Body'],
@@ -201,7 +266,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
             },
           ),
           const SizedBox(height: 16),
-          // MODIFICATION: Added more regions to the list.
           _buildTitledChipGroup(
             'Region Focus',
             [
@@ -223,6 +287,102 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  void _showAdvancedFilters() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.primaryBackground,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setModalState) {
+            return DraggableScrollableSheet(
+              expand: false,
+              initialChildSize: 0.8,
+              maxChildSize: 0.9,
+              builder: (_, scrollController) {
+                return SingleChildScrollView(
+                  controller: scrollController,
+                  child: Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Advanced Search Filters',
+                          style: Theme.of(context).textTheme.headlineSmall,
+                        ),
+                        const SizedBox(height: 24),
+                        _buildChoiceChipSection(
+                          'Gender',
+                          _genderOptions,
+                          _selectedGender,
+                          (val) {
+                            setModalState(() => _selectedGender = val);
+                            _firebaseService.updateUserProfile({
+                              'searchGender': val,
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 20),
+                        _buildAgeRangeSlider((values) {
+                          setModalState(() => _currentRangeValues = values);
+                          _firebaseService.updateUserProfile({
+                            'searchMinAge': values.start.round(),
+                            'searchMaxAge': values.end.round(),
+                          });
+                        }),
+                        const SizedBox(height: 20),
+                        _TitledChipInput(
+                          title: 'Language',
+                          hint: 'Type specific language',
+                          items: _languages,
+                          controller: _languageController,
+                          onListChanged: (list) {
+                            _firebaseService.updateUserProfile({
+                              'searchLanguages': list,
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 20),
+                        _TitledChipInput(
+                          title: 'Profession',
+                          hint: 'Type specific profession',
+                          items: _professions,
+                          controller: _professionController,
+                          onListChanged: (list) {
+                            _firebaseService.updateUserProfile({
+                              'searchProfessions': list,
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 20),
+                        _TitledChipInput(
+                          title: 'Interest',
+                          hint: 'Type specific interest',
+                          items: _interests,
+                          controller: _interestController,
+                          onListChanged: (list) {
+                            _firebaseService.updateUserProfile({
+                              'searchInterests': list,
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 32),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            );
+          },
+        );
+      },
     );
   }
 
@@ -424,6 +584,194 @@ class _ProfileScreenState extends State<ProfileScreen> {
       onTap: onTap,
       dense: true,
       contentPadding: EdgeInsets.zero,
+    );
+  }
+
+  // Widgets for the bottom sheet (moved from search_screen)
+  Widget _buildChoiceChipSection(
+    String title,
+    List<String> options,
+    String? selectedValue,
+    ValueChanged<String?> onChanged,
+  ) {
+    final textTheme = Theme.of(context).textTheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title, style: textTheme.titleLarge?.copyWith(fontSize: 16)),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 6.0,
+          runSpacing: 6.0,
+          children: options.map((option) {
+            final isSelected = selectedValue == option;
+            return ChoiceChip(
+              label: Text(option),
+              selected: isSelected,
+              onSelected: (bool selected) {
+                onChanged(selected ? option : null);
+              },
+              selectedColor: AppColors.primaryRed.withOpacity(0.1),
+              backgroundColor: Colors.white,
+              labelStyle: textTheme.bodySmall?.copyWith(
+                color: isSelected
+                    ? AppColors.primaryRed
+                    : AppColors.textSecondary,
+                fontWeight: FontWeight.w600,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+                side: BorderSide(
+                  color: isSelected
+                      ? AppColors.primaryRed
+                      : AppColors.inputBorder,
+                ),
+              ),
+              showCheckmark: false,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAgeRangeSlider(ValueChanged<RangeValues> onChanged) {
+    final textTheme = Theme.of(context).textTheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Age range', style: textTheme.titleLarge?.copyWith(fontSize: 16)),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: RangeSlider(
+                values: _currentRangeValues,
+                min: 18,
+                max: 100,
+                divisions: 82,
+                activeColor: AppColors.primaryRed,
+                inactiveColor: AppColors.inputBorder,
+                labels: RangeLabels(
+                  _currentRangeValues.start.round().toString(),
+                  _currentRangeValues.end.round().toString(),
+                ),
+                onChanged: onChanged,
+              ),
+            ),
+            Container(
+              width: 80,
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              decoration: BoxDecoration(
+                border: Border.all(color: AppColors.inputBorder, width: 1.5),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Center(
+                child: Text(
+                  '${_currentRangeValues.start.round()}-${_currentRangeValues.end.round()}',
+                  style: textTheme.bodySmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _TitledChipInput extends StatefulWidget {
+  final String title;
+  final String hint;
+  final List<String> items;
+  final TextEditingController controller;
+  final ValueChanged<List<String>> onListChanged;
+
+  const _TitledChipInput({
+    required this.title,
+    required this.hint,
+    required this.items,
+    required this.controller,
+    required this.onListChanged,
+  });
+
+  @override
+  State<_TitledChipInput> createState() => _TitledChipInputState();
+}
+
+class _TitledChipInputState extends State<_TitledChipInput> {
+  void _addItemToList(String item) {
+    final trimmedItem = item.trim();
+    if (trimmedItem.isNotEmpty && !widget.items.contains(trimmedItem)) {
+      setState(() {
+        widget.items.add(trimmedItem);
+        widget.controller.clear();
+        widget.onListChanged(widget.items);
+      });
+      FocusScope.of(context).unfocus();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(widget.title, style: textTheme.titleLarge?.copyWith(fontSize: 16)),
+        const SizedBox(height: 8),
+        TextField(
+          controller: widget.controller,
+          decoration: InputDecoration(
+            hintText: widget.hint,
+            hintStyle: const TextStyle(
+              fontSize: 14,
+              color: AppColors.textSecondary,
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 20,
+              vertical: 12,
+            ),
+          ),
+          onSubmitted: _addItemToList,
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 8.0,
+          runSpacing: 8.0,
+          children: widget.items
+              .map(
+                (item) => Chip(
+                  label: Text(item),
+                  onDeleted: () {
+                    setState(() {
+                      widget.items.remove(item);
+                      widget.onListChanged(widget.items);
+                    });
+                  },
+                  deleteIconColor: AppColors.primaryRed,
+                  backgroundColor: AppColors.secondaryBackground,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                    side: const BorderSide(color: Color(0xFFE9C5C5)),
+                  ),
+                  labelStyle: textTheme.bodySmall?.copyWith(
+                    color: AppColors.primaryRed,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  deleteIcon: const Icon(Icons.close, size: 16),
+                ),
+              )
+              .toList(),
+        ),
+      ],
     );
   }
 }

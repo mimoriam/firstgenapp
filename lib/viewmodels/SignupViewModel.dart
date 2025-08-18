@@ -77,13 +77,10 @@ class SignUpViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  // MODIFICATION: Added method to pre-populate data from a Google Sign-In.
   /// Populates basic info from a Firebase User object.
-  /// This is used after a social sign-in when the user profile needs to be created.
   void populateFromUser(User user) {
     fullName = user.displayName;
     email = user.email;
-    // Password is not set because authentication is handled by the social provider.
     password = null;
     notifyListeners();
   }
@@ -137,8 +134,7 @@ class SignUpViewModel extends ChangeNotifier {
 
   /// Gathers all data from the view model and saves it to Firestore.
   Future<void> completeRegistration() async {
-    // MODIFICATION: Refactored to handle both email and social sign-up flows.
-    if (email == null || fullName == null) {
+    if (email == null) {
       throw Exception("User basic info is not available.");
     }
 
@@ -147,8 +143,6 @@ class SignUpViewModel extends ChangeNotifier {
     try {
       User? user = _firebaseService.currentUser;
 
-      // If password is not null, it's a new email/password registration flow.
-      // We need to create the user in Firebase Auth first.
       if (password != null) {
         UserCredential userCredential = await _firebaseService.signUpWithEmail(
           email: email!,
@@ -158,7 +152,6 @@ class SignUpViewModel extends ChangeNotifier {
         user = userCredential.user;
       }
 
-      // If user is still null here, something is wrong.
       if (user == null) {
         throw Exception("User is not signed in. Cannot complete registration.");
       }
@@ -171,22 +164,19 @@ class SignUpViewModel extends ChangeNotifier {
         );
       }
 
-      // MODIFICATION: Determine the continent from the country code.
       final String continent = culturalHeritage != null
           ? ContinentService.getContinent(culturalHeritage!)
           : 'Unknown';
 
-      // 2. Prepare the data for Firestore
       final Map<String, dynamic> userProfileData = {
         'uid': user.uid,
-        // 'fullName': fullName,
         'fullName': user.displayName,
         'email': email,
         'profileImageUrl': imageUrl,
         'createdAt': FieldValue.serverTimestamp(),
         'culturalHeritage': culturalHeritage,
-        'languages': languages,
         'continent': continent,
+        'languages': languages,
         'generation': generation,
         'religion': religion,
         'religionImportance': religionImportance,
@@ -207,22 +197,21 @@ class SignUpViewModel extends ChangeNotifier {
         'gender': gender,
         'dateOfBirth': dateOfBirth,
         'profession': profession,
+        // FIX: Add default values for search preferences.
+        'lookingForGeneration': 'First generation',
+        'regionFocus': 'Global',
       };
 
-      // Remove null values before sending to Firestore
       userProfileData.removeWhere((key, value) => value == null);
 
-      // 3. Save the data to Firestore
       await _firebaseService.createUserDocument(user.uid, userProfileData);
     } catch (e) {
-      // Re-throw the exception to be caught by the UI
       rethrow;
     } finally {
       _setLoading(false);
     }
   }
 
-  /// Resets all the data in the view model to its initial state.
   void reset() {
     fullName = null;
     email = null;
