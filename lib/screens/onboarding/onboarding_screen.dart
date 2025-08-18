@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:firstgenapp/common/gradient_btn.dart';
 import 'package:firstgenapp/constants/appColors.dart';
 import 'package:firstgenapp/screens/onboarding/onboarding_widget.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -84,63 +85,71 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.secondaryBackground,
-      body: LayoutBuilder(
-        builder: (BuildContext context, BoxConstraints constraints) {
-          return Stack(
-            children: [
-              Positioned(
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: constraints.maxHeight * 0.1,
-                child: PageView.builder(
-                  controller: _pageController,
-                  onPageChanged: _onPageChanged,
-                  itemCount: _pageData.length,
-                  itemBuilder: (context, index) {
-                    // If it's the third page (index 2), build the custom layout.
-                    if (index == 2) {
-                      return Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          Positioned(
-                            top: constraints.maxHeight * 0.14,
-                            child: SvgPicture.asset(
-                              _pageData[index]['backgroundImage']!,
-                              fit: BoxFit.contain,
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: const SystemUiOverlayStyle(
+        statusBarColor:
+            AppColors.secondaryBackground, // Onboarding screen background color
+        statusBarIconBrightness: Brightness.dark,
+        statusBarBrightness: Brightness.light, // For iOS
+      ),
+      child: Scaffold(
+        backgroundColor: AppColors.secondaryBackground,
+        body: LayoutBuilder(
+          builder: (BuildContext context, BoxConstraints constraints) {
+            return Stack(
+              children: [
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: constraints.maxHeight * 0.1,
+                  child: PageView.builder(
+                    controller: _pageController,
+                    onPageChanged: _onPageChanged,
+                    itemCount: _pageData.length,
+                    itemBuilder: (context, index) {
+                      // If it's the third page (index 2), build the custom layout.
+                      if (index == 2) {
+                        return Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            Positioned(
+                              top: constraints.maxHeight * 0.14,
+                              child: SvgPicture.asset(
+                                _pageData[index]['backgroundImage']!,
+                                fit: BoxFit.contain,
+                              ),
                             ),
-                          ),
-                          Positioned(
-                            bottom: constraints.maxHeight * 0.16,
-                            width: constraints.maxWidth,
-                            height: 200,
-                            child: Image.asset(
-                              _pageData[index]['foregroundImage']!,
-                              fit: BoxFit.contain,
+                            Positioned(
+                              bottom: constraints.maxHeight * 0.16,
+                              width: constraints.maxWidth,
+                              height: 200,
+                              child: Image.asset(
+                                _pageData[index]['foregroundImage']!,
+                                fit: BoxFit.contain,
+                              ),
                             ),
-                          ),
-                        ],
-                      );
-                    } else {
-                      return OnboardingPage(
-                        imagePath: _pageData[index]['backgroundImage']!,
-                      );
-                    }
-                  },
+                          ],
+                        );
+                      } else {
+                        return OnboardingPage(
+                          imagePath: _pageData[index]['backgroundImage']!,
+                        );
+                      }
+                    },
+                  ),
                 ),
-              ),
-              // Position the content card at the bottom.
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 0,
-                child: _buildBottomCard(),
-              ),
-            ],
-          );
-        },
+                // Position the content card at the bottom.
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: _buildBottomCard(),
+                ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }

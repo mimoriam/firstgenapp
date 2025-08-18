@@ -77,6 +77,11 @@ class _MatchDetailForSearchScreenState
   void _onSwipeRight(int index) {
     final user = _users[index];
     debugPrint("Liked ${user['fullName']}");
+    final firebaseService = Provider.of<FirebaseService>(
+      context,
+      listen: false,
+    );
+    firebaseService.addRecentMatch(user['uid']);
   }
 
   void _onSwipeLeft(int index) {

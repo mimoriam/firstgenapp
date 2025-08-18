@@ -6,6 +6,7 @@ import 'package:firstgenapp/screens/auth/signup/signup_screen.dart';
 import 'package:firstgenapp/services/firebase_service.dart';
 import 'package:firstgenapp/utils/authException.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:firstgenapp/common/exit_dialog.dart';
 import 'package:marqueer/marqueer.dart';
@@ -76,7 +77,6 @@ class _SigninScreenState extends State<SigninScreen> {
 
     try {
       await firebaseService.signInWithGoogle();
-
     } on AuthException catch (e) {
       if (e.code == 'account-exists-with-different-credential' &&
           e.credential != null &&
@@ -168,72 +168,80 @@ class _SigninScreenState extends State<SigninScreen> {
           showExitConfirmationDialogForHome(context);
         }
       },
-      child: Scaffold(
-        backgroundColor: AppColors.primaryBackground,
-        body: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0),
-            child: Column(
-              children: [
-                Expanded(
-                  child: SingleChildScrollView(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const SizedBox(height: 40),
-                        _buildLogo(context),
-                        const SizedBox(height: 32),
-                        _buildWelcomeText(context),
-                        const SizedBox(height: 24),
-                        // MODIFICATION: Hooked up Google Sign-In handler.
-                        _buildSocialButton(
-                          context: context,
-                          iconPath: 'images/icons/google.svg',
-                          text: 'Continue with Google',
-                          onPressed: _handleGoogleSignIn,
-                          isLoading: _isGoogleLoading,
-                        ),
-                        const SizedBox(height: 16),
-                        _buildSocialButton(
-                          context: context,
-                          iconPath: 'images/icons/apple.svg',
-                          text: 'Continue with Apple',
-                          onPressed: () {},
-                        ),
-                        const SizedBox(height: 16),
-                        _buildSocialButton(
-                          context: context,
-                          iconPath: 'images/icons/facebook.svg',
-                          text: 'Continue with Facebook',
-                          onPressed: () {},
-                        ),
-                        const SizedBox(height: 24),
-                        GradientButton(
-                          text: 'Sign Up',
-                          onPressed: () {
-                            if (context.mounted) {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (context) => const SignUpScreen(),
-                                ),
-                              );
-                            }
-                          },
-                          insets: 14,
-                          fontSize: 15,
-                        ),
-                        const SizedBox(height: 16),
-                        _buildSignInButton(context),
-                        const SizedBox(height: 24),
-                        _buildFooterLinks(context),
-                        const SizedBox(height: 24),
-                      ],
+      child: AnnotatedRegion<SystemUiOverlayStyle>(
+        value: const SystemUiOverlayStyle(
+          statusBarColor:
+              AppColors.primaryBackground, // Onboarding screen background color
+          statusBarIconBrightness: Brightness.dark,
+          statusBarBrightness: Brightness.light, // For iOS
+        ),
+        child: Scaffold(
+          backgroundColor: AppColors.primaryBackground,
+          body: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0),
+              child: Column(
+                children: [
+                  Expanded(
+                    child: SingleChildScrollView(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const SizedBox(height: 40),
+                          _buildLogo(context),
+                          const SizedBox(height: 32),
+                          _buildWelcomeText(context),
+                          const SizedBox(height: 24),
+                          // MODIFICATION: Hooked up Google Sign-In handler.
+                          _buildSocialButton(
+                            context: context,
+                            iconPath: 'images/icons/google.svg',
+                            text: 'Continue with Google',
+                            onPressed: _handleGoogleSignIn,
+                            isLoading: _isGoogleLoading,
+                          ),
+                          const SizedBox(height: 16),
+                          _buildSocialButton(
+                            context: context,
+                            iconPath: 'images/icons/apple.svg',
+                            text: 'Continue with Apple',
+                            onPressed: () {},
+                          ),
+                          const SizedBox(height: 16),
+                          _buildSocialButton(
+                            context: context,
+                            iconPath: 'images/icons/facebook.svg',
+                            text: 'Continue with Facebook',
+                            onPressed: () {},
+                          ),
+                          const SizedBox(height: 24),
+                          GradientButton(
+                            text: 'Sign Up',
+                            onPressed: () {
+                              if (context.mounted) {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (context) => const SignUpScreen(),
+                                  ),
+                                );
+                              }
+                            },
+                            insets: 14,
+                            fontSize: 15,
+                          ),
+                          const SizedBox(height: 16),
+                          _buildSignInButton(context),
+                          const SizedBox(height: 24),
+                          _buildFooterLinks(context),
+                          const SizedBox(height: 24),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-                _buildFlagBanner(),
-                const SizedBox(height: 32),
-              ],
+                  _buildFlagBanner(),
+                  const SizedBox(height: 32),
+                ],
+              ),
             ),
           ),
         ),

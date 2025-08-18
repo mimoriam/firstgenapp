@@ -535,20 +535,83 @@ class FirebaseService {
         });
   }
 
+  Future<void> addRecentMatch(String otherUserId) async {
+    final currentUser = _auth.currentUser;
+    if (currentUser == null) return;
+
+    // Add other user to current user's recent matches
+    await _updateRecentMatchesForUser(currentUser.uid, otherUserId);
+
+    // Add current user to other user's recent matches
+    await _updateRecentMatchesForUser(otherUserId, currentUser.uid);
+  }
+
+  Future<void> _updateRecentMatchesForUser(
+    String userId,
+    String matchId,
+  ) async {
+    final recentMatchesRef = _database.ref('users/$userId/recent_matches');
+    final snapshot = await recentMatchesRef.get();
+
+    List<dynamic> recentMatches = [];
+    if (snapshot.exists && snapshot.value is List) {
+      recentMatches = List<dynamic>.from(snapshot.value as List);
+    }
+
+    // Remove if it exists to re-add it at the end (most recent)
+    recentMatches.remove(matchId);
+    recentMatches.add(matchId);
+
+    // Keep only the 6 most recent matches
+    if (recentMatches.length > 6) {
+      recentMatches = recentMatches.sublist(recentMatches.length - 6);
+    }
+
+    await recentMatchesRef.set(recentMatches);
+  }
+
   Future<List<QueryDocumentSnapshot<Map<String, dynamic>>>>
   getRecentUsers() async {
-    try {
-      final user = _auth.currentUser;
-      if (user == null) return [];
+    final user = _auth.currentUser;
+    if (user == null) return [];
 
+    try {
+      final recentMatchesRef = _database.ref(
+        'users/${user.uid}/recent_matches',
+      );
+      final snapshot = await recentMatchesRef.get();
+
+      if (!snapshot.exists || snapshot.value == null) {
+        return [];
+      }
+
+      final recentMatchIds = List<String>.from(
+        (snapshot.value as List).map((e) => e.toString()),
+      );
+
+      if (recentMatchIds.isEmpty) {
+        return [];
+      }
+
+      // Fetch user profiles from Firestore based on the UIDs from Realtime DB
       final querySnapshot = await _firestore
           .collection(userCollection)
-          .where('uid', isNotEqualTo: user.uid)
-          .orderBy('createdAt', descending: true)
-          .limit(6)
+          .where('uid', whereIn: recentMatchIds)
           .get();
 
-      return querySnapshot.docs;
+      // To maintain the order from recent_matches
+      final orderedDocs = <QueryDocumentSnapshot<Map<String, dynamic>>>[];
+      // We iterate in reverse to get the most recent matches first.
+      for (final userId in recentMatchIds.reversed) {
+        final doc = querySnapshot.docs.firstWhere(
+          (d) => d.id == userId,
+          orElse: () =>
+              throw Exception("User not found"), // Or handle it gracefully
+        );
+        orderedDocs.add(doc);
+      }
+
+      return orderedDocs;
     } catch (e) {
       log('Error getting recent users: $e');
       return [];
