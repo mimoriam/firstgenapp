@@ -138,8 +138,7 @@ class _MatchDetailForSearchScreenState
                     numberOfCardsDisplayed: 1,
                     backCardOffset: Offset.zero,
                     padding: EdgeInsets.zero,
-                    allowedSwipeDirection:
-                        const AllowedSwipeDirection.symmetric(horizontal: true),
+                    allowedSwipeDirection: const AllowedSwipeDirection.none(),
                     cardBuilder:
                         (
                           context,
@@ -261,12 +260,8 @@ class _MatchDetailForSearchScreenState
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          mainAxisAlignment: MainAxisAlignment.end,
           children: [
-            IconButton(
-              icon: const Icon(Icons.arrow_back, color: Colors.white),
-              onPressed: () => Navigator.of(context).pop(),
-            ),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(
@@ -476,8 +471,7 @@ class _MatchDetailForSearchScreenState
                     bgColor: AppColors.primaryBackground,
                     iconColor: AppColors.textSecondary,
                     size: 52,
-                    onPressed: () =>
-                        _swiperController.swipe(CardSwiperDirection.left),
+                    onPressed: () => _onSwipeLeft(index),
                   ),
                   const SizedBox(width: 12),
                   _buildCircleButton(
@@ -493,8 +487,7 @@ class _MatchDetailForSearchScreenState
                     isGradient: true,
                     iconColor: AppColors.primaryBackground,
                     size: 52,
-                    onPressed: () =>
-                        _swiperController.swipe(CardSwiperDirection.right),
+                    onPressed: () => _onSwipeRight(index),
                   ),
                 ],
               ),
