@@ -60,7 +60,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
     super.initState();
-    _firebaseService = Provider.of<FirebaseService>(context, listen: false);
+    // _firebaseService = Provider.of<FirebaseService>(context, listen: false);
+    // _user = _firebaseService.currentUser;
+    // _userProfileStream = _firebaseService.getUserProfileStream();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _firebaseService = Provider.of<FirebaseService>(context);
     _user = _firebaseService.currentUser;
     _userProfileStream = _firebaseService.getUserProfileStream();
   }
@@ -230,7 +238,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   // insets: 8,
                   child: Row(
                     children: [
-                      const Text('More ', style: TextStyle(fontSize: 14),),
+                      const Text('More ', style: TextStyle(fontSize: 14)),
                       Icon(Icons.arrow_forward_ios, size: 14),
                     ],
                   ),
