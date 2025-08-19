@@ -19,6 +19,12 @@ class _ConversationScreenState extends State<ConversationScreen> {
   final ScrollController _scrollController = ScrollController();
   final FocusNode _focusNode = FocusNode();
 
+  // --- OPTIMIZATION START ---
+  // These variables help manage the smart auto-scrolling behavior.
+  bool _isUserAtBottom = true; // Tracks if the user is scrolled to the bottom.
+  int _messageCount = 0; // Tracks the number of messages to detect new ones.
+  // --- OPTIMIZATION END ---
+
   @override
   void initState() {
     super.initState();
@@ -26,18 +32,43 @@ class _ConversationScreenState extends State<ConversationScreen> {
       context,
       listen: false,
     ).markAsRead(widget.conversation.id);
-    WidgetsBinding.instance.addPostFrameCallback(
-      (_) => _scrollToBottom(animated: false),
-    );
+
+    // --- OPTIMIZATION START ---
+    // Add a listener to the scroll controller to track the user's position.
+    _scrollController.addListener(_scrollListener);
+    // --- OPTIMIZATION END ---
+
+    // Scroll to the bottom when the screen first loads.
+    WidgetsBinding.instance
+        .addPostFrameCallback((_) => _scrollToBottom(animated: false));
   }
 
   @override
   void dispose() {
     _messageController.dispose();
+    _scrollController.removeListener(_scrollListener); // Remove the listener
     _scrollController.dispose();
     _focusNode.dispose();
     super.dispose();
   }
+
+  // --- OPTIMIZATION START ---
+  // This listener updates whether the user is at the bottom of the list.
+  void _scrollListener() {
+    if (_scrollController.hasClients) {
+      if (_scrollController.position.atEdge) {
+        // Check if the user is at the bottom edge.
+        if (_scrollController.position.pixels ==
+            _scrollController.position.maxScrollExtent) {
+          _isUserAtBottom = true;
+        }
+      } else {
+        // If they are not at an edge, they are not at the bottom.
+        _isUserAtBottom = false;
+      }
+    }
+  }
+  // --- OPTIMIZATION END ---
 
   void _scrollToBottom({bool animated = true}) {
     if (_scrollController.hasClients) {
@@ -63,6 +94,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
       );
       firebaseService.sendMessage(widget.conversation.id, text);
       _messageController.clear();
+      // After sending a message, always scroll to the bottom.
+      _scrollToBottom();
     }
   }
 
@@ -90,12 +123,20 @@ class _ConversationScreenState extends State<ConversationScreen> {
                 }
 
                 final messages = snapshot.data!;
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  if (_scrollController.position.pixels >=
-                      _scrollController.position.maxScrollExtent - 50) {
-                    _scrollToBottom();
+
+                // --- OPTIMIZATION START ---
+                // This is the smart auto-scroll logic.
+                // It checks if new messages have arrived since the last rebuild.
+                if (messages.length > _messageCount) {
+                  // If the user was already at the bottom, scroll down to show the new message.
+                  if (_isUserAtBottom) {
+                    WidgetsBinding.instance
+                        .addPostFrameCallback((_) => _scrollToBottom());
                   }
-                });
+                }
+                // Update the message count for the next check.
+                _messageCount = messages.length;
+                // --- OPTIMIZATION END ---
 
                 return ListView.builder(
                   controller: _scrollController,
@@ -106,8 +147,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
                   itemCount: messages.length,
                   itemBuilder: (context, index) {
                     final message = messages[index];
-                    final showDateSeparator =
-                        index == 0 ||
+                    final showDateSeparator = index == 0 ||
                         TimeAgo.formatDateSeparator(message.timestamp) !=
                             TimeAgo.formatDateSeparator(
                               messages[index - 1].timestamp,
@@ -190,30 +230,28 @@ class _ConversationScreenState extends State<ConversationScreen> {
   }
 
   Widget _buildMessageBubble(ChatMessage message) {
-    final isSender =
-        message.senderId ==
+    final isSender = message.senderId ==
         Provider.of<FirebaseService>(context, listen: false).currentUser?.uid;
     final alignment = isSender ? Alignment.centerRight : Alignment.centerLeft;
     final color = isSender ? AppColors.primaryRed : Colors.white;
     final textColor = isSender ? Colors.white : AppColors.textPrimary;
     final borderRadius = isSender
         ? const BorderRadius.only(
-            topLeft: Radius.circular(20),
-            topRight: Radius.circular(20),
-            bottomLeft: Radius.circular(20),
-          )
+      topLeft: Radius.circular(20),
+      topRight: Radius.circular(20),
+      bottomLeft: Radius.circular(20),
+    )
         : const BorderRadius.only(
-            topLeft: Radius.circular(20),
-            topRight: Radius.circular(20),
-            bottomRight: Radius.circular(20),
-          );
+      topLeft: Radius.circular(20),
+      topRight: Radius.circular(20),
+      bottomRight: Radius.circular(20),
+    );
 
     return Align(
       alignment: alignment,
       child: Column(
-        crossAxisAlignment: isSender
-            ? CrossAxisAlignment.end
-            : CrossAxisAlignment.start,
+        crossAxisAlignment:
+        isSender ? CrossAxisAlignment.end : CrossAxisAlignment.start,
         children: [
           Container(
             constraints: BoxConstraints(
