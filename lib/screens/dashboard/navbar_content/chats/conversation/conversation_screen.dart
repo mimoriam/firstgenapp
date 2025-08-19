@@ -22,38 +22,35 @@ class _ConversationScreenState extends State<ConversationScreen> {
   @override
   void initState() {
     super.initState();
-    _focusNode.addListener(_onFocusChange);
     Provider.of<FirebaseService>(
       context,
       listen: false,
     ).markAsRead(widget.conversation.id);
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _scrollToBottom(animated: false),
+    );
   }
 
   @override
   void dispose() {
     _messageController.dispose();
     _scrollController.dispose();
-    _focusNode.removeListener(_onFocusChange);
     _focusNode.dispose();
     super.dispose();
   }
 
-  void _onFocusChange() {
-    if (_focusNode.hasFocus) {
-      Future.delayed(
-        const Duration(milliseconds: 300),
-        () => _scrollToBottom(),
-      );
-    }
-  }
-
-  void _scrollToBottom() {
+  void _scrollToBottom({bool animated = true}) {
     if (_scrollController.hasClients) {
-      _scrollController.animateTo(
-        _scrollController.position.maxScrollExtent,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOut,
-      );
+      final position = _scrollController.position.maxScrollExtent;
+      if (animated) {
+        _scrollController.animateTo(
+          position,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      } else {
+        _scrollController.jumpTo(position);
+      }
     }
   }
 
@@ -66,7 +63,6 @@ class _ConversationScreenState extends State<ConversationScreen> {
       );
       firebaseService.sendMessage(widget.conversation.id, text);
       _messageController.clear();
-      _scrollToBottom();
     }
   }
 
@@ -82,7 +78,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
             child: StreamBuilder<List<ChatMessage>>(
               stream: firebaseService.getMessages(widget.conversation.id),
               builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
+                if (snapshot.connectionState == ConnectionState.waiting &&
+                    !snapshot.hasData) {
                   return const Center(child: CircularProgressIndicator());
                 }
                 if (snapshot.hasError) {
@@ -93,9 +90,12 @@ class _ConversationScreenState extends State<ConversationScreen> {
                 }
 
                 final messages = snapshot.data!;
-                WidgetsBinding.instance.addPostFrameCallback(
-                  (_) => _scrollToBottom(),
-                );
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (_scrollController.position.pixels >=
+                      _scrollController.position.maxScrollExtent - 50) {
+                    _scrollToBottom();
+                  }
+                });
 
                 return ListView.builder(
                   controller: _scrollController,

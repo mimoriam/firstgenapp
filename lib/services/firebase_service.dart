@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
 import 'dart:io';
 import 'dart:math' hide log;
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart' hide Query;
@@ -9,6 +11,7 @@ import 'package:firstgenapp/models/chat_models.dart';
 import 'package:firstgenapp/services/continent_service.dart';
 import 'package:firstgenapp/utils/authException.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:rxdart/rxdart.dart';
 
 class FirebaseService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -506,33 +509,44 @@ class FirebaseService {
     final currentUser = _auth.currentUser;
     if (currentUser == null) return Stream.value([]);
 
-    return _database
-        .ref('users/${currentUser.uid}/conversations')
-        .onValue
-        .asyncMap((event) async {
-          if (event.snapshot.value == null) {
-            return [];
+    final userConversationsRef = _database.ref(
+      'users/${currentUser.uid}/conversations',
+    );
+
+    return userConversationsRef.onValue.switchMap((event) {
+      if (event.snapshot.value == null) {
+        return Stream.value([]);
+      }
+
+      final conversationIdsMap = event.snapshot.value as Map;
+      final conversationIds = conversationIdsMap.keys.toList();
+
+      if (conversationIds.isEmpty) {
+        return Stream.value([]);
+      }
+
+      final conversationStreams = conversationIds.map((id) {
+        return _database.ref('conversations/$id').onValue.map((event) {
+          if (event.snapshot.exists && event.snapshot.value != null) {
+            final encodedData = jsonEncode(event.snapshot.value);
+            final data = jsonDecode(encodedData) as Map<String, dynamic>;
+            return Conversation.fromJson(data, id.toString(), currentUser.uid);
           }
-          final conversationIdsMap = event.snapshot.value as Map;
-          final conversationIds = conversationIdsMap.keys.toList();
-          final conversations = <Conversation>[];
-          for (var id in conversationIds) {
-            final snapshot = await _database.ref('conversations/$id').get();
-            if (snapshot.exists && snapshot.value != null) {
-              // FIX: Use jsonEncode/Decode to safely convert the map
-              final encodedData = jsonEncode(snapshot.value);
-              final data = jsonDecode(encodedData) as Map<String, dynamic>;
-              conversations.add(
-                Conversation.fromJson(data, id.toString(), currentUser.uid),
-              );
-            }
-          }
-          // Sort conversations to show the most recent first
-          conversations.sort(
-            (a, b) => b.lastMessageTimestamp.compareTo(a.lastMessageTimestamp),
-          );
-          return conversations;
+          return null;
         });
+      }).toList();
+
+      return CombineLatestStream.list(conversationStreams).map((conversations) {
+        final validConversations = conversations
+            .where((c) => c != null)
+            .cast<Conversation>()
+            .toList();
+        validConversations.sort(
+          (a, b) => b.lastMessageTimestamp.compareTo(a.lastMessageTimestamp),
+        );
+        return validConversations;
+      });
+    });
   }
 
   Future<void> addRecentMatch(String otherUserId) async {
