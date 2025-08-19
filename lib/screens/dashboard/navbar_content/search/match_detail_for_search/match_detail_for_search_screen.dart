@@ -10,7 +10,7 @@ import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:provider/provider.dart';
 
 class MatchDetailForSearchScreen extends StatefulWidget {
-  final String continent;
+  final String? continent;
   final List<String> languages;
   final String? generation;
   final String? gender;
@@ -71,7 +71,7 @@ class _MatchDetailForSearchScreenState
     super.dispose();
   }
 
-  void _onSwipeRight(int index) {
+  void _handleLike(int index) {
     final user = _users[index];
     debugPrint("Liked ${user['fullName']}");
     final firebaseService = Provider.of<FirebaseService>(
@@ -81,14 +81,13 @@ class _MatchDetailForSearchScreenState
     firebaseService.addRecentMatch(user['uid']);
   }
 
-  void _onSwipeLeft(int index) {
+  void _handleDiscard(int index) {
     final user = _users[index];
     debugPrint("Discarded ${user['fullName']}");
   }
 
   void _onMessage(int index) {
     final user = _users[index];
-    // FIX: Added fallback for fullName to prevent null errors.
     final otherUser = ChatUser(
       uid: user['uid'],
       name: user['fullName'] ?? 'No Name',
@@ -206,9 +205,9 @@ class _MatchDetailForSearchScreenState
     });
 
     if (direction == CardSwiperDirection.right) {
-      _onSwipeRight(previousIndex);
+      _handleLike(previousIndex);
     } else if (direction == CardSwiperDirection.left) {
-      _onSwipeLeft(previousIndex);
+      _handleDiscard(previousIndex);
     }
     return true;
   }
@@ -471,7 +470,8 @@ class _MatchDetailForSearchScreenState
                     bgColor: AppColors.primaryBackground,
                     iconColor: AppColors.textSecondary,
                     size: 52,
-                    onPressed: () => _onSwipeLeft(index),
+                    onPressed: () =>
+                        _swiperController.swipe(CardSwiperDirection.left),
                   ),
                   const SizedBox(width: 12),
                   _buildCircleButton(
@@ -487,7 +487,8 @@ class _MatchDetailForSearchScreenState
                     isGradient: true,
                     iconColor: AppColors.primaryBackground,
                     size: 52,
-                    onPressed: () => _onSwipeRight(index),
+                    onPressed: () =>
+                        _swiperController.swipe(CardSwiperDirection.right),
                   ),
                 ],
               ),
