@@ -7,6 +7,7 @@ import 'package:flutter_card_swiper/flutter_card_swiper.dart';
 import 'package:iconly/iconly.dart';
 import 'dart:ui';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
+import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 import 'package:provider/provider.dart';
 
 class MatchDetailForSearchScreen extends StatefulWidget {
@@ -261,12 +262,17 @@ class _MatchDetailForSearchScreenState
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          // mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          mainAxisAlignment: MainAxisAlignment.end,
           children: [
-            IconButton(
-              icon: const Icon(Icons.arrow_back, color: Colors.white),
-              onPressed: () => Navigator.of(context).pop(),
-            ),
+            // IconButton(
+            //   icon: const Icon(Icons.arrow_back, color: Colors.white),
+            //   // onPressed: () => Navigator.of(context).pop(),
+            //   onPressed: () {
+            //     // PersistentNavBarNavigator.p
+            //     // PersistentNavBarNavigator.pop(context);
+            //   },
+            // ),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(
