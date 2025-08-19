@@ -578,7 +578,8 @@ class FirebaseService {
     await addRecentMatch(userId);
   }
 
-  Future<List<Map<String, String>>> getRecentUsers() async {
+  // FIX: Modified to return user UID for chat functionality.
+  Future<List<Map<String, dynamic>>> getRecentUsers() async {
     final user = _auth.currentUser;
     if (user == null) return [];
 
@@ -607,11 +608,15 @@ class FirebaseService {
           .get();
 
       // To maintain the order from recent_matches
-      final orderedDocs = <Map<String, String>>[];
+      final orderedDocs = <Map<String, dynamic>>[];
       // We iterate in reverse to get the most recent matches first.
       for (final userId in recentMatchIds.reversed) {
-        final doc = querySnapshot.docs.firstWhere((d) => d.id == userId);
+        final doc = querySnapshot.docs.firstWhere(
+          (d) => d.id == userId,
+          orElse: () => throw Exception("User not found"),
+        );
         orderedDocs.add({
+          'uid': doc.id, // Add UID
           'name': doc.data()['fullName'] as String? ?? 'No Name',
           'avatar':
               doc.data()['profileImageUrl'] as String? ??
@@ -715,6 +720,44 @@ class FirebaseService {
 
   String getConversationId(String uid1, String uid2) {
     return uid1.hashCode <= uid2.hashCode ? '$uid1-$uid2' : '$uid2-$uid1';
+  }
+
+  // FIX: New method to get or create a conversation
+  Future<Conversation> getOrCreateConversation(String otherUserId) async {
+    final currentUser = _auth.currentUser;
+    if (currentUser == null) throw Exception("User not logged in");
+
+    final conversationId = getConversationId(currentUser.uid, otherUserId);
+    final conversationRef = _database.ref('conversations/$conversationId');
+
+    final snapshot = await conversationRef.get();
+    if (!snapshot.exists) {
+      // Conversation doesn't exist, create it.
+      final otherUserDoc = await _firestore
+          .collection(userCollection)
+          .doc(otherUserId)
+          .get();
+      if (!otherUserDoc.exists) {
+        throw Exception("Other user profile not found");
+      }
+
+      final otherUserData = otherUserDoc.data()!;
+      final otherUser = ChatUser(
+        uid: otherUserId,
+        name: otherUserData['fullName'] ?? 'No Name',
+        avatarUrl:
+            otherUserData['profileImageUrl'] ??
+            'https://picsum.photos/seed/$otherUserId/200/200',
+      );
+      await createChat(otherUser);
+    }
+
+    // Fetch the (now existing) conversation data
+    final finalSnapshot = await conversationRef.get();
+    final encodedData = jsonEncode(finalSnapshot.value);
+    final data = jsonDecode(encodedData) as Map<String, dynamic>;
+
+    return Conversation.fromJson(data, conversationId, currentUser.uid);
   }
 
   /// Maps [FirebaseAuthException] codes to user-friendly [AuthException] objects.

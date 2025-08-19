@@ -79,7 +79,7 @@ class SignUpViewModel extends ChangeNotifier {
 
   /// Populates basic info from a Firebase User object.
   void populateFromUser(User user) {
-    fullName = user.displayName;
+    fullName = user.displayName ?? fullName;
     email = user.email;
     password = null;
     notifyListeners();
@@ -156,6 +156,21 @@ class SignUpViewModel extends ChangeNotifier {
         throw Exception("User is not signed in. Cannot complete registration.");
       }
 
+      print({fullName});
+      print({user.displayName});
+
+      // FIX: Prioritize fullName from the ViewModel, but fallback to the user's displayName.
+      final finalFullName = fullName ?? user.displayName;
+
+      if (finalFullName == null || finalFullName.isEmpty) {
+        throw Exception("User's full name is not available.");
+      }
+
+      // Ensure the auth profile is up-to-date.
+      if (user.displayName != finalFullName) {
+        await user.updateDisplayName(finalFullName);
+      }
+
       String? imageUrl;
       if (profileImage != null) {
         imageUrl = await _firebaseService.uploadProfileImage(
@@ -170,7 +185,7 @@ class SignUpViewModel extends ChangeNotifier {
 
       final Map<String, dynamic> userProfileData = {
         'uid': user.uid,
-        'fullName': user.displayName,
+        'fullName': finalFullName,
         'email': email,
         'profileImageUrl': imageUrl,
         'createdAt': FieldValue.serverTimestamp(),
@@ -197,7 +212,6 @@ class SignUpViewModel extends ChangeNotifier {
         'gender': gender,
         'dateOfBirth': dateOfBirth,
         'profession': profession,
-        // FIX: Add default values for search preferences.
         'lookingForGeneration': 'First generation',
         'regionFocus': 'Global',
       };

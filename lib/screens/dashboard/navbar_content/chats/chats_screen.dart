@@ -9,8 +9,26 @@ import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 import 'package:provider/provider.dart';
 
-class ChatsScreen extends StatelessWidget {
+// FIX: Converted to StatefulWidget to handle refresh.
+class ChatsScreen extends StatefulWidget {
   const ChatsScreen({super.key});
+
+  @override
+  State<ChatsScreen> createState() => _ChatsScreenState();
+}
+
+class _ChatsScreenState extends State<ChatsScreen> {
+  // FIX: Added keys to force child widgets to rebuild on refresh.
+  Key _recentMatchesKey = UniqueKey();
+  Key _conversationsKey = UniqueKey();
+
+  Future<void> _handleRefresh() async {
+    // This will cause the children with these keys to be rebuilt, re-triggering their futures/streams.
+    setState(() {
+      _recentMatchesKey = UniqueKey();
+      _conversationsKey = UniqueKey();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -44,18 +62,22 @@ class ChatsScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.symmetric(horizontal: 16.0),
-        children: [
-          const SizedBox(height: 16),
-          _buildSectionHeader('Recent match', textTheme),
-          const SizedBox(height: 12),
-          const RecentMatchesList(),
-          const SizedBox(height: 20),
-          _buildSectionHeader('Messages', textTheme),
-          const SizedBox(height: 12),
-          const ConversationsList(),
-        ],
+      // FIX: Added RefreshIndicator to allow pull-to-refresh.
+      body: RefreshIndicator(
+        onRefresh: _handleRefresh,
+        child: ListView(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          children: [
+            const SizedBox(height: 16),
+            _buildSectionHeader('Recent match', textTheme),
+            const SizedBox(height: 12),
+            RecentMatchesList(key: _recentMatchesKey),
+            const SizedBox(height: 20),
+            _buildSectionHeader('Messages', textTheme),
+            const SizedBox(height: 12),
+            ConversationsList(key: _conversationsKey),
+          ],
+        ),
       ),
     );
   }
@@ -73,7 +95,8 @@ class RecentMatchesList extends StatefulWidget {
 }
 
 class _RecentMatchesListState extends State<RecentMatchesList> {
-  late Future<List<Map<String, String>>> _recentMatchesFuture;
+  // FIX: Changed future type to handle the full user map including UID.
+  late Future<List<Map<String, dynamic>>> _recentMatchesFuture;
 
   @override
   void initState() {
@@ -81,7 +104,7 @@ class _RecentMatchesListState extends State<RecentMatchesList> {
     _recentMatchesFuture = _fetchRecentMatches();
   }
 
-  Future<List<Map<String, String>>> _fetchRecentMatches() async {
+  Future<List<Map<String, dynamic>>> _fetchRecentMatches() async {
     final firebaseService = Provider.of<FirebaseService>(
       context,
       listen: false,
@@ -91,11 +114,14 @@ class _RecentMatchesListState extends State<RecentMatchesList> {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<List<Map<String, String>>>(
+    return FutureBuilder<List<Map<String, dynamic>>>(
       future: _recentMatchesFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return Center(child: Text("Error: ${snapshot.error}"));
         }
         if (!snapshot.hasData || snapshot.data!.isEmpty) {
           return const Center(child: Text("No recent matches"));
@@ -108,20 +134,38 @@ class _RecentMatchesListState extends State<RecentMatchesList> {
             itemCount: matches.length,
             itemBuilder: (context, index) {
               final match = matches[index];
-              return Padding(
-                padding: const EdgeInsets.only(right: 16.0),
-                child: Column(
-                  children: [
-                    CircleAvatar(
-                      radius: 26,
-                      backgroundImage: NetworkImage(match['avatar']!),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      match['name']!,
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                  ],
+              // FIX: Wrapped with GestureDetector to handle taps.
+              return GestureDetector(
+                onTap: () async {
+                  final firebaseService = Provider.of<FirebaseService>(
+                    context,
+                    listen: false,
+                  );
+                  final conversation = await firebaseService
+                      .getOrCreateConversation(match['uid']);
+                  if (mounted) {
+                    PersistentNavBarNavigator.pushNewScreen(
+                      context,
+                      screen: ConversationScreen(conversation: conversation),
+                      withNavBar: false,
+                    );
+                  }
+                },
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 16.0),
+                  child: Column(
+                    children: [
+                      CircleAvatar(
+                        radius: 26,
+                        backgroundImage: NetworkImage(match['avatar']!),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        match['name']!,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ],
+                  ),
                 ),
               );
             },
