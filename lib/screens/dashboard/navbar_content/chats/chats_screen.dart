@@ -9,6 +9,7 @@ import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 import 'package:provider/provider.dart';
 
+// FIX: Converted to StatefulWidget to handle refresh.
 class ChatsScreen extends StatefulWidget {
   const ChatsScreen({super.key});
 
@@ -16,37 +17,22 @@ class ChatsScreen extends StatefulWidget {
   State<ChatsScreen> createState() => _ChatsScreenState();
 }
 
-class _ChatsScreenState extends State<ChatsScreen>
-    with AutomaticKeepAliveClientMixin {
-  // Add AutomaticKeepAliveClientMixin
-  late Future<void> _initFuture;
-
-  @override
-  bool get wantKeepAlive => true; // Keep the state alive
-
-  @override
-  void initState() {
-    super.initState();
-    _initFuture = _initializeData();
-  }
-
-  Future<void> _initializeData() async {
-    // This can be used for any one-time initializations.
-    // The main data will be handled by streams.
-  }
+class _ChatsScreenState extends State<ChatsScreen> {
+  // FIX: Added keys to force child widgets to rebuild on refresh.
+  Key _recentMatchesKey = UniqueKey();
+  Key _conversationsKey = UniqueKey();
 
   Future<void> _handleRefresh() async {
+    // This will cause the children with these keys to be rebuilt, re-triggering their futures/streams.
     setState(() {
-      // Re-trigger the future builder for recent matches
-      _initFuture = _initializeData();
+      _recentMatchesKey = UniqueKey();
+      _conversationsKey = UniqueKey();
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    super.build(context); // Call super.build
     final textTheme = Theme.of(context).textTheme;
-
     return Scaffold(
       backgroundColor: AppColors.primaryBackground,
       appBar: AppBar(
@@ -75,6 +61,7 @@ class _ChatsScreenState extends State<ChatsScreen>
           ),
         ],
       ),
+      // FIX: Added RefreshIndicator to allow pull-to-refresh.
       body: RefreshIndicator(
         onRefresh: _handleRefresh,
         child: ListView(
@@ -83,19 +70,11 @@ class _ChatsScreenState extends State<ChatsScreen>
             const SizedBox(height: 16),
             _buildSectionHeader('Recent match', textTheme),
             const SizedBox(height: 12),
-            FutureBuilder(
-              future: _initFuture,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                return const RecentMatchesList();
-              },
-            ),
+            RecentMatchesList(key: _recentMatchesKey),
             const SizedBox(height: 20),
             _buildSectionHeader('Messages', textTheme),
             const SizedBox(height: 12),
-            const ConversationsList(),
+            ConversationsList(key: _conversationsKey),
           ],
         ),
       ),
@@ -115,26 +94,27 @@ class RecentMatchesList extends StatefulWidget {
 }
 
 class _RecentMatchesListState extends State<RecentMatchesList> {
-  late Future<List<Map<String, dynamic>>> _recentMatchesFuture;
+  // FIX: Changed future type to handle the full user map including UID.
+  late Stream<List<Map<String, dynamic>>> _recentMatchesStream;
 
   @override
   void initState() {
     super.initState();
-    _recentMatchesFuture = _fetchRecentMatches();
+    _recentMatchesStream = _fetchRecentMatches();
   }
 
-  Future<List<Map<String, dynamic>>> _fetchRecentMatches() async {
+  Stream<List<Map<String, dynamic>>> _fetchRecentMatches() {
     final firebaseService = Provider.of<FirebaseService>(
       context,
       listen: false,
     );
-    return await firebaseService.getRecentUsers();
+    return firebaseService.getRecentUsers();
   }
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<List<Map<String, dynamic>>>(
-      future: _recentMatchesFuture,
+    return StreamBuilder<List<Map<String, dynamic>>>(
+      stream: _recentMatchesStream,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
@@ -153,6 +133,7 @@ class _RecentMatchesListState extends State<RecentMatchesList> {
             itemCount: matches.length,
             itemBuilder: (context, index) {
               final match = matches[index];
+              // FIX: Wrapped with GestureDetector to handle taps.
               return GestureDetector(
                 onTap: () async {
                   final firebaseService = Provider.of<FirebaseService>(
@@ -194,16 +175,33 @@ class _RecentMatchesListState extends State<RecentMatchesList> {
   }
 }
 
-class ConversationsList extends StatelessWidget {
+class ConversationsList extends StatefulWidget {
   const ConversationsList({super.key});
 
   @override
+  State<ConversationsList> createState() => _ConversationsListState();
+}
+
+class _ConversationsListState extends State<ConversationsList> {
+  late Stream<List<Conversation>> _conversationsStream;
+
+  @override
+  void initState() {
+    super.initState();
+    final firebaseService = Provider.of<FirebaseService>(
+      context,
+      listen: false,
+    );
+    _conversationsStream = firebaseService.getConversations();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final firebaseService = Provider.of<FirebaseService>(context);
     return StreamBuilder<List<Conversation>>(
-      stream: firebaseService.getConversations(),
+      stream: _conversationsStream,
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
+        if (snapshot.connectionState == ConnectionState.waiting &&
+            !snapshot.hasData) {
           return const Center(child: CircularProgressIndicator());
         }
         if (snapshot.hasError) {
@@ -232,7 +230,6 @@ class ConversationsList extends StatelessWidget {
 
   Widget _buildChatItem(BuildContext context, Conversation conversation) {
     final textTheme = Theme.of(context).textTheme;
-
     return GestureDetector(
       onTap: () {
         PersistentNavBarNavigator.pushNewScreen(

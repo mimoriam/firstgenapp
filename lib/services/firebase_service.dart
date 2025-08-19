@@ -79,7 +79,7 @@ class FirebaseService {
       }
 
       final GoogleSignInAuthentication googleAuth =
-      await googleUser.authentication;
+          await googleUser.authentication;
 
       final AuthCredential credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
@@ -161,9 +161,9 @@ class FirebaseService {
   }
 
   Future<void> createUserDocument(
-      String userId,
-      Map<String, dynamic> data,
-      ) async {
+    String userId,
+    Map<String, dynamic> data,
+  ) async {
     try {
       await _firestore.collection(userCollection).doc(userId).set(data);
     } on FirebaseException catch (e) {
@@ -180,8 +180,10 @@ class FirebaseService {
   // MODIFICATION: Added a method to check if the user's profile document exists in Firestore.
   Future<bool> isUserProfileComplete(String userId) async {
     try {
-      final docSnapshot =
-      await _firestore.collection(userCollection).doc(userId).get();
+      final docSnapshot = await _firestore
+          .collection(userCollection)
+          .doc(userId)
+          .get();
       return docSnapshot.exists;
     } catch (e) {
       log('Error checking user profile completeness: $e');
@@ -212,8 +214,10 @@ class FirebaseService {
     if (user == null) return null;
 
     try {
-      final docSnapshot =
-      await _firestore.collection(userCollection).doc(user.uid).get();
+      final docSnapshot = await _firestore
+          .collection(userCollection)
+          .doc(user.uid)
+          .get();
       if (docSnapshot.exists) {
         return docSnapshot;
       } else {
@@ -277,7 +281,7 @@ class FirebaseService {
 
       final querySnapshot = await _firestore
           .collection(userCollection)
-      // Optionally, you might want to exclude the current user from the list.
+          // Optionally, you might want to exclude the current user from the list.
           .where('uid', isNotEqualTo: user.uid)
           .get();
 
@@ -303,8 +307,9 @@ class FirebaseService {
       if (user == null) return [];
 
       // Start with a base query
-      Query<Map<String, dynamic>> query =
-      _firestore.collection(userCollection).where('uid', isNotEqualTo: user.uid);
+      Query<Map<String, dynamic>> query = _firestore
+          .collection(userCollection)
+          .where('uid', isNotEqualTo: user.uid);
 
       // Apply filters. Note: Firestore has limitations on complex queries.
       // This implementation uses multiple 'where' clauses. For more complex
@@ -378,8 +383,9 @@ class FirebaseService {
     if (user == null) return [];
 
     // Start with a base query that excludes the current user.
-    Query<Map<String, dynamic>> query =
-    _firestore.collection(userCollection).where('uid', isNotEqualTo: user.uid);
+    Query<Map<String, dynamic>> query = _firestore
+        .collection(userCollection)
+        .where('uid', isNotEqualTo: user.uid);
 
     // Apply strict AND filters for core preferences on the server-side.
     if (continent != null && continent != 'Global') {
@@ -429,7 +435,8 @@ class FirebaseService {
       // === Start Client-Side OR Filtering for optional criteria ===
 
       final bool hasOrFilters =
-          (professions?.isNotEmpty ?? false) || (interests?.isNotEmpty ?? false);
+          (professions?.isNotEmpty ?? false) ||
+          (interests?.isNotEmpty ?? false);
 
       if (hasOrFilters) {
         results = results.where((doc) {
@@ -446,10 +453,12 @@ class FirebaseService {
           if (interests?.isNotEmpty ?? false) {
             final userHobbiesString = data['hobbies'] as String?;
             if (userHobbiesString != null) {
-              final userInterests =
-              userHobbiesString.split(',').map((e) => e.trim()).toList();
+              final userInterests = userHobbiesString
+                  .split(',')
+                  .map((e) => e.trim())
+                  .toList();
               if (interests!.any(
-                    (interest) => userInterests.contains(interest),
+                (interest) => userInterests.contains(interest),
               )) {
                 return true;
               }
@@ -500,8 +509,9 @@ class FirebaseService {
     final currentUser = _auth.currentUser;
     if (currentUser == null) return Stream.value([]);
 
-    final userConversationsRef =
-    _database.ref('users/${currentUser.uid}/conversations');
+    final userConversationsRef = _database.ref(
+      'users/${currentUser.uid}/conversations',
+    );
 
     return userConversationsRef.onValue.switchMap((event) {
       if (event.snapshot.value == null) {
@@ -520,19 +530,19 @@ class FirebaseService {
           if (event.snapshot.exists && event.snapshot.value != null) {
             final encodedData = jsonEncode(event.snapshot.value);
             final data = jsonDecode(encodedData) as Map<String, dynamic>;
-            return Conversation.fromJson(
-                data, id.toString(), currentUser.uid);
+            return Conversation.fromJson(data, id.toString(), currentUser.uid);
           }
           return null;
         });
       }).toList();
 
-      return CombineLatestStream.list(conversationStreams)
-          .map((conversations) {
-        final validConversations =
-        conversations.where((c) => c != null).cast<Conversation>().toList();
+      return CombineLatestStream.list(conversationStreams).map((conversations) {
+        final validConversations = conversations
+            .where((c) => c != null)
+            .cast<Conversation>()
+            .toList();
         validConversations.sort(
-              (a, b) => b.lastMessageTimestamp.compareTo(a.lastMessageTimestamp),
+          (a, b) => b.lastMessageTimestamp.compareTo(a.lastMessageTimestamp),
         );
         return validConversations;
       });
@@ -551,9 +561,9 @@ class FirebaseService {
   }
 
   Future<void> _updateRecentMatchesForUser(
-      String userId,
-      String matchId,
-      ) async {
+    String userId,
+    String matchId,
+  ) async {
     final recentMatchesRef = _database.ref('users/$userId/recent_matches');
     final snapshot = await recentMatchesRef.get();
 
@@ -583,55 +593,48 @@ class FirebaseService {
   }
 
   // FIX: Modified to return user UID for chat functionality.
-  Future<List<Map<String, dynamic>>> getRecentUsers() async {
+  Stream<List<Map<String, dynamic>>> getRecentUsers() {
     final user = _auth.currentUser;
-    if (user == null) return [];
+    if (user == null) return Stream.value([]);
 
-    try {
-      final recentMatchesRef = _database.ref(
-        'users/${user.uid}/recent_matches',
-      );
-      final snapshot = await recentMatchesRef.get();
-
-      if (!snapshot.exists || snapshot.value == null) {
-        return [];
+    final recentMatchesRef = _database.ref('users/${user.uid}/recent_matches');
+    return recentMatchesRef.onValue.switchMap((event) {
+      if (!event.snapshot.exists || event.snapshot.value == null) {
+        return Stream.value([]);
       }
 
       final recentMatchIds = List<String>.from(
-        (snapshot.value as List).map((e) => e.toString()),
+        (event.snapshot.value as List).map((e) => e.toString()),
       );
 
       if (recentMatchIds.isEmpty) {
-        return [];
+        return Stream.value([]);
       }
 
-      // Fetch user profiles from Firestore based on the UIDs from Realtime DB
-      final querySnapshot = await _firestore
+      return _firestore
           .collection(userCollection)
           .where('uid', whereIn: recentMatchIds)
-          .get();
-
-      // To maintain the order from recent_matches
-      final orderedDocs = <Map<String, dynamic>>[];
-      // We iterate in reverse to get the most recent matches first.
-      for (final userId in recentMatchIds.reversed) {
-        final doc = querySnapshot.docs.firstWhere(
-              (d) => d.id == userId,
-          orElse: () => throw Exception("User not found"),
-        );
-        orderedDocs.add({
-          'uid': doc.id, // Add UID
-          'name': doc.data()['fullName'] as String? ?? 'No Name',
-          'avatar': doc.data()['profileImageUrl'] as String? ??
-              'https://picsum.photos/seed/${doc.data()['uid']}/200/200',
-        });
-      }
-
-      return orderedDocs;
-    } catch (e) {
-      log('Error getting recent users: $e');
-      return [];
-    }
+          .snapshots()
+          .map((snapshot) {
+            final orderedDocs = <Map<String, dynamic>>[];
+            for (final userId in recentMatchIds.reversed) {
+              try {
+                final doc = snapshot.docs.firstWhere((d) => d.id == userId);
+                orderedDocs.add({
+                  'uid': doc.id,
+                  'name': doc.data()['fullName'] as String? ?? 'No Name',
+                  'avatar':
+                      doc.data()['profileImageUrl'] as String? ??
+                      'https://picsum.photos/seed/${doc.data()['uid']}/200/200',
+                });
+              } catch (e) {
+                // Handle case where user profile might not be found
+                log("User profile not found for UID: $userId");
+              }
+            }
+            return orderedDocs;
+          });
+    });
   }
 
   Stream<List<ChatMessage>> getMessages(String conversationId) {
@@ -640,23 +643,23 @@ class FirebaseService {
         .orderByChild('timestamp')
         .onValue
         .map((event) {
-      if (event.snapshot.value == null) {
-        return [];
-      }
-      // FIX: Use jsonEncode/Decode here as well
-      final encodedData = jsonEncode(event.snapshot.value);
-      final messagesMap = jsonDecode(encodedData) as Map<String, dynamic>;
-      final messages = messagesMap.entries
-          .map(
-            (e) => ChatMessage.fromJson(
-          Map<String, dynamic>.from(e.value as Map),
-          e.key,
-        ),
-      )
-          .toList();
-      messages.sort((a, b) => a.timestamp.compareTo(b.timestamp));
-      return messages;
-    });
+          if (event.snapshot.value == null) {
+            return [];
+          }
+          // FIX: Use jsonEncode/Decode here as well
+          final encodedData = jsonEncode(event.snapshot.value);
+          final messagesMap = jsonDecode(encodedData) as Map<String, dynamic>;
+          final messages = messagesMap.entries
+              .map(
+                (e) => ChatMessage.fromJson(
+                  Map<String, dynamic>.from(e.value as Map),
+                  e.key,
+                ),
+              )
+              .toList();
+          messages.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+          return messages;
+        });
   }
 
   Future<void> sendMessage(String conversationId, String text) async {
@@ -685,7 +688,7 @@ class FirebaseService {
         data['participants'] as Map,
       );
       final otherUserId = participants.keys.firstWhere(
-            (id) => id != currentUser.uid,
+        (id) => id != currentUser.uid,
       );
 
       conversationRef.update({
@@ -715,7 +718,8 @@ class FirebaseService {
     return ChatUser(
       uid: user.uid,
       name: profile.data()?['fullName'] ?? 'No Name',
-      avatarUrl: profile.data()?['profileImageUrl'] ??
+      avatarUrl:
+          profile.data()?['profileImageUrl'] ??
           'https://picsum.photos/seed/${Random().nextInt(1000)}/200/200',
     );
   }
@@ -735,8 +739,10 @@ class FirebaseService {
     final snapshot = await conversationRef.get();
     if (!snapshot.exists) {
       // Conversation doesn't exist, create it.
-      final otherUserDoc =
-      await _firestore.collection(userCollection).doc(otherUserId).get();
+      final otherUserDoc = await _firestore
+          .collection(userCollection)
+          .doc(otherUserId)
+          .get();
       if (!otherUserDoc.exists) {
         throw Exception("Other user profile not found");
       }
@@ -745,7 +751,8 @@ class FirebaseService {
       final otherUser = ChatUser(
         uid: otherUserId,
         name: otherUserData['fullName'] ?? 'No Name',
-        avatarUrl: otherUserData['profileImageUrl'] ??
+        avatarUrl:
+            otherUserData['profileImageUrl'] ??
             'https://picsum.photos/seed/$otherUserId/200/200',
       );
       await createChat(otherUser);
@@ -787,7 +794,7 @@ class FirebaseService {
         break;
       case 'too-many-requests':
         message =
-        'Access to this account has been temporarily disabled due to many failed login attempts. You can immediately restore it by resetting your password or you can try again later.';
+            'Access to this account has been temporarily disabled due to many failed login attempts. You can immediately restore it by resetting your password or you can try again later.';
         break;
       case 'network-request-failed':
         message = 'Network error. Please check your connection and try again.';
