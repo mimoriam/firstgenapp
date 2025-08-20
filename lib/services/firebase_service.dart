@@ -19,7 +19,6 @@ class FirebaseService {
   final GoogleSignIn _googleSignIn = GoogleSignIn();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseDatabase _database = FirebaseDatabase.instance;
-  // MODIFICATION: Added FirebaseStorage instance.
   final FirebaseStorage _storage = FirebaseStorage.instance;
 
   Stream<User?> get authStateChanges => _auth.authStateChanges();
@@ -512,6 +511,7 @@ class FirebaseService {
         .set(true);
   }
 
+  // MODIFICATION: Rewrote this method to fetch fresh user data from Firestore.
   Stream<List<Conversation>> getConversations() {
     final currentUser = _auth.currentUser;
     if (currentUser == null) return Stream.value([]);
@@ -533,10 +533,42 @@ class FirebaseService {
       }
 
       final conversationStreams = conversationIds.map((id) {
-        return _database.ref('conversations/$id').onValue.map((event) {
+        return _database.ref('conversations/$id').onValue.asyncMap((
+          event,
+        ) async {
           if (event.snapshot.exists && event.snapshot.value != null) {
             final encodedData = jsonEncode(event.snapshot.value);
             final data = jsonDecode(encodedData) as Map<String, dynamic>;
+
+            final participants = Map<String, dynamic>.from(
+              data['participants'] as Map? ?? {},
+            );
+            final otherUserId = participants.keys.firstWhere(
+              (key) => key != currentUser.uid,
+              orElse: () => '',
+            );
+
+            if (otherUserId.isNotEmpty) {
+              try {
+                final userDoc = await _firestore
+                    .collection(userCollection)
+                    .doc(otherUserId)
+                    .get();
+                if (userDoc.exists) {
+                  final userData = userDoc.data()!;
+                  // Replace the stale user data in the conversation with fresh data
+                  data['users'][otherUserId] = {
+                    'uid': otherUserId,
+                    'name': userData['fullName'] ?? 'No Name',
+                    'avatarUrl':
+                        userData['profileImageUrl'] ??
+                        'https://picsum.photos/seed/error/200/200',
+                  };
+                }
+              } catch (e) {
+                log("Error fetching user profile for chat: $e");
+              }
+            }
             return Conversation.fromJson(data, id.toString(), currentUser.uid);
           }
           return null;
