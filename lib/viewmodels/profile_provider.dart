@@ -1,4 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firstgenapp/services/firebase_service.dart';
 import 'package:flutter/material.dart';
 
@@ -9,13 +8,10 @@ import 'package:flutter/material.dart';
 /// needing to fetch it from Firebase every time.
 class UserProfileViewModel extends ChangeNotifier {
   final FirebaseService _firebaseService;
-  DocumentSnapshot<Map<String, dynamic>>? _userProfile;
-
-  /// The user's profile document snapshot.
-  DocumentSnapshot<Map<String, dynamic>>? get userProfile => _userProfile;
+  Map<String, dynamic>? _userProfileData;
 
   /// The user's profile data as a map.
-  Map<String, dynamic>? get userProfileData => _userProfile?.data();
+  Map<String, dynamic>? get userProfileData => _userProfileData;
 
   bool _isLoading = false;
   bool get isLoading => _isLoading;
@@ -25,20 +21,33 @@ class UserProfileViewModel extends ChangeNotifier {
   /// Fetches the user profile from Firebase and notifies listeners.
   Future<void> fetchUserProfile() async {
     _isLoading = true;
+    // Notify listeners at the start of the fetch operation.
     notifyListeners();
-    _userProfile = await _firebaseService.getUserProfile();
+    final snapshot = await _firebaseService.getUserProfile();
+    _userProfileData = snapshot?.data();
     _isLoading = false;
+    // Notify listeners again once the data is available.
     notifyListeners();
   }
 
   /// Clears the cached user profile data.
   void clearProfile() {
-    _userProfile = null;
+    _userProfileData = null;
     notifyListeners();
   }
 
   /// Refreshes the user profile data from Firebase.
   Future<void> refreshUserProfile() async {
     await fetchUserProfile();
+  }
+
+  /// Updates the local profile data and notifies listeners for instant UI updates.
+  /// This makes the UI feel responsive while the data is being saved to Firebase
+  /// in the background.
+  void updateLocalProfileData(Map<String, dynamic> newData) {
+    if (_userProfileData != null) {
+      _userProfileData!.addAll(newData);
+      notifyListeners();
+    }
   }
 }

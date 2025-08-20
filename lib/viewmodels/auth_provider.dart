@@ -7,7 +7,6 @@ import 'package:flutter/material.dart';
 enum AuthStatus {
   uninitialized,
   unauthenticated,
-  // MODIFICATION: Added a new state to handle the period after login but before the profile check is complete.
   authenticating,
   authenticated_incomplete_profile,
   authenticated_complete_profile,
@@ -36,14 +35,13 @@ class AuthProvider extends ChangeNotifier {
     super.dispose();
   }
 
+  /// This method is called whenever the user's authentication state changes.
   Future<void> _onAuthStateChanged(User? user) async {
     if (user == null) {
       _status = AuthStatus.unauthenticated;
       _user = null;
     } else {
       _user = user;
-      // MODIFICATION: Immediately set status to authenticating to show a loading indicator
-      // and prevent the sign-in screen from flashing.
       _status = AuthStatus.authenticating;
       notifyListeners(); // Notify listeners to show the loading screen.
 
@@ -60,10 +58,9 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Re-checks if the user's profile is complete.
   Future<void> recheckUserProfile() async {
     if (_user != null) {
-      // Set status to authenticating to show a brief loading indicator
-      // and prevent UI flicker.
       _status = AuthStatus.authenticating;
       notifyListeners();
 
@@ -75,7 +72,6 @@ class AuthProvider extends ChangeNotifier {
       } else {
         _status = AuthStatus.authenticated_incomplete_profile;
       }
-      // Notify listeners with the final, correct state.
       notifyListeners();
     }
   }

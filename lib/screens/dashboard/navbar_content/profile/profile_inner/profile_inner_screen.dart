@@ -3,6 +3,7 @@ import 'package:country_picker/country_picker.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firstgenapp/common/gradient_btn.dart';
 import 'package:firstgenapp/services/firebase_service.dart';
+import 'package:firstgenapp/viewmodels/profile_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:firstgenapp/constants/appColors.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
@@ -26,7 +27,6 @@ class _ProfileInnerScreenState extends State<ProfileInnerScreen> {
   final _languagesFieldKey = GlobalKey<FormBuilderFieldState>();
 
   User? _user;
-  late Future<DocumentSnapshot<Map<String, dynamic>>?> _userProfileFuture;
   bool _isLoading = false;
 
   @override
@@ -37,7 +37,6 @@ class _ProfileInnerScreenState extends State<ProfileInnerScreen> {
       listen: false,
     );
     _user = firebaseService.currentUser;
-    _userProfileFuture = firebaseService.getUserProfile();
   }
 
   @override
@@ -71,6 +70,12 @@ class _ProfileInnerScreenState extends State<ProfileInnerScreen> {
       try {
         await firebaseService.updateUserProfile(dataToUpdate);
 
+        // Refresh the centralized user profile data.
+        await Provider.of<UserProfileViewModel>(
+          context,
+          listen: false,
+        ).refreshUserProfile();
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -79,7 +84,6 @@ class _ProfileInnerScreenState extends State<ProfileInnerScreen> {
               content: const Text("Profile updated successfully!"),
             ),
           );
-          // Navigator.of(context).pop(true); // Pop with a success result
         }
       } catch (e) {
         if (mounted) {
@@ -133,20 +137,14 @@ class _ProfileInnerScreenState extends State<ProfileInnerScreen> {
         ),
         title: Text('Profile', style: textTheme.titleLarge),
       ),
-      body: FutureBuilder<DocumentSnapshot<Map<String, dynamic>>?>(
-        future: _userProfileFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
+      body: Consumer<UserProfileViewModel>(
+        builder: (context, userProfileViewModel, child) {
+          if (userProfileViewModel.isLoading ||
+              userProfileViewModel.userProfileData == null) {
             return const Center(child: CircularProgressIndicator());
           }
-          if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          }
-          if (!snapshot.hasData || snapshot.data == null) {
-            return const Center(child: Text('No profile data found.'));
-          }
 
-          final userData = snapshot.data!.data();
+          final userData = userProfileViewModel.userProfileData;
           final dob = (userData?['dateOfBirth'] as Timestamp?)?.toDate();
 
           return KeyboardDismissOnTap(

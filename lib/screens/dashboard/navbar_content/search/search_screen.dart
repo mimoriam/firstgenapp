@@ -5,6 +5,7 @@ import 'package:firstgenapp/constants/appColors.dart';
 import 'package:firstgenapp/models/chat_models.dart';
 import 'package:firstgenapp/screens/dashboard/navbar_content/chats/conversation/conversation_screen.dart';
 import 'package:firstgenapp/services/firebase_service.dart';
+import 'package:firstgenapp/viewmodels/profile_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_card_swiper/flutter_card_swiper.dart';
 import 'package:iconly/iconly.dart';
@@ -20,8 +21,9 @@ class SearchScreen extends StatefulWidget {
 }
 
 class _SearchScreenState extends State<SearchScreen> {
-  // This future now handles both fetching preferences and searching for users.
-  late Future<List<QueryDocumentSnapshot<Map<String, dynamic>>>> _usersFuture;
+  // This future will hold the search results. It's nullable because it's
+  // initialized only after the user's preferences are loaded.
+  Future<List<QueryDocumentSnapshot<Map<String, dynamic>>>>? _usersFuture;
   final CardSwiperController _swiperController = CardSwiperController();
 
   // State for managing the card swiper
@@ -30,10 +32,20 @@ class _SearchScreenState extends State<SearchScreen> {
   bool _isFinished = false;
 
   @override
-  void initState() {
-    super.initState();
-    // The future is initialized once when the widget is created.
-    _usersFuture = _fetchUsersBasedOnPreferences();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final userProfileViewModel = Provider.of<UserProfileViewModel>(context);
+
+    // Initialize the future only if it hasn't been initialized yet AND
+    // the required profile data is available from the provider. This prevents
+    // re-fetching on every rebuild.
+    if (_usersFuture == null && userProfileViewModel.userProfileData != null) {
+      setState(() {
+        _usersFuture = _fetchUsersBasedOnPreferences(
+          userProfileViewModel.userProfileData!,
+        );
+      });
+    }
   }
 
   @override
@@ -42,43 +54,28 @@ class _SearchScreenState extends State<SearchScreen> {
     super.dispose();
   }
 
-  /// This single function now performs both steps:
-  /// 1. Fetches the current user's profile to get their search preferences.
-  /// 2. Uses those preferences to search for matching users.
+  /// Fetches users based on the preferences loaded from the centralized view model.
   Future<List<QueryDocumentSnapshot<Map<String, dynamic>>>>
-  _fetchUsersBasedOnPreferences() async {
-    // Ensure the widget is still mounted before proceeding.
-    if (!mounted) return [];
+  _fetchUsersBasedOnPreferences(Map<String, dynamic> searchUserData) async {
+    final String? continent = searchUserData['regionFocus'];
+    final String? generation = searchUserData['lookingForGeneration'];
+    final String? gender = searchUserData['searchGender'];
+    final int minAge = searchUserData['searchMinAge'] ?? 18;
+    final int maxAge = searchUserData['searchMaxAge'] ?? 100;
+    final List<String> languages = List<String>.from(
+      searchUserData['searchLanguages'] ?? [],
+    );
+    final List<String> professions = List<String>.from(
+      searchUserData['searchProfessions'] ?? [],
+    );
+    final List<String> interests = List<String>.from(
+      searchUserData['searchInterests'] ?? [],
+    );
 
     final firebaseService = Provider.of<FirebaseService>(
       context,
       listen: false,
     );
-    final userProfile = await firebaseService.getUserProfile();
-
-    if (userProfile == null || !userProfile.exists) {
-      throw Exception('Could not load your profile to perform a search.');
-    }
-
-    final userData = userProfile.data()!;
-
-    // Extract search parameters from the user's profile data.
-    final String? continent = userData['regionFocus'];
-    final String? generation = userData['lookingForGeneration'];
-    final String? gender = userData['searchGender'];
-    final int minAge = userData['searchMinAge'] ?? 18;
-    final int maxAge = userData['searchMaxAge'] ?? 100;
-    final List<String> languages = List<String>.from(
-      userData['searchLanguages'] ?? [],
-    );
-    final List<String> professions = List<String>.from(
-      userData['searchProfessions'] ?? [],
-    );
-    final List<String> interests = List<String>.from(
-      userData['searchInterests'] ?? [],
-    );
-
-    // Perform the user search with the fetched preferences.
     return await firebaseService.searchUsersStrict(
       continent: continent,
       generation: generation,
@@ -121,15 +118,12 @@ class _SearchScreenState extends State<SearchScreen> {
       context,
       listen: false,
     );
-    // Add the user to recent matches when a message is initiated.
     firebaseService.addRecentUser(otherUser.uid);
 
-    // Get or create a conversation with the selected user.
     final conversation = await firebaseService.getOrCreateConversation(
       otherUser.uid,
     );
 
-    // Navigate to the conversation screen.
     if (mounted) {
       PersistentNavBarNavigator.pushNewScreen(
         context,
@@ -173,7 +167,6 @@ class _SearchScreenState extends State<SearchScreen> {
     return true;
   }
 
-  /// Helper to parse lists which might be stored as comma-separated strings.
   List<String> _parseList(dynamic data) {
     if (data is List) {
       return List<String>.from(data.map((item) => item.toString()));
@@ -190,10 +183,19 @@ class _SearchScreenState extends State<SearchScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // If the future is null, it means we are waiting for the user preferences
+    // to load. Show a loading indicator.
+    if (_usersFuture == null) {
+      return const Scaffold(
+        backgroundColor: AppColors.secondaryBackground,
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    // Once the future is initialized, use it to build the UI.
     return FutureBuilder<List<QueryDocumentSnapshot<Map<String, dynamic>>>>(
       future: _usersFuture,
       builder: (context, snapshot) {
-        // Show a single loading indicator while fetching all data.
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
             backgroundColor: AppColors.secondaryBackground,
@@ -223,10 +225,8 @@ class _SearchScreenState extends State<SearchScreen> {
           );
         }
 
-        // Once data is loaded, populate the users list.
         _users = snapshot.data!.map((doc) => doc.data()).toList();
 
-        // Build the main UI with the card swiper.
         return Material(
           color: AppColors.secondaryBackground,
           child: ClipRect(
@@ -271,7 +271,6 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   // --- UI Helper Widgets ---
-  // (These are moved from the old match_detail_for_search_screen.dart)
 
   Widget _buildBlurredBackground() {
     int backgroundIndex = _currentIndex;

@@ -156,9 +156,6 @@ class SignUpViewModel extends ChangeNotifier {
         throw Exception("User is not signed in. Cannot complete registration.");
       }
 
-      print({fullName});
-      print({user.displayName});
-
       // FIX: Prioritize fullName from the ViewModel, but fallback to the user's displayName.
       final finalFullName = fullName ?? user.displayName;
 

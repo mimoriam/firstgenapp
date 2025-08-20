@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firstgenapp/screens/dashboard/navbar_content/profile/profile_inner/profile_inner_screen.dart';
 import 'package:firstgenapp/services/firebase_service.dart';
+import 'package:firstgenapp/viewmodels/profile_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:firstgenapp/constants/appColors.dart';
 import 'package:iconly/iconly.dart';
@@ -17,61 +18,19 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  // State variables for connection preferences
-  String _seeProfileSelection = 'Only Communities I\'m In';
-  String _lookingForGenerationSelection = 'First generation';
-  String _regionFocusSelection = 'Global';
-
-  // State variables for advanced search filters (moved from search_screen)
-  RangeValues _currentRangeValues = const RangeValues(25, 30);
-  final List<String> _languages = [];
-  final List<String> _professions = [];
-  final List<String> _interests = [];
-  String? _selectedGender;
-
-  // Options lists
-  final List<String> _generationOptions = [
-    'First generation',
-    'Second generation',
-    'Culture enthusiast',
-    'Mixed heritage',
-    'Not sure',
-  ];
-  final List<String> _genderOptions = ['Male', 'Female', 'Other'];
-
-  // Controllers
+  // Controllers for text fields in the advanced filters modal.
   final TextEditingController _languageController = TextEditingController();
   final TextEditingController _professionController = TextEditingController();
   final TextEditingController _interestController = TextEditingController();
 
-  // State variables for notification settings
+  final List<String> _genderOptions = ['Male', 'Female', 'Other'];
+
+  // State variables for notification and privacy settings (can be local).
   bool _appNotifications = true;
   bool _emailUpdates = true;
   bool _eventReminders = false;
-
-  // State variables for privacy controls
   bool _showOnlineStatus = true;
   bool _showJoinedCommunities = true;
-
-  User? _user;
-  late Stream<DocumentSnapshot<Map<String, dynamic>>> _userProfileStream;
-  late FirebaseService _firebaseService;
-
-  @override
-  void initState() {
-    super.initState();
-    // _firebaseService = Provider.of<FirebaseService>(context, listen: false);
-    // _user = _firebaseService.currentUser;
-    // _userProfileStream = _firebaseService.getUserProfileStream();
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _firebaseService = Provider.of<FirebaseService>(context);
-    _user = _firebaseService.currentUser;
-    _userProfileStream = _firebaseService.getUserProfileStream();
-  }
 
   @override
   void dispose() {
@@ -84,6 +43,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final firebaseService = Provider.of<FirebaseService>(
+      context,
+      listen: false,
+    );
+    final user = firebaseService.currentUser;
+
     return Scaffold(
       backgroundColor: AppColors.primaryBackground,
       appBar: AppBar(
@@ -103,21 +68,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ],
         ),
       ),
-      body: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-        stream: _userProfileStream,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
+      // Use a Consumer to listen for changes in the UserProfileViewModel.
+      body: Consumer<UserProfileViewModel>(
+        builder: (context, userProfileViewModel, child) {
+          // Show a loading indicator while the profile is being fetched.
+          if (userProfileViewModel.isLoading ||
+              userProfileViewModel.userProfileData == null) {
             return const Center(child: CircularProgressIndicator());
           }
-          if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          }
-          if (!snapshot.hasData || !snapshot.data!.exists) {
-            return const Center(child: Text('No profile data found.'));
-          }
 
-          final userData = snapshot.data!.data();
-          _loadPreferences(userData);
+          final userData = userProfileViewModel.userProfileData!;
 
           return ListView(
             padding: const EdgeInsets.symmetric(
@@ -125,15 +85,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
               vertical: 8.0,
             ),
             children: [
-              _buildProfileCard(userData),
+              _buildProfileCard(userData, user, textTheme),
               const SizedBox(height: 10),
-              _buildConnectionPreferences(),
+              _buildConnectionPreferences(userData, firebaseService),
               const SizedBox(height: 10),
               _buildNotificationSettings(),
               const SizedBox(height: 10),
               _buildPrivacyControls(),
               const SizedBox(height: 10),
-              _buildAboutApp(),
+              _buildAboutApp(firebaseService),
               const SizedBox(height: 10),
             ],
           );
@@ -142,45 +102,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  void _loadPreferences(Map<String, dynamic>? userData) {
-    if (userData == null) return;
-
-    // Load basic preferences
-    _seeProfileSelection = userData['seeProfile'] ?? 'Only Communities I\'m In';
-    _lookingForGenerationSelection =
-        userData['lookingForGeneration'] ?? 'First generation';
-    _regionFocusSelection = userData['regionFocus'] ?? 'Global';
-
-    // Load advanced search preferences
-    _selectedGender = userData['searchGender'];
-    final startAge = userData['searchMinAge']?.toDouble() ?? 25.0;
-    final endAge = userData['searchMaxAge']?.toDouble() ?? 30.0;
-    _currentRangeValues = RangeValues(startAge, endAge);
-
-    if (userData['searchLanguages'] != null) {
-      _languages.clear();
-      _languages.addAll(List<String>.from(userData['searchLanguages']));
-    }
-    if (userData['searchProfessions'] != null) {
-      _professions.clear();
-      _professions.addAll(List<String>.from(userData['searchProfessions']));
-    }
-    if (userData['searchInterests'] != null) {
-      _interests.clear();
-      _interests.addAll(List<String>.from(userData['searchInterests']));
-    }
-  }
-
-  Widget _buildProfileCard(Map<String, dynamic>? userData) {
-    final textTheme = Theme.of(context).textTheme;
-    final hasPhoto = _user?.photoURL != null && _user!.photoURL!.isNotEmpty;
+  Widget _buildProfileCard(
+    Map<String, dynamic> userData,
+    User? user,
+    TextTheme textTheme,
+  ) {
+    final hasPhoto = user?.photoURL != null && user!.photoURL!.isNotEmpty;
 
     return _buildSectionCard(
       child: ListTile(
         leading: CircleAvatar(
           radius: 25,
           backgroundColor: AppColors.secondaryBackground,
-          backgroundImage: hasPhoto ? NetworkImage(_user!.photoURL!) : null,
+          backgroundImage: hasPhoto ? NetworkImage(user!.photoURL!) : null,
           child: !hasPhoto
               ? const Icon(
                   IconlyLight.profile,
@@ -190,14 +124,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
               : null,
         ),
         title: Text(
-          userData?['fullName'] ?? _user?.displayName ?? 'No Name',
+          userData['fullName'] ?? user?.displayName ?? 'No Name',
           style: textTheme.labelLarge?.copyWith(
             fontWeight: FontWeight.bold,
             color: AppColors.textPrimary,
           ),
         ),
         subtitle: Text(
-          userData?['email'] ?? _user?.email ?? 'No Email',
+          userData['email'] ?? user?.email ?? 'No Email',
           style: textTheme.bodySmall,
         ),
         trailing: const Icon(
@@ -218,7 +152,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildConnectionPreferences() {
+  Widget _buildConnectionPreferences(
+    Map<String, dynamic> userData,
+    FirebaseService firebaseService,
+  ) {
     return _buildSectionCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -230,18 +167,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 'Connection Preferences',
                 style: Theme.of(context).textTheme.titleLarge,
               ),
-              SizedBox(
-                // width: 120,
-                child: TextButton(
-                  onPressed: _showAdvancedFilters,
-                  // fontSize: 12,
-                  // insets: 8,
-                  child: Row(
-                    children: [
-                      const Text('More ', style: TextStyle(fontSize: 14)),
-                      Icon(Icons.arrow_forward_ios, size: 14),
-                    ],
-                  ),
+              TextButton(
+                onPressed: () => _showAdvancedFilters(userData),
+                child: const Row(
+                  children: [
+                    Text('More ', style: TextStyle(fontSize: 14)),
+                    Icon(Icons.arrow_forward_ios, size: 14),
+                  ],
                 ),
               ),
             ],
@@ -250,23 +182,35 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _buildTitledChipGroup(
             'Who can see your profile?',
             ['Everyone', 'Only Communities I\'m In', 'No Body'],
-            _seeProfileSelection,
+            userData['seeProfile'] ?? 'Only Communities I\'m In',
             (newValue) {
               if (newValue != null) {
-                setState(() => _seeProfileSelection = newValue);
-                _firebaseService.updateUserProfile({'seeProfile': newValue});
+                Provider.of<UserProfileViewModel>(
+                  context,
+                  listen: false,
+                ).updateLocalProfileData({'seeProfile': newValue});
+                firebaseService.updateUserProfile({'seeProfile': newValue});
               }
             },
           ),
           const SizedBox(height: 16),
           _buildTitledChipGroup(
             'Which generation are you looking for?',
-            _generationOptions,
-            _lookingForGenerationSelection,
+            [
+              'First generation',
+              'Second generation',
+              'Culture enthusiast',
+              'Mixed heritage',
+              'Not sure',
+            ],
+            userData['lookingForGeneration'] ?? 'First generation',
             (newValue) {
               if (newValue != null) {
-                setState(() => _lookingForGenerationSelection = newValue);
-                _firebaseService.updateUserProfile({
+                Provider.of<UserProfileViewModel>(
+                  context,
+                  listen: false,
+                ).updateLocalProfileData({'lookingForGeneration': newValue});
+                firebaseService.updateUserProfile({
                   'lookingForGeneration': newValue,
                 });
               }
@@ -284,11 +228,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
               'Oceania',
               'Global',
             ],
-            _regionFocusSelection,
+            userData['regionFocus'] ?? 'Global',
             (newValue) {
               if (newValue != null) {
-                setState(() => _regionFocusSelection = newValue);
-                _firebaseService.updateUserProfile({'regionFocus': newValue});
+                Provider.of<UserProfileViewModel>(
+                  context,
+                  listen: false,
+                ).updateLocalProfileData({'regionFocus': newValue});
+                firebaseService.updateUserProfile({'regionFocus': newValue});
               }
             },
           ),
@@ -297,7 +244,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  void _showAdvancedFilters() {
+  void _showAdvancedFilters(Map<String, dynamic> initialUserData) {
+    final firebaseService = Provider.of<FirebaseService>(
+      context,
+      listen: false,
+    );
+    final userProfileViewModel = Provider.of<UserProfileViewModel>(
+      context,
+      listen: false,
+    );
+
+    // Initialize local state for the modal from the view model's data.
+    String? selectedGender = initialUserData['searchGender'];
+    RangeValues currentRangeValues = RangeValues(
+      initialUserData['searchMinAge']?.toDouble() ?? 25.0,
+      initialUserData['searchMaxAge']?.toDouble() ?? 30.0,
+    );
+    List<String> languages = List<String>.from(
+      initialUserData['searchLanguages'] ?? [],
+    );
+    List<String> professions = List<String>.from(
+      initialUserData['searchProfessions'] ?? [],
+    );
+    List<String> interests = List<String>.from(
+      initialUserData['searchInterests'] ?? [],
+    );
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -328,18 +300,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         _buildChoiceChipSection(
                           'Gender',
                           _genderOptions,
-                          _selectedGender,
+                          selectedGender,
                           (val) {
-                            setModalState(() => _selectedGender = val);
-                            _firebaseService.updateUserProfile({
+                            setModalState(() => selectedGender = val);
+                            userProfileViewModel.updateLocalProfileData({
+                              'searchGender': val,
+                            });
+                            firebaseService.updateUserProfile({
                               'searchGender': val,
                             });
                           },
                         ),
                         const SizedBox(height: 20),
-                        _buildAgeRangeSlider((values) {
-                          setModalState(() => _currentRangeValues = values);
-                          _firebaseService.updateUserProfile({
+                        _buildAgeRangeSlider(currentRangeValues, (values) {
+                          setModalState(() => currentRangeValues = values);
+                          userProfileViewModel.updateLocalProfileData({
+                            'searchMinAge': values.start.round(),
+                            'searchMaxAge': values.end.round(),
+                          });
+                          firebaseService.updateUserProfile({
                             'searchMinAge': values.start.round(),
                             'searchMaxAge': values.end.round(),
                           });
@@ -348,10 +327,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         _TitledChipInput(
                           title: 'Language',
                           hint: 'Type specific language',
-                          items: _languages,
+                          items: languages,
                           controller: _languageController,
                           onListChanged: (list) {
-                            _firebaseService.updateUserProfile({
+                            userProfileViewModel.updateLocalProfileData({
+                              'searchLanguages': list,
+                            });
+                            firebaseService.updateUserProfile({
                               'searchLanguages': list,
                             });
                           },
@@ -360,10 +342,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         _TitledChipInput(
                           title: 'Profession',
                           hint: 'Type specific profession',
-                          items: _professions,
+                          items: professions,
                           controller: _professionController,
                           onListChanged: (list) {
-                            _firebaseService.updateUserProfile({
+                            userProfileViewModel.updateLocalProfileData({
+                              'searchProfessions': list,
+                            });
+                            firebaseService.updateUserProfile({
                               'searchProfessions': list,
                             });
                           },
@@ -372,10 +357,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         _TitledChipInput(
                           title: 'Interest',
                           hint: 'Type specific interest',
-                          items: _interests,
+                          items: interests,
                           controller: _interestController,
                           onListChanged: (list) {
-                            _firebaseService.updateUserProfile({
+                            userProfileViewModel.updateLocalProfileData({
+                              'searchInterests': list,
+                            });
+                            firebaseService.updateUserProfile({
                               'searchInterests': list,
                             });
                           },
@@ -448,7 +436,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildAboutApp() {
+  Widget _buildAboutApp(FirebaseService firebaseService) {
     return _buildSectionCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -461,7 +449,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _buildInfoRow(
             'Log Out',
             onTap: () async {
-              await _firebaseService.signOut();
+              await firebaseService.signOut();
             },
           ),
           _buildInfoRow(
@@ -594,7 +582,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // Widgets for the bottom sheet (moved from search_screen)
   Widget _buildChoiceChipSection(
     String title,
     List<String> options,
@@ -643,7 +630,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildAgeRangeSlider(ValueChanged<RangeValues> onChanged) {
+  Widget _buildAgeRangeSlider(
+    RangeValues currentRangeValues,
+    ValueChanged<RangeValues> onChanged,
+  ) {
     final textTheme = Theme.of(context).textTheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -654,15 +644,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
           children: [
             Expanded(
               child: RangeSlider(
-                values: _currentRangeValues,
+                values: currentRangeValues,
                 min: 18,
                 max: 100,
                 divisions: 82,
                 activeColor: AppColors.primaryRed,
                 inactiveColor: AppColors.inputBorder,
                 labels: RangeLabels(
-                  _currentRangeValues.start.round().toString(),
-                  _currentRangeValues.end.round().toString(),
+                  currentRangeValues.start.round().toString(),
+                  currentRangeValues.end.round().toString(),
                 ),
                 onChanged: onChanged,
               ),
@@ -676,7 +666,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               child: Center(
                 child: Text(
-                  '${_currentRangeValues.start.round()}-${_currentRangeValues.end.round()}',
+                  '${currentRangeValues.start.round()}-${currentRangeValues.end.round()}',
                   style: textTheme.bodySmall?.copyWith(
                     fontWeight: FontWeight.w600,
                   ),

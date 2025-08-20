@@ -3,6 +3,7 @@ import 'package:firstgenapp/auth_gate.dart';
 import 'package:firstgenapp/services/firebase_service.dart';
 import 'package:firstgenapp/viewmodels/SignupViewModel.dart';
 import 'package:firstgenapp/viewmodels/auth_provider.dart';
+import 'package:firstgenapp/viewmodels/profile_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:firstgenapp/screens/onboarding/onboarding_screen.dart';
 import 'package:firstgenapp/utils/appTheme.dart';
@@ -42,6 +43,29 @@ class MyApp extends StatelessWidget {
 
         ChangeNotifierProvider<AuthProvider>(
           create: (context) => AuthProvider(context.read<FirebaseService>()),
+        ),
+
+        // This provider will create the UserProfileViewModel and manage its state
+        // based on the AuthProvider's status.
+        ChangeNotifierProxyProvider<AuthProvider, UserProfileViewModel>(
+          create: (context) =>
+              UserProfileViewModel(context.read<FirebaseService>()),
+          update: (context, authProvider, userProfileViewModel) {
+            // When the user is authenticated with a complete profile,
+            // fetch their profile data if it's not already loaded.
+            if (authProvider.status ==
+                AuthStatus.authenticated_complete_profile) {
+              if (userProfileViewModel?.userProfileData == null &&
+                  !userProfileViewModel!.isLoading) {
+                userProfileViewModel.fetchUserProfile();
+              }
+            }
+            // When the user logs out, clear their profile data.
+            else if (authProvider.status == AuthStatus.unauthenticated) {
+              userProfileViewModel?.clearProfile();
+            }
+            return userProfileViewModel!;
+          },
         ),
       ],
       child: MaterialApp(

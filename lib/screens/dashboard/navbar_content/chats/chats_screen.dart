@@ -142,7 +142,7 @@ class _RecentMatchesListState extends State<RecentMatchesList> {
                   );
                   final conversation = await firebaseService
                       .getOrCreateConversation(match['uid']);
-                  if (mounted) {
+                  if (context.mounted) {
                     PersistentNavBarNavigator.pushNewScreen(
                       context,
                       screen: ConversationScreen(conversation: conversation),
