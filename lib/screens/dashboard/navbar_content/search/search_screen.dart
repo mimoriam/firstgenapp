@@ -1,8 +1,14 @@
+import 'dart:ui';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firstgenapp/constants/appColors.dart';
+import 'package:firstgenapp/models/chat_models.dart';
 import 'package:firstgenapp/screens/dashboard/navbar_content/chats/conversation/conversation_screen.dart';
-import 'package:firstgenapp/screens/dashboard/navbar_content/search/match_detail_for_search/match_detail_for_search_screen.dart';
 import 'package:firstgenapp/services/firebase_service.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_card_swiper/flutter_card_swiper.dart';
+import 'package:iconly/iconly.dart';
+import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 import 'package:provider/provider.dart';
 
@@ -14,16 +20,35 @@ class SearchScreen extends StatefulWidget {
 }
 
 class _SearchScreenState extends State<SearchScreen> {
-  late Future<Map<String, dynamic>> _searchFuture;
+  // This future now handles both fetching preferences and searching for users.
+  late Future<List<QueryDocumentSnapshot<Map<String, dynamic>>>> _usersFuture;
+  final CardSwiperController _swiperController = CardSwiperController();
+
+  // State for managing the card swiper
+  List<Map<String, dynamic>> _users = [];
+  int _currentIndex = 0;
+  bool _isFinished = false;
 
   @override
   void initState() {
     super.initState();
-    _searchFuture = _fetchPreferencesAndSearch();
+    // The future is initialized once when the widget is created.
+    _usersFuture = _fetchUsersBasedOnPreferences();
   }
 
-  Future<Map<String, dynamic>> _fetchPreferencesAndSearch() async {
-    if (!mounted) return {};
+  @override
+  void dispose() {
+    _swiperController.dispose();
+    super.dispose();
+  }
+
+  /// This single function now performs both steps:
+  /// 1. Fetches the current user's profile to get their search preferences.
+  /// 2. Uses those preferences to search for matching users.
+  Future<List<QueryDocumentSnapshot<Map<String, dynamic>>>>
+  _fetchUsersBasedOnPreferences() async {
+    // Ensure the widget is still mounted before proceeding.
+    if (!mounted) return [];
 
     final firebaseService = Provider.of<FirebaseService>(
       context,
@@ -32,11 +57,12 @@ class _SearchScreenState extends State<SearchScreen> {
     final userProfile = await firebaseService.getUserProfile();
 
     if (userProfile == null || !userProfile.exists) {
-      throw Exception('Could not load your profile to perform search.');
+      throw Exception('Could not load your profile to perform a search.');
     }
 
     final userData = userProfile.data()!;
 
+    // Extract search parameters from the user's profile data.
     final String? continent = userData['regionFocus'];
     final String? generation = userData['lookingForGeneration'];
     final String? gender = userData['searchGender'];
@@ -52,82 +78,545 @@ class _SearchScreenState extends State<SearchScreen> {
       userData['searchInterests'] ?? [],
     );
 
-    return {
-      'continent': continent,
-      'generation': generation,
-      'gender': gender,
-      'minAge': minAge,
-      'maxAge': maxAge,
-      'languages': languages,
-      'professions': professions,
-      'interests': interests,
-    };
+    // Perform the user search with the fetched preferences.
+    return await firebaseService.searchUsersStrict(
+      continent: continent,
+      generation: generation,
+      gender: gender,
+      minAge: minAge,
+      maxAge: maxAge,
+      languages: languages,
+      professions: professions,
+      interests: interests,
+    );
+  }
+
+  // --- Card Action Handlers ---
+
+  void _handleLike(int index) {
+    final user = _users[index];
+    debugPrint("Liked ${user['fullName']}");
+    final firebaseService = Provider.of<FirebaseService>(
+      context,
+      listen: false,
+    );
+    firebaseService.addRecentMatch(user['uid']);
+  }
+
+  void _handleDiscard(int index) {
+    final user = _users[index];
+    debugPrint("Discarded ${user['fullName']}");
+  }
+
+  void _onMessage(int index) async {
+    final user = _users[index];
+    final otherUser = ChatUser(
+      uid: user['uid'],
+      name: user['fullName'] ?? 'No Name',
+      avatarUrl:
+          user['profileImageUrl'] ?? 'https://picsum.photos/seed/error/200/200',
+    );
+
+    final firebaseService = Provider.of<FirebaseService>(
+      context,
+      listen: false,
+    );
+    // Add the user to recent matches when a message is initiated.
+    firebaseService.addRecentUser(otherUser.uid);
+
+    // Get or create a conversation with the selected user.
+    final conversation = await firebaseService.getOrCreateConversation(
+      otherUser.uid,
+    );
+
+    // Navigate to the conversation screen.
+    if (mounted) {
+      PersistentNavBarNavigator.pushNewScreen(
+        context,
+        screen: ConversationScreen(conversation: conversation),
+        withNavBar: false,
+      );
+    }
+  }
+
+  // --- Swiper Callbacks ---
+
+  bool _onSwipe(
+    int previousIndex,
+    int? currentIndex,
+    CardSwiperDirection direction,
+  ) {
+    setState(() {
+      _currentIndex = currentIndex ?? previousIndex;
+      if (currentIndex == null) {
+        _isFinished = true;
+      }
+    });
+
+    if (direction == CardSwiperDirection.right) {
+      _handleLike(previousIndex);
+    } else if (direction == CardSwiperDirection.left) {
+      _handleDiscard(previousIndex);
+    }
+    return true;
+  }
+
+  bool _onUndo(
+    int? previousIndex,
+    int currentIndex,
+    CardSwiperDirection direction,
+  ) {
+    setState(() {
+      _currentIndex = currentIndex;
+      _isFinished = false;
+    });
+    return true;
+  }
+
+  /// Helper to parse lists which might be stored as comma-separated strings.
+  List<String> _parseList(dynamic data) {
+    if (data is List) {
+      return List<String>.from(data.map((item) => item.toString()));
+    }
+    if (data is String) {
+      return data
+          .split(',')
+          .map((e) => e.trim())
+          .where((e) => e.isNotEmpty)
+          .toList();
+    }
+    return [];
   }
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<Map<String, dynamic>>(
-      future: _searchFuture,
+    return FutureBuilder<List<QueryDocumentSnapshot<Map<String, dynamic>>>>(
+      future: _usersFuture,
       builder: (context, snapshot) {
+        // Show a single loading indicator while fetching all data.
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return Scaffold(
+          return const Scaffold(
             backgroundColor: AppColors.secondaryBackground,
-            body: const Center(child: CircularProgressIndicator()),
+            body: Center(child: CircularProgressIndicator()),
           );
         }
 
         if (snapshot.hasError) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Text(
-                'Error: ${snapshot.error}\nPlease ensure your search preferences are set in your profile.',
-                textAlign: TextAlign.center,
+          return Scaffold(
+            backgroundColor: AppColors.secondaryBackground,
+            body: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Text(
+                  'Error: ${snapshot.error}\nPlease ensure your search preferences are set in your profile.',
+                  textAlign: TextAlign.center,
+                ),
               ),
             ),
           );
         }
 
         if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          return const Center(child: Text('Could not load preferences.'));
+          return const Scaffold(
+            backgroundColor: AppColors.secondaryBackground,
+            body: Center(child: Text('No users match your criteria.')),
+          );
         }
 
-        final searchParams = snapshot.data!;
+        // Once data is loaded, populate the users list.
+        _users = snapshot.data!.map((doc) => doc.data()).toList();
 
-        return MatchDetailForSearchScreen(
-          continent: searchParams['continent'],
-          generation: searchParams['generation'],
-          gender: searchParams['gender'],
-          minAge: searchParams['minAge'],
-          maxAge: searchParams['maxAge'],
-          languages: searchParams['languages'],
-          professions: searchParams['professions'],
-          interests: searchParams['interests'],
-          // FIX: Updated onUserSelected to correctly handle chat navigation.
-          onUserSelected: (user) async {
-            final firebaseService = Provider.of<FirebaseService>(
-              context,
-              listen: false,
-            );
-            // Add to recent matches
-            firebaseService.addRecentUser(user.uid);
-
-            // Get or create the conversation
-            final conversation = await firebaseService.getOrCreateConversation(
-              user.uid,
-            );
-
-            // Navigate to the conversation screen
-            if (context.mounted) {
-              PersistentNavBarNavigator.pushNewScreen(
-                context,
-                screen: ConversationScreen(conversation: conversation),
-                withNavBar: false,
-              );
-            }
-          },
+        // Build the main UI with the card swiper.
+        return Material(
+          color: AppColors.secondaryBackground,
+          child: ClipRect(
+            child: Stack(
+              children: [
+                _buildBlurredBackground(),
+                if (_isFinished)
+                  Center(
+                    child: Text(
+                      'No more users found.',
+                      style: Theme.of(
+                        context,
+                      ).textTheme.headlineSmall?.copyWith(color: Colors.white),
+                    ),
+                  ),
+                CardSwiper(
+                  controller: _swiperController,
+                  cardsCount: _users.length,
+                  onSwipe: _onSwipe,
+                  onUndo: _onUndo,
+                  numberOfCardsDisplayed: 1,
+                  backCardOffset: Offset.zero,
+                  padding: EdgeInsets.zero,
+                  allowedSwipeDirection: const AllowedSwipeDirection.none(),
+                  cardBuilder:
+                      (
+                        context,
+                        index,
+                        horizontalThresholdPercentage,
+                        verticalThresholdPercentage,
+                      ) {
+                        final userProfile = _users[index];
+                        return _buildMatchCard(userProfile, index);
+                      },
+                ),
+              ],
+            ),
+          ),
         );
       },
+    );
+  }
+
+  // --- UI Helper Widgets ---
+  // (These are moved from the old match_detail_for_search_screen.dart)
+
+  Widget _buildBlurredBackground() {
+    int backgroundIndex = _currentIndex;
+    if (!_isFinished) {
+      backgroundIndex = _currentIndex + 1;
+      if (backgroundIndex >= _users.length) {
+        backgroundIndex = _currentIndex;
+      }
+    }
+
+    if (_users.isEmpty) {
+      return Container(color: AppColors.secondaryBackground);
+    }
+
+    final backgroundUserProfile = _users[backgroundIndex];
+    final imageUrl = backgroundUserProfile['profileImageUrl'];
+    final bool isNetworkUrl = imageUrl != null && imageUrl.startsWith('http');
+
+    return Container(
+      decoration: BoxDecoration(
+        image: DecorationImage(
+          image: isNetworkUrl
+              ? NetworkImage(imageUrl)
+              : const AssetImage('images/backgrounds/match_bg.png')
+                    as ImageProvider,
+          fit: BoxFit.cover,
+        ),
+      ),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 15.0, sigmaY: 15.0),
+        child: Container(color: Colors.black.withOpacity(0.2)),
+      ),
+    );
+  }
+
+  Widget _buildMatchCard(Map<String, dynamic> userProfile, int index) {
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: Stack(
+        children: [
+          _buildBackgroundImage(userProfile['profileImageUrl']),
+          _buildBottomInfoCard(userProfile),
+          _buildOverlayContent(userProfile),
+          _buildTopBar(userProfile),
+          _buildActionButtons(index),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTopBar(Map<String, dynamic> userProfile) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Iconsax.send_2_copy,
+                    color: Colors.white,
+                    size: 14,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${userProfile['distance'] ?? 2.5} km',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBackgroundImage(String? imageUrl) {
+    final bool isNetworkUrl = imageUrl != null && imageUrl.startsWith('http');
+
+    return Container(
+      decoration: BoxDecoration(
+        image: DecorationImage(
+          image: isNetworkUrl
+              ? NetworkImage(imageUrl)
+              : const AssetImage('images/backgrounds/match_bg.png')
+                    as ImageProvider,
+          fit: BoxFit.cover,
+        ),
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Colors.transparent, Colors.black.withOpacity(0.8)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            stops: const [0.4, 1.0],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBottomInfoCard(Map<String, dynamic> userProfile) {
+    final textTheme = Theme.of(context).textTheme;
+    return Align(
+      alignment: Alignment.bottomCenter,
+      child: Container(
+        width: double.infinity,
+        height: MediaQuery.of(context).size.height * 0.43,
+        decoration: const BoxDecoration(
+          color: AppColors.primaryBackground,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24.0, 32.0, 24.0, 100.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildSectionTitle('About'),
+                const SizedBox(height: 8),
+                Text(
+                  userProfile['bio'] ?? 'No bio yet.',
+                  style: textTheme.bodySmall,
+                ),
+                const SizedBox(height: 20),
+                _buildSectionTitle('Languages'),
+                const SizedBox(height: 12),
+                _buildChipGroup(_parseList(userProfile['languages'])),
+                const SizedBox(height: 20),
+                _buildSectionTitle('Interest'),
+                const SizedBox(height: 12),
+                _buildChipGroup(_parseList(userProfile['hobbies'])),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOverlayContent(Map<String, dynamic> userProfile) {
+    final textTheme = Theme.of(context).textTheme;
+    final dob = (userProfile['dateOfBirth'] as Timestamp?)?.toDate();
+    final age = dob != null
+        ? (DateTime.now().difference(dob).inDays / 365).floor()
+        : 'N/A';
+
+    return Positioned(
+      bottom: MediaQuery.of(context).size.height * 0.43,
+      left: 24,
+      right: 24,
+      child: Column(
+        children: [
+          Text(
+            '${userProfile['fullName'] ?? 'N/A'}, $age',
+            textAlign: TextAlign.center,
+            style: textTheme.headlineLarge?.copyWith(
+              color: Colors.white,
+              fontSize: 22,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '${userProfile['profession'] ?? 'N/A'}  |  ${userProfile['culturalHeritage'] ?? 'N/A'}',
+            style: textTheme.bodyMedium?.copyWith(
+              color: Colors.white.withOpacity(0.8),
+            ),
+          ),
+          const SizedBox(height: 16),
+          _buildMatchIndicator(userProfile),
+          const SizedBox(height: 20),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMatchIndicator(Map<String, dynamic> userProfile) {
+    final textTheme = Theme.of(context).textTheme;
+    final matchPercentage = userProfile['matchPercentage'] ?? 0.80;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.4),
+        borderRadius: BorderRadius.circular(30),
+        border: Border.all(color: AppColors.primaryRed.withOpacity(0.5)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            width: 36,
+            height: 36,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                CircularProgressIndicator(
+                  value: matchPercentage,
+                  strokeWidth: 3,
+                  backgroundColor: Colors.white.withOpacity(0.2),
+                  valueColor: const AlwaysStoppedAnimation<Color>(
+                    AppColors.primaryRed,
+                  ),
+                ),
+                Center(
+                  child: Text(
+                    '${(matchPercentage * 100).toInt()}%',
+                    style: textTheme.bodySmall?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 10,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            'Match',
+            style: textTheme.titleLarge?.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionButtons(int index) {
+    return Positioned(
+      bottom: 30,
+      left: 0,
+      right: 0,
+      child: Center(
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(35),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.grey.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(35),
+                border: Border.all(color: Colors.white.withOpacity(0.3)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildCircleButton(
+                    icon: Icons.close,
+                    bgColor: AppColors.primaryBackground,
+                    iconColor: AppColors.textSecondary,
+                    size: 52,
+                    onPressed: () =>
+                        _swiperController.swipe(CardSwiperDirection.left),
+                  ),
+                  const SizedBox(width: 12),
+                  _buildCircleButton(
+                    icon: IconlyBold.message,
+                    bgColor: AppColors.textPrimary,
+                    iconColor: AppColors.primaryBackground,
+                    size: 62,
+                    onPressed: () => _onMessage(index),
+                  ),
+                  const SizedBox(width: 12),
+                  _buildCircleButton(
+                    icon: Icons.favorite,
+                    isGradient: true,
+                    iconColor: AppColors.primaryBackground,
+                    size: 52,
+                    onPressed: () =>
+                        _swiperController.swipe(CardSwiperDirection.right),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCircleButton({
+    required IconData icon,
+    Color? bgColor,
+    bool isGradient = false,
+    required Color iconColor,
+    required double size,
+    required VoidCallback onPressed,
+  }) {
+    return GestureDetector(
+      onTap: onPressed,
+      child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          gradient: isGradient
+              ? const LinearGradient(
+                  colors: [AppColors.primaryOrange, AppColors.primaryRed],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                )
+              : null,
+          color: bgColor,
+          shape: BoxShape.circle,
+        ),
+        child: Icon(icon, color: iconColor, size: size * 0.5),
+      ),
+    );
+  }
+
+  Widget _buildSectionTitle(String title) {
+    return Text(title, style: Theme.of(context).textTheme.titleLarge);
+  }
+
+  Widget _buildChipGroup(List<String> items) {
+    return Wrap(
+      spacing: 8.0,
+      runSpacing: 8.0,
+      children: items.map((item) => _buildChip(item)).toList(),
+    );
+  }
+
+  Widget _buildChip(String label) {
+    return Chip(
+      label: Text(label),
+      backgroundColor: AppColors.primaryBackground,
+      side: const BorderSide(color: AppColors.inputBorder),
+      labelStyle: Theme.of(
+        context,
+      ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
     );
   }
 }
