@@ -7,6 +7,7 @@ import 'dart:math' hide log;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart' hide Query;
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firstgenapp/models/chat_models.dart';
 import 'package:firstgenapp/services/continent_service.dart';
 import 'package:firstgenapp/utils/authException.dart';
@@ -18,6 +19,8 @@ class FirebaseService {
   final GoogleSignIn _googleSignIn = GoogleSignIn();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseDatabase _database = FirebaseDatabase.instance;
+  // MODIFICATION: Added FirebaseStorage instance.
+  final FirebaseStorage _storage = FirebaseStorage.instance;
 
   Stream<User?> get authStateChanges => _auth.authStateChanges();
   User? get currentUser => _auth.currentUser;
@@ -191,13 +194,12 @@ class FirebaseService {
     }
   }
 
+  // MODIFICATION: Implemented the actual image upload logic.
   Future<String> uploadProfileImage(String userId, File image) async {
     try {
-      // final ref = _storage.ref().child('profile_images').child('$userId.jpg');
-      // await ref.putFile(image);
-      // return await ref.getDownloadURL();
-
-      return "image.png";
+      final ref = _storage.ref().child('profile_images').child('$userId.jpg');
+      await ref.putFile(image);
+      return await ref.getDownloadURL();
     } on FirebaseException catch (e) {
       log('FirebaseException in uploadProfileImage: ${e.code}', error: e);
       throw Exception('Failed to upload profile image.');
@@ -253,6 +255,11 @@ class FirebaseService {
       if (data.containsKey('fullName') &&
           user.displayName != data['fullName']) {
         await user.updateDisplayName(data['fullName']);
+      }
+
+      // MODIFICATION: If a new image URL is provided, update the auth user's photoURL.
+      if (data.containsKey('profileImageUrl')) {
+        await user.updatePhotoURL(data['profileImageUrl']);
       }
 
       // MODIFICATION: If the country is being updated, also update the continent.

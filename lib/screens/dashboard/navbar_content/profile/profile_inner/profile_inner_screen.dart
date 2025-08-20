@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:country_picker/country_picker.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -10,6 +12,7 @@ import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_keyboard_visibility/flutter_keyboard_visibility.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:iconly/iconly.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:tap_debouncer/tap_debouncer.dart';
@@ -28,6 +31,8 @@ class _ProfileInnerScreenState extends State<ProfileInnerScreen> {
 
   User? _user;
   bool _isLoading = false;
+  // MODIFICATION: Added state for image picking.
+  File? _pickedImage;
 
   @override
   void initState() {
@@ -43,6 +48,50 @@ class _ProfileInnerScreenState extends State<ProfileInnerScreen> {
   void dispose() {
     _languageController.dispose();
     super.dispose();
+  }
+
+  // MODIFICATION: Added method to handle image picking and uploading.
+  Future<void> _pickAndUpdateImage() async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 70,
+    );
+
+    if (image != null) {
+      setState(() {
+        _pickedImage = File(image.path);
+        _isLoading = true;
+      });
+
+      final firebaseService = Provider.of<FirebaseService>(
+        context,
+        listen: false,
+      );
+      try {
+        final imageUrl = await firebaseService.uploadProfileImage(
+          _user!.uid,
+          _pickedImage!,
+        );
+        await firebaseService.updateUserProfile({'profileImageUrl': imageUrl});
+        await Provider.of<UserProfileViewModel>(
+          context,
+          listen: false,
+        ).refreshUserProfile();
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text("Failed to upload image: ${e.toString()}")),
+          );
+        }
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
+      }
+    }
   }
 
   Future<void> _onSavePressed() async {
@@ -169,7 +218,7 @@ class _ProfileInnerScreenState extends State<ProfileInnerScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildProfileAvatar(),
+                    _buildProfileAvatar(userData),
                     const SizedBox(height: 24),
                     _buildSectionTitle('Full Name', textTheme),
                     FormBuilderTextField(
@@ -341,44 +390,56 @@ class _ProfileInnerScreenState extends State<ProfileInnerScreen> {
     );
   }
 
-  Widget _buildProfileAvatar() {
-    final hasPhoto = _user?.photoURL != null && _user!.photoURL!.isNotEmpty;
+  // MODIFICATION: Updated to handle image picking and display the correct image.
+  Widget _buildProfileAvatar(Map<String, dynamic>? userData) {
+    final imageUrl = userData?['profileImageUrl'];
+    final hasNetworkImage = imageUrl != null && imageUrl.isNotEmpty;
+
+    ImageProvider? backgroundImage;
+    if (_pickedImage != null) {
+      backgroundImage = FileImage(_pickedImage!);
+    } else if (hasNetworkImage) {
+      backgroundImage = NetworkImage(imageUrl);
+    }
 
     return Center(
-      child: Stack(
-        children: [
-          CircleAvatar(
-            radius: 50,
-            backgroundColor: AppColors.secondaryBackground,
-            backgroundImage: hasPhoto ? NetworkImage(_user!.photoURL!) : null,
-            child: !hasPhoto
-                ? const Icon(
-                    IconlyLight.profile,
-                    size: 50,
-                    color: AppColors.textSecondary,
-                  )
-                : null,
-          ),
-          Positioned(
-            bottom: 0,
-            right: 0,
-            child: Container(
-              decoration: BoxDecoration(
-                color: AppColors.tertiaryBackground,
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 2),
-              ),
-              child: const Padding(
-                padding: EdgeInsets.all(6.0),
-                child: Icon(
-                  IconlyBold.edit,
-                  color: AppColors.primaryOrange,
-                  size: 18,
+      child: GestureDetector(
+        onTap: _pickAndUpdateImage,
+        child: Stack(
+          children: [
+            CircleAvatar(
+              radius: 50,
+              backgroundColor: AppColors.secondaryBackground,
+              backgroundImage: backgroundImage,
+              child: backgroundImage == null
+                  ? const Icon(
+                      IconlyLight.profile,
+                      size: 50,
+                      color: AppColors.textSecondary,
+                    )
+                  : null,
+            ),
+            Positioned(
+              bottom: 0,
+              right: 0,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: AppColors.tertiaryBackground,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 2),
+                ),
+                child: const Padding(
+                  padding: EdgeInsets.all(6.0),
+                  child: Icon(
+                    IconlyBold.edit,
+                    color: AppColors.primaryOrange,
+                    size: 18,
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

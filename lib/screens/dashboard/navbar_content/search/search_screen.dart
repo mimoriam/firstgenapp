@@ -368,7 +368,8 @@ class _SearchScreenState extends State<SearchScreen> {
               ? NetworkImage(imageUrl)
               : const AssetImage('images/backgrounds/match_bg.png')
                     as ImageProvider,
-          fit: BoxFit.cover,
+          // fit: BoxFit.cover,
+          fit: BoxFit.fill,
         ),
       ),
       child: Container(

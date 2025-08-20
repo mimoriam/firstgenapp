@@ -102,19 +102,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  // MODIFICATION: Updated to use profileImageUrl from userData.
   Widget _buildProfileCard(
     Map<String, dynamic> userData,
     User? user,
     TextTheme textTheme,
   ) {
-    final hasPhoto = user?.photoURL != null && user!.photoURL!.isNotEmpty;
+    final imageUrl = userData['profileImageUrl'];
+    final hasPhoto = imageUrl != null && imageUrl.isNotEmpty;
 
     return _buildSectionCard(
       child: ListTile(
         leading: CircleAvatar(
           radius: 25,
           backgroundColor: AppColors.secondaryBackground,
-          backgroundImage: hasPhoto ? NetworkImage(user!.photoURL!) : null,
+          backgroundImage: hasPhoto ? NetworkImage(imageUrl) : null,
           child: !hasPhoto
               ? const Icon(
                   IconlyLight.profile,
