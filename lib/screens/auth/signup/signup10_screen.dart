@@ -15,6 +15,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:tap_debouncer/tap_debouncer.dart';
+import 'package:image_cropper/image_cropper.dart';
 
 class Signup10Screen extends StatefulWidget {
   const Signup10Screen({super.key});
@@ -75,9 +76,41 @@ class _Signup10ScreenState extends State<Signup10Screen> {
     );
 
     if (image != null) {
-      _formKey.currentState?.fields['profile_image']?.didChange(
-        File(image.path),
+      // _formKey.currentState?.fields['profile_image']?.didChange(
+      //   File(image.path),
+      // );
+
+      // **MODIFICATION START: Add cropping step**
+      final croppedFile = await ImageCropper().cropImage(
+        sourcePath: image.path,
+        maxWidth: 600,
+        maxHeight: 800,
+        uiSettings: [
+          AndroidUiSettings(
+            toolbarTitle: 'Crop Image',
+            toolbarColor: AppColors.primaryRed,
+            toolbarWidgetColor: Colors.white,
+            initAspectRatio: CropAspectRatioPreset.square,
+            aspectRatioPresets: [
+              CropAspectRatioPreset.square, // Enforce a square aspect ratio
+            ],
+            lockAspectRatio: true, // User cannot change the aspect ratio
+          ),
+          IOSUiSettings(
+            title: 'Crop Image',
+            aspectRatioLockEnabled: true,
+            aspectRatioPresets: [
+              CropAspectRatioPreset.square, // Enforce a square aspect ratio
+            ],
+          ),
+        ],
       );
+
+      if (croppedFile != null) {
+        _formKey.currentState?.fields['profile_image']?.didChange(
+          File(croppedFile.path),
+        );
+      }
     }
   }
 

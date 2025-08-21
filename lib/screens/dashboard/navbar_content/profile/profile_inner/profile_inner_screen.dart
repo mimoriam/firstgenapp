@@ -16,6 +16,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:tap_debouncer/tap_debouncer.dart';
+import 'package:image_cropper/image_cropper.dart';
 
 class ProfileInnerScreen extends StatefulWidget {
   const ProfileInnerScreen({super.key});
@@ -59,8 +60,38 @@ class _ProfileInnerScreenState extends State<ProfileInnerScreen> {
     );
 
     if (image != null) {
+      // **MODIFICATION START: Add cropping step**
+      final croppedFile = await ImageCropper().cropImage(
+        sourcePath: image.path,
+        maxWidth: 600,
+        maxHeight: 800,
+        uiSettings: [
+          AndroidUiSettings(
+            toolbarTitle: 'Crop Image',
+            toolbarColor: AppColors.primaryRed,
+            toolbarWidgetColor: Colors.white,
+            initAspectRatio: CropAspectRatioPreset.square,
+            lockAspectRatio: true, // User cannot change the aspect ratio
+            aspectRatioPresets: [
+              CropAspectRatioPreset.square, // Enforce a square aspect ratio
+            ],
+          ),
+          IOSUiSettings(
+            title: 'Crop Image',
+            aspectRatioLockEnabled: true,
+            aspectRatioPresets: [
+              CropAspectRatioPreset.square, // Enforce a square aspect ratio
+            ],
+          ),
+        ],
+      );
+      // **MODIFICATION END**
+
+      // Check if the user completed the cropping step
+      if (croppedFile == null) return;
+
       setState(() {
-        _pickedImage = File(image.path);
+        _pickedImage = File(croppedFile.path); // Use the cropped file
         _isLoading = true;
       });
 
@@ -74,10 +105,13 @@ class _ProfileInnerScreenState extends State<ProfileInnerScreen> {
           _pickedImage!,
         );
         await firebaseService.updateUserProfile({'profileImageUrl': imageUrl});
-        await Provider.of<UserProfileViewModel>(
-          context,
-          listen: false,
-        ).refreshUserProfile();
+
+        if (mounted) {
+          await Provider.of<UserProfileViewModel>(
+            context,
+            listen: false,
+          ).refreshUserProfile();
+        }
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(

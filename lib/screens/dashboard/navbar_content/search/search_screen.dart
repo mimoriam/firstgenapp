@@ -232,7 +232,7 @@ class _SearchScreenState extends State<SearchScreen> {
           child: ClipRect(
             child: Stack(
               children: [
-                _buildBlurredBackground(),
+                // _buildBlurredBackground(),
                 if (_isFinished)
                   Center(
                     child: Text(
@@ -369,7 +369,7 @@ class _SearchScreenState extends State<SearchScreen> {
               : const AssetImage('images/backgrounds/match_bg.png')
                     as ImageProvider,
           // fit: BoxFit.cover,
-          fit: BoxFit.fill,
+          fit: BoxFit.cover,
         ),
       ),
       child: Container(
