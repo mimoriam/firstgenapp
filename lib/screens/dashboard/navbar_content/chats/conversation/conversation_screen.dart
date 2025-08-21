@@ -7,8 +7,11 @@ import 'package:iconly/iconly.dart';
 import 'package:provider/provider.dart';
 
 class ConversationScreen extends StatefulWidget {
-  final Conversation conversation;
-  const ConversationScreen({super.key, required this.conversation});
+  final Conversation? conversation;
+  final ChatUser? otherUser;
+
+  const ConversationScreen({super.key, this.conversation, this.otherUser})
+    : assert(conversation != null || otherUser != null);
 
   @override
   State<ConversationScreen> createState() => _ConversationScreenState();
@@ -19,56 +22,73 @@ class _ConversationScreenState extends State<ConversationScreen> {
   final ScrollController _scrollController = ScrollController();
   final FocusNode _focusNode = FocusNode();
 
-  // --- OPTIMIZATION START ---
-  // These variables help manage the smart auto-scrolling behavior.
-  bool _isUserAtBottom = true; // Tracks if the user is scrolled to the bottom.
-  int _messageCount = 0; // Tracks the number of messages to detect new ones.
-  // --- OPTIMIZATION END ---
+  bool _isUserAtBottom = true;
+  int _messageCount = 0;
+  late Future<Conversation> _conversationFuture;
 
   @override
   void initState() {
     super.initState();
-    Provider.of<FirebaseService>(
+    final firebaseService = Provider.of<FirebaseService>(
       context,
       listen: false,
-    ).markAsRead(widget.conversation.id);
+    );
 
-    // --- OPTIMIZATION START ---
-    // Add a listener to the scroll controller to track the user's position.
+    // Initialize the conversation future based on what was passed in.
+    if (widget.conversation != null) {
+      _conversationFuture = Future.value(widget.conversation);
+      firebaseService.markAsRead(widget.conversation!.id);
+    } else {
+      _conversationFuture = firebaseService.getOrCreateConversationWithUser(
+        widget.otherUser!,
+      );
+    }
+
+    // Add listeners for smart scrolling behavior.
     _scrollController.addListener(_scrollListener);
-    // --- OPTIMIZATION END ---
+    _focusNode.addListener(_onFocusChange);
 
-    // Scroll to the bottom when the screen first loads.
-    WidgetsBinding.instance
-        .addPostFrameCallback((_) => _scrollToBottom(animated: false));
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _scrollToBottom(animated: false),
+    );
   }
 
   @override
   void dispose() {
     _messageController.dispose();
-    _scrollController.removeListener(_scrollListener); // Remove the listener
+    _scrollController.removeListener(_scrollListener);
+    // Remove the focus node listener.
+    _focusNode.removeListener(_onFocusChange);
     _scrollController.dispose();
     _focusNode.dispose();
     super.dispose();
   }
 
-  // --- OPTIMIZATION START ---
   // This listener updates whether the user is at the bottom of the list.
   void _scrollListener() {
     if (_scrollController.hasClients) {
       if (_scrollController.position.atEdge) {
-        // Check if the user is at the bottom edge.
         if (_scrollController.position.pixels ==
             _scrollController.position.maxScrollExtent) {
           _isUserAtBottom = true;
         }
       } else {
-        // If they are not at an edge, they are not at the bottom.
         _isUserAtBottom = false;
       }
     }
   }
-  // --- OPTIMIZATION END ---
+
+  // **HERE IS THE MISSING METHOD**
+  // This method scrolls to the bottom when the user focuses the text field.
+  void _onFocusChange() {
+    if (_focusNode.hasFocus) {
+      // Delay helps ensure the keyboard is up before scrolling.
+      Future.delayed(
+        const Duration(milliseconds: 300),
+        () => _scrollToBottom(),
+      );
+    }
+  }
 
   void _scrollToBottom({bool animated = true}) {
     if (_scrollController.hasClients) {
@@ -85,16 +105,15 @@ class _ConversationScreenState extends State<ConversationScreen> {
     }
   }
 
-  void _sendMessage() {
+  void _sendMessage(String conversationId) {
     final text = _messageController.text.trim();
     if (text.isNotEmpty) {
       final firebaseService = Provider.of<FirebaseService>(
         context,
         listen: false,
       );
-      firebaseService.sendMessage(widget.conversation.id, text);
+      firebaseService.sendMessage(conversationId, text);
       _messageController.clear();
-      // After sending a message, always scroll to the bottom.
       _scrollToBottom();
     }
   }
@@ -102,78 +121,100 @@ class _ConversationScreenState extends State<ConversationScreen> {
   @override
   Widget build(BuildContext context) {
     final firebaseService = Provider.of<FirebaseService>(context);
+    // Use the name from whichever object was passed in for the initial AppBar title.
+    final initialAppBarTitle =
+        widget.conversation?.otherUser.name ?? widget.otherUser?.name ?? 'Chat';
+
     return Scaffold(
       backgroundColor: AppColors.secondaryBackground,
-      appBar: _buildAppBar(),
-      body: Column(
-        children: [
-          Expanded(
-            child: StreamBuilder<List<ChatMessage>>(
-              stream: firebaseService.getMessages(widget.conversation.id),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting &&
-                    !snapshot.hasData) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (snapshot.hasError) {
-                  return Center(child: Text('Error: ${snapshot.error}'));
-                }
-                if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return const Center(child: Text('No messages yet.'));
-                }
+      appBar: _buildAppBar(initialAppBarTitle),
+      body: FutureBuilder<Conversation>(
+        future: _conversationFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting &&
+              !snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          }
+          if (!snapshot.hasData) {
+            return const Center(child: Text('Could not load conversation.'));
+          }
 
-                final messages = snapshot.data!;
+          final conversation = snapshot.data!;
 
-                // --- OPTIMIZATION START ---
-                // This is the smart auto-scroll logic.
-                // It checks if new messages have arrived since the last rebuild.
-                if (messages.length > _messageCount) {
-                  // If the user was already at the bottom, scroll down to show the new message.
-                  if (_isUserAtBottom) {
-                    WidgetsBinding.instance
-                        .addPostFrameCallback((_) => _scrollToBottom());
-                  }
-                }
-                // Update the message count for the next check.
-                _messageCount = messages.length;
-                // --- OPTIMIZATION END ---
+          return Column(
+            children: [
+              Expanded(
+                child: StreamBuilder<List<ChatMessage>>(
+                  stream: firebaseService.getMessages(conversation.id),
+                  builder: (context, messageSnapshot) {
+                    if (messageSnapshot.connectionState ==
+                            ConnectionState.waiting &&
+                        !messageSnapshot.hasData) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    if (messageSnapshot.hasError) {
+                      return Center(
+                        child: Text('Error: ${messageSnapshot.error}'),
+                      );
+                    }
+                    if (!messageSnapshot.hasData ||
+                        messageSnapshot.data!.isEmpty) {
+                      return const Center(child: Text('No messages yet.'));
+                    }
 
-                return ListView.builder(
-                  controller: _scrollController,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16.0,
-                    vertical: 20.0,
-                  ),
-                  itemCount: messages.length,
-                  itemBuilder: (context, index) {
-                    final message = messages[index];
-                    final showDateSeparator = index == 0 ||
-                        TimeAgo.formatDateSeparator(message.timestamp) !=
-                            TimeAgo.formatDateSeparator(
-                              messages[index - 1].timestamp,
-                            );
+                    final messages = messageSnapshot.data!;
 
-                    return Column(
-                      children: [
-                        if (showDateSeparator)
-                          _buildDateSeparator(
-                            TimeAgo.formatDateSeparator(message.timestamp),
-                          ),
-                        _buildMessageBubble(message),
-                      ],
+                    if (messages.length > _messageCount) {
+                      if (_isUserAtBottom) {
+                        WidgetsBinding.instance.addPostFrameCallback(
+                          (_) => _scrollToBottom(),
+                        );
+                      }
+                    }
+                    _messageCount = messages.length;
+
+                    return ListView.builder(
+                      controller: _scrollController,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16.0,
+                        vertical: 20.0,
+                      ),
+                      itemCount: messages.length,
+                      itemBuilder: (context, index) {
+                        final message = messages[index];
+                        final showDateSeparator =
+                            index == 0 ||
+                            TimeAgo.formatDateSeparator(message.timestamp) !=
+                                TimeAgo.formatDateSeparator(
+                                  messages[index - 1].timestamp,
+                                );
+
+                        return Column(
+                          children: [
+                            if (showDateSeparator)
+                              _buildDateSeparator(
+                                TimeAgo.formatDateSeparator(message.timestamp),
+                              ),
+                            _buildMessageBubble(message),
+                          ],
+                        );
+                      },
                     );
                   },
-                );
-              },
-            ),
-          ),
-          _buildMessageComposer(),
-        ],
+                ),
+              ),
+              _buildMessageComposer(() => _sendMessage(conversation.id)),
+            ],
+          );
+        },
       ),
     );
   }
 
-  AppBar _buildAppBar() {
+  AppBar _buildAppBar(String title) {
     return AppBar(
       backgroundColor: AppColors.primaryBackground,
       elevation: 0,
@@ -183,7 +224,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
         onPressed: () => Navigator.of(context).pop(),
       ),
       title: Text(
-        widget.conversation.otherUser.name,
+        title,
         style: const TextStyle(
           color: AppColors.textPrimary,
           fontWeight: FontWeight.bold,
@@ -230,28 +271,30 @@ class _ConversationScreenState extends State<ConversationScreen> {
   }
 
   Widget _buildMessageBubble(ChatMessage message) {
-    final isSender = message.senderId ==
+    final isSender =
+        message.senderId ==
         Provider.of<FirebaseService>(context, listen: false).currentUser?.uid;
     final alignment = isSender ? Alignment.centerRight : Alignment.centerLeft;
     final color = isSender ? AppColors.primaryRed : Colors.white;
     final textColor = isSender ? Colors.white : AppColors.textPrimary;
     final borderRadius = isSender
         ? const BorderRadius.only(
-      topLeft: Radius.circular(20),
-      topRight: Radius.circular(20),
-      bottomLeft: Radius.circular(20),
-    )
+            topLeft: Radius.circular(20),
+            topRight: Radius.circular(20),
+            bottomLeft: Radius.circular(20),
+          )
         : const BorderRadius.only(
-      topLeft: Radius.circular(20),
-      topRight: Radius.circular(20),
-      bottomRight: Radius.circular(20),
-    );
+            topLeft: Radius.circular(20),
+            topRight: Radius.circular(20),
+            bottomRight: Radius.circular(20),
+          );
 
     return Align(
       alignment: alignment,
       child: Column(
-        crossAxisAlignment:
-        isSender ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        crossAxisAlignment: isSender
+            ? CrossAxisAlignment.end
+            : CrossAxisAlignment.start,
         children: [
           Container(
             constraints: BoxConstraints(
@@ -295,7 +338,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
     );
   }
 
-  Widget _buildMessageComposer() {
+  Widget _buildMessageComposer(VoidCallback onSend) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 12.0),
       color: Colors.white,
@@ -336,7 +379,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
                 color: AppColors.primaryRed,
                 size: 28,
               ),
-              onPressed: _sendMessage,
+              onPressed: onSend,
             ),
           ],
         ),

@@ -120,14 +120,14 @@ class _SearchScreenState extends State<SearchScreen> {
     );
     firebaseService.addRecentUser(otherUser.uid);
 
-    final conversation = await firebaseService.getOrCreateConversation(
-      otherUser.uid,
-    );
-
+    // OPTIMIZATION: Instead of awaiting the conversation here,
+    // we pass the already known user data directly to the next screen.
+    // This makes the UI transition feel instantaneous.
     if (mounted) {
       PersistentNavBarNavigator.pushNewScreen(
         context,
-        screen: ConversationScreen(conversation: conversation),
+        // Pass the other user's data directly to the ConversationScreen.
+        screen: ConversationScreen(otherUser: otherUser),
         withNavBar: false,
       );
     }

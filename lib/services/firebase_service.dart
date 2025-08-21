@@ -805,6 +805,31 @@ class FirebaseService {
     return Conversation.fromJson(data, conversationId, currentUser.uid);
   }
 
+  // OPTIMIZATION: New method to get or create a conversation using a ChatUser object.
+  // This is more efficient as it uses the already-fetched user data.
+  Future<Conversation> getOrCreateConversationWithUser(
+    ChatUser otherUser,
+  ) async {
+    final currentUser = await getCurrentChatUser();
+    if (currentUser == null) throw Exception("User not logged in");
+
+    final conversationId = getConversationId(currentUser.uid, otherUser.uid);
+    final conversationRef = _database.ref('conversations/$conversationId');
+
+    final snapshot = await conversationRef.get();
+    if (!snapshot.exists) {
+      // If the conversation doesn't exist, create it without fetching the other user's data again.
+      await createChat(otherUser);
+    }
+
+    // Fetch the latest conversation data.
+    final finalSnapshot = await conversationRef.get();
+    final encodedData = jsonEncode(finalSnapshot.value);
+    final data = jsonDecode(encodedData) as Map<String, dynamic>;
+
+    return Conversation.fromJson(data, conversationId, currentUser.uid);
+  }
+
   /// Maps [FirebaseAuthException] codes to user-friendly [AuthException] objects.
   AuthException _handleAuthException(FirebaseAuthException e) {
     log('FirebaseAuthException: code=${e.code}, message=${e.message}');
