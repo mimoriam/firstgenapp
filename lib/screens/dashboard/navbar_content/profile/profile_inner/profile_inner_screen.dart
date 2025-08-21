@@ -65,7 +65,7 @@ class _ProfileInnerScreenState extends State<ProfileInnerScreen> {
         sourcePath: image.path,
         maxWidth: 600,
         maxHeight: 900,
-        aspectRatio: CropAspectRatio(ratioX: 9.0, ratioY: 16.0),
+        // aspectRatio: CropAspectRatio(ratioX: 9.0, ratioY: 16.0),
         uiSettings: [
           AndroidUiSettings(
             toolbarTitle: 'Crop Image',
@@ -73,9 +73,9 @@ class _ProfileInnerScreenState extends State<ProfileInnerScreen> {
             toolbarWidgetColor: Colors.white,
             initAspectRatio: CropAspectRatioPreset.original,
             lockAspectRatio: true, // User cannot change the aspect ratio
-            // aspectRatioPresets: [
-            //   CropAspectRatioPreset.ratio4x3, // Enforce a square aspect ratio
-            // ],
+            aspectRatioPresets: [
+              CropAspectRatioPreset.ratio16x9, // Enforce a square aspect ratio
+            ],
           ),
           IOSUiSettings(
             title: 'Crop Image',
