@@ -625,7 +625,7 @@ class FirebaseService {
             .cast<Conversation>()
             .toList();
         validConversations.sort(
-              (a, b) => b.lastMessageTimestamp.compareTo(a.lastMessageTimestamp),
+          (a, b) => b.lastMessageTimestamp.compareTo(a.lastMessageTimestamp),
         );
         return validConversations;
       });
@@ -676,6 +676,50 @@ class FirebaseService {
   }
 
   // FIX: Modified to return user UID for chat functionality.
+  // Stream<List<Map<String, dynamic>>> getRecentUsers() {
+  //   final user = _auth.currentUser;
+  //   if (user == null) return Stream.value([]);
+  //
+  //   final recentMatchesRef = _database.ref('users/${user.uid}/recent_matches');
+  //   return recentMatchesRef.onValue.switchMap((event) {
+  //     if (!event.snapshot.exists || event.snapshot.value == null) {
+  //       return Stream.value([]);
+  //     }
+  //
+  //     final recentMatchIds = List<String>.from(
+  //       (event.snapshot.value as List).map((e) => e.toString()),
+  //     );
+  //
+  //     if (recentMatchIds.isEmpty) {
+  //       return Stream.value([]);
+  //     }
+  //
+  //     return _firestore
+  //         .collection(userCollection)
+  //         .where('uid', whereIn: recentMatchIds)
+  //         .snapshots()
+  //         .map((snapshot) {
+  //           final orderedDocs = <Map<String, dynamic>>[];
+  //           for (final userId in recentMatchIds.reversed) {
+  //             try {
+  //               final doc = snapshot.docs.firstWhere((d) => d.id == userId);
+  //               orderedDocs.add({
+  //                 'uid': doc.id,
+  //                 'name': doc.data()['fullName'] as String? ?? 'No Name',
+  //                 'avatar':
+  //                     doc.data()['profileImageUrl'] as String? ??
+  //                     'https://picsum.photos/seed/${doc.data()['uid']}/200/200',
+  //               });
+  //             } catch (e) {
+  //               // Handle case where user profile might not be found
+  //               log("User profile not found for UID: $userId");
+  //             }
+  //           }
+  //           return orderedDocs;
+  //         });
+  //   });
+  // }
+
   Stream<List<Map<String, dynamic>>> getRecentUsers() {
     final user = _auth.currentUser;
     if (user == null) return Stream.value([]);
@@ -703,15 +747,35 @@ class FirebaseService {
             for (final userId in recentMatchIds.reversed) {
               try {
                 final doc = snapshot.docs.firstWhere((d) => d.id == userId);
+                final data = doc.data();
+                final dob = (data['dateOfBirth'] as Timestamp?)?.toDate();
+                final age = dob != null
+                    ? (DateTime.now().difference(dob).inDays / 365).floor()
+                    : null;
+
                 orderedDocs.add({
                   'uid': doc.id,
-                  'name': doc.data()['fullName'] as String? ?? 'No Name',
+                  'name': data['fullName'] as String? ?? 'No Name',
+                  // Corrected key to 'imageUrl' and provided a fallback
                   'avatar':
-                      doc.data()['profileImageUrl'] as String? ??
-                      'https://picsum.photos/seed/${doc.data()['uid']}/200/200',
+                      data['profileImageUrl'] as String? ??
+                      'https://picsum.photos/seed/${doc.id}/200/200',
+                  'imageUrl':
+                      data['profileImageUrl']
+                          as String?, // Keep for home screen
+                  'age': age,
+                  'countryCode': data['culturalHeritage'] as String?,
+                  'interests':
+                      (data['hobbies'] as String?)
+                          ?.split(',')
+                          .map((e) => e.trim())
+                          .toList() ??
+                      [],
+                  'languages': List<String>.from(data['languages'] ?? []),
+                  'about': data['bio'] as String?,
+                  'profession': data['profession'] as String?,
                 });
               } catch (e) {
-                // Handle case where user profile might not be found
                 log("User profile not found for UID: $userId");
               }
             }
@@ -860,15 +924,16 @@ class FirebaseService {
     final conversationId = getConversationId(currentUser.uid, otherUser.uid);
     final conversationRef = _database.ref('conversations/$conversationId');
 
-    final snapshot = await conversationRef.get();
+    DataSnapshot snapshot = await conversationRef.get(); // First read
     if (!snapshot.exists) {
-      // If the conversation doesn't exist, create it without fetching the other user's data again.
+      // If the conversation doesn't exist, create it.
       await createChat(otherUser);
+      // Then fetch the newly created data.
+      snapshot = await conversationRef.get(); // Second read ONLY if it's new
     }
 
-    // Fetch the latest conversation data.
-    final finalSnapshot = await conversationRef.get();
-    final encodedData = jsonEncode(finalSnapshot.value);
+    // Use the snapshot we already have instead of fetching again.
+    final encodedData = jsonEncode(snapshot.value);
     final data = jsonDecode(encodedData) as Map<String, dynamic>;
 
     return Conversation.fromJson(data, conversationId, currentUser.uid);

@@ -2,31 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:firstgenapp/constants/appColors.dart';
 import 'package:iconly/iconly.dart';
 import 'dart:ui';
+import 'package:country_picker/country_picker.dart';
+import 'package:iconsax_flutter/iconsax_flutter.dart';
 
-import 'package:iconsax_flutter/iconsax_flutter.dart'; // Required for ImageFilter
+class MatchDetailScreen extends StatelessWidget {
+  final Map<String, dynamic> userProfile;
 
-class MatchDetailScreen extends StatefulWidget {
-  const MatchDetailScreen({super.key});
-
-  @override
-  State<MatchDetailScreen> createState() => _MatchDetailScreenState();
-}
-
-class _MatchDetailScreenState extends State<MatchDetailScreen> {
-  // Mock data for the user profile
-  final Map<String, dynamic> userProfile = {
-    'name': 'Alfredo Calzoni',
-    'age': 20,
-    'profession': 'Doctor',
-    'nationality': 'German',
-    'flag': '🇩🇪',
-    'distance': 2.5,
-    'matchPercentage': 0.80,
-    'imageUrl': 'images/backgrounds/match_bg.png',
-    'about': 'A good listener. I love having a good talk to know each other\'s side 😍.',
-    'languages': ['English', 'German'],
-    'interests': ['Reading', 'Photography', 'Music', 'Travel'],
-  };
+  const MatchDetailScreen({super.key, required this.userProfile});
 
   @override
   Widget build(BuildContext context) {
@@ -34,28 +16,23 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
       backgroundColor: AppColors.secondaryBackground,
       body: Stack(
         children: [
-          _buildBackgroundImage(),
-          _buildBottomInfoCard(),
-          _buildOverlayContent(),
-          _buildTopBar(),
-          _buildActionButtons(),
+          _buildBackgroundImage(userProfile['imageUrl']),
+          _buildBottomInfoCard(context),
+          _buildOverlayContent(context),
+          _buildTopBar(context),
+          _buildActionButtons(context),
         ],
       ),
     );
   }
 
-  /// Builds the top bar with the back arrow and distance chip.
-  Widget _buildTopBar() {
+  Widget _buildTopBar(BuildContext context) {
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          mainAxisAlignment: MainAxisAlignment.end,
           children: [
-            IconButton(
-              icon: const Icon(Icons.arrow_back, color: Colors.white),
-              onPressed: () => Navigator.of(context).pop(),
-            ),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(
@@ -64,17 +41,18 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
               ),
               child: Row(
                 children: [
-                  Icon(
-                      // Icons.location_on,
+                  const Icon(
                     Iconsax.send_2_copy,
-                      color: Colors.white, size: 14),
+                    color: Colors.white,
+                    size: 14,
+                  ),
                   const SizedBox(width: 4),
                   Text(
-                    '${userProfile['distance']} km',
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodySmall
-                        ?.copyWith(color: Colors.white, fontWeight: FontWeight.w600),
+                    '${userProfile['distance'] ?? 2.5} km',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ],
               ),
@@ -85,12 +63,14 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
     );
   }
 
-  /// Builds the full-screen background image with a gradient overlay.
-  Widget _buildBackgroundImage() {
+  Widget _buildBackgroundImage(String? imageUrl) {
+    final bool isNetworkUrl = imageUrl != null && imageUrl.startsWith('http');
     return Container(
       decoration: BoxDecoration(
         image: DecorationImage(
-          image: AssetImage(userProfile['imageUrl']),
+          image: isNetworkUrl
+              ? NetworkImage(imageUrl) as ImageProvider
+              : const AssetImage('images/backgrounds/match_bg.png'),
           fit: BoxFit.cover,
         ),
       ),
@@ -107,38 +87,37 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
     );
   }
 
-  /// Builds the fixed bottom card with user details.
-  Widget _buildBottomInfoCard() {
+  Widget _buildBottomInfoCard(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     return Align(
       alignment: Alignment.bottomCenter,
       child: Container(
-        // UPDATED: Reduced height for compactness
         height: MediaQuery.of(context).size.height * 0.43,
+        width: double.infinity,
         decoration: const BoxDecoration(
           color: AppColors.primaryBackground,
           borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
         ),
         child: SingleChildScrollView(
           child: Padding(
-            // UPDATED: Reduced top and bottom padding
             padding: const EdgeInsets.fromLTRB(24.0, 32.0, 24.0, 100.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildSectionTitle('About'),
+                _buildSectionTitle('About', context),
                 const SizedBox(height: 8),
-                Text(userProfile['about'], style: textTheme.bodySmall),
-                // UPDATED: Reduced spacing
+                Text(
+                  userProfile['about'] ?? 'No bio yet.',
+                  style: textTheme.bodySmall,
+                ),
                 const SizedBox(height: 20),
-                _buildSectionTitle('Languages'),
+                _buildSectionTitle('Languages', context),
                 const SizedBox(height: 12),
-                _buildChipGroup(userProfile['languages']),
-                // UPDATED: Reduced spacing
+                _buildChipGroup(userProfile['languages'] ?? [], context),
                 const SizedBox(height: 20),
-                _buildSectionTitle('Interest'),
+                _buildSectionTitle('Interest', context),
                 const SizedBox(height: 12),
-                _buildChipGroup(userProfile['interests']),
+                _buildChipGroup(userProfile['interests'] ?? [], context),
               ],
             ),
           ),
@@ -147,42 +126,43 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
     );
   }
 
-  /// Builds the content that overlays the background image.
-  Widget _buildOverlayContent() {
+  Widget _buildOverlayContent(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final country = Country.tryParse(userProfile['countryCode'] ?? '');
+
     return Positioned(
-      // UPDATED: Adjusted position to match new card height
       bottom: MediaQuery.of(context).size.height * 0.43,
       left: 24,
       right: 24,
       child: Column(
         children: [
           Text(
-            '${userProfile['name']}, ${userProfile['age']}',
+            '${userProfile['name'] ?? 'N/A'}, ${userProfile['age'] ?? 'N/A'}',
             textAlign: TextAlign.center,
-            // UPDATED: Reduced font size
-            style: textTheme.headlineLarge?.copyWith(color: Colors.white, fontSize: 22),
+            style: textTheme.headlineLarge?.copyWith(
+              color: Colors.white,
+              fontSize: 22,
+            ),
           ),
           const SizedBox(height: 8),
           Text(
-            '${userProfile['profession']}  |  ${userProfile['flag']} ${userProfile['nationality']}',
-            // UPDATED: Reduced font size
-            style: textTheme.bodyMedium?.copyWith(color: Colors.white.withOpacity(0.8)),
+            '${userProfile['profession'] ?? 'N/A'}  |  ${country?.flagEmoji ?? ''} ${country?.name ?? 'N/A'}',
+            style: textTheme.bodyMedium?.copyWith(
+              color: Colors.white.withOpacity(0.8),
+            ),
           ),
-          // UPDATED: Reduced spacing
           const SizedBox(height: 16),
-          _buildMatchIndicator(),
+          _buildMatchIndicator(context),
           const SizedBox(height: 20),
         ],
       ),
     );
   }
 
-  /// Builds the match percentage indicator button.
-  Widget _buildMatchIndicator() {
+  Widget _buildMatchIndicator(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final matchPercentage = userProfile['matchPercentage'] ?? 0.80;
     return Container(
-      // UPDATED: Reduced padding
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
         color: Colors.black.withOpacity(0.4),
@@ -193,24 +173,27 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
         mainAxisSize: MainAxisSize.min,
         children: [
           SizedBox(
-            // UPDATED: Reduced size
             width: 36,
             height: 36,
             child: Stack(
               fit: StackFit.expand,
               children: [
                 CircularProgressIndicator(
-                  value: userProfile['matchPercentage'],
+                  value: matchPercentage,
                   strokeWidth: 3,
                   backgroundColor: Colors.white.withOpacity(0.2),
-                  valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primaryRed),
+                  valueColor: const AlwaysStoppedAnimation<Color>(
+                    AppColors.primaryRed,
+                  ),
                 ),
                 Center(
                   child: Text(
-                    '${(userProfile['matchPercentage'] * 100).toInt()}%',
-                    // UPDATED: Reduced font size
-                    style: textTheme.bodySmall
-                        ?.copyWith(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 10),
+                    '${(matchPercentage * 100).toInt()}%',
+                    style: textTheme.bodySmall?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 10,
+                    ),
                   ),
                 ),
               ],
@@ -219,16 +202,17 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
           const SizedBox(width: 12),
           Text(
             'Match',
-            // UPDATED: Reduced font size
-            style: textTheme.titleLarge?.copyWith(color: Colors.white, fontWeight: FontWeight.w600),
+            style: textTheme.titleLarge?.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ],
       ),
     );
   }
 
-  /// Builds the action buttons with blur effect at the bottom of the screen.
-  Widget _buildActionButtons() {
+  Widget _buildActionButtons(BuildContext context) {
     return Positioned(
       bottom: 30,
       left: 0,
@@ -239,11 +223,9 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
             child: Container(
-              // UPDATED: Reduced padding
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
                 color: Colors.grey.withOpacity(0.1),
-                // color: Colors.white.withOpacity(0.9),
                 borderRadius: BorderRadius.circular(35),
                 border: Border.all(color: Colors.white.withOpacity(0.3)),
               ),
@@ -254,25 +236,28 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
                     icon: Icons.close,
                     bgColor: AppColors.primaryBackground,
                     iconColor: AppColors.textSecondary,
-                    // UPDATED: Reduced size
                     size: 52,
+                    onPressed: () => Navigator.of(context).pop(),
                   ),
                   const SizedBox(width: 12),
                   _buildCircleButton(
-                    // icon: Icons.mail_outline,
                     icon: IconlyBold.message,
                     bgColor: AppColors.textPrimary,
                     iconColor: AppColors.primaryBackground,
-                    // UPDATED: Reduced size
                     size: 62,
+                    onPressed: () {
+                      // Implement message functionality
+                    },
                   ),
                   const SizedBox(width: 12),
                   _buildCircleButton(
                     icon: Icons.favorite,
                     isGradient: true,
                     iconColor: AppColors.primaryBackground,
-                    // UPDATED: Reduced size
                     size: 52,
+                    onPressed: () {
+                      // Implement like functionality
+                    },
                   ),
                 ],
               ),
@@ -283,57 +268,57 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
     );
   }
 
-  /// Helper to build a single circular action button.
   Widget _buildCircleButton({
     required IconData icon,
     Color? bgColor,
     bool isGradient = false,
     required Color iconColor,
     required double size,
+    required VoidCallback onPressed,
   }) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        gradient: isGradient
-            ? const LinearGradient(
-          colors: [AppColors.primaryOrange, AppColors.primaryRed],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        )
-            : null,
-        color: bgColor,
-        shape: BoxShape.circle,
+    return GestureDetector(
+      onTap: onPressed,
+      child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          gradient: isGradient
+              ? const LinearGradient(
+                  colors: [AppColors.primaryOrange, AppColors.primaryRed],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                )
+              : null,
+          color: bgColor,
+          shape: BoxShape.circle,
+        ),
+        child: Icon(icon, color: iconColor, size: size * 0.5),
       ),
-      child: Icon(icon, color: iconColor, size: size * 0.5),
     );
   }
 
-  /// Helper to build a section title.
-  Widget _buildSectionTitle(String title) {
-    // UPDATED: Inherited from theme
-    return Text(
-      title,
-      style: Theme.of(context).textTheme.titleLarge,
-    );
+  Widget _buildSectionTitle(String title, BuildContext context) {
+    return Text(title, style: Theme.of(context).textTheme.titleLarge);
   }
 
-  /// Helper to build a group of chips.
-  Widget _buildChipGroup(List<String> items) {
+  Widget _buildChipGroup(List<dynamic> items, BuildContext context) {
     return Wrap(
       spacing: 8.0,
       runSpacing: 8.0,
-      children: items.map((item) => _buildChip(item)).toList(),
+      children: items
+          .map((item) => _buildChip(item.toString(), context))
+          .toList(),
     );
   }
 
-  /// Helper to build a single styled chip.
-  Widget _buildChip(String label) {
+  Widget _buildChip(String label, BuildContext context) {
     return Chip(
       label: Text(label),
       backgroundColor: AppColors.primaryBackground,
       side: const BorderSide(color: AppColors.inputBorder),
-      labelStyle: Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
+      labelStyle: Theme.of(
+        context,
+      ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
     );
   }

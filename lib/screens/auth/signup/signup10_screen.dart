@@ -84,16 +84,17 @@ class _Signup10ScreenState extends State<Signup10Screen> {
       final croppedFile = await ImageCropper().cropImage(
         sourcePath: image.path,
         maxWidth: 600,
-        maxHeight: 800,
+        maxHeight: 900,
+        aspectRatio: CropAspectRatio(ratioX: 9.0, ratioY: 16.0),
         uiSettings: [
           AndroidUiSettings(
             toolbarTitle: 'Crop Image',
             toolbarColor: AppColors.primaryRed,
             toolbarWidgetColor: Colors.white,
-            initAspectRatio: CropAspectRatioPreset.square,
-            aspectRatioPresets: [
-              CropAspectRatioPreset.square, // Enforce a square aspect ratio
-            ],
+            initAspectRatio: CropAspectRatioPreset.original,
+            // aspectRatioPresets: [
+            //   CropAspectRatioPreset.ratio7x5, // Enforce a square aspect ratio
+            // ],
             lockAspectRatio: true, // User cannot change the aspect ratio
           ),
           IOSUiSettings(

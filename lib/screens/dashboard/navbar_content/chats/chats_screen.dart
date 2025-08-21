@@ -191,10 +191,8 @@ class _ChatsScreenState extends State<ChatsScreen> {
           itemCount: filteredConversations.length,
           itemBuilder: (context, index) {
             final conversation = filteredConversations[index];
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 12.0),
-              child: _buildChatItem(context, conversation, textTheme),
-            );
+            // The outer Padding is no longer needed here
+            return _buildChatItem(context, conversation, textTheme);
           },
         );
       },
@@ -211,6 +209,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
     TextTheme textTheme,
   ) {
     return GestureDetector(
+      behavior: HitTestBehavior.opaque, // This makes the whole area tappable
       onTap: () {
         PersistentNavBarNavigator.pushNewScreen(
           context,
@@ -218,60 +217,64 @@ class _ChatsScreenState extends State<ChatsScreen> {
           withNavBar: false,
         );
       },
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 26,
-            backgroundImage: NetworkImage(conversation.otherUser.avatarUrl),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      child: Padding(
+        // This padding now contributes to the tappable area
+        padding: const EdgeInsets.symmetric(vertical: 8.0),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 26,
+              backgroundImage: NetworkImage(conversation.otherUser.avatarUrl),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    conversation.otherUser.name,
+                    style: textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      const Icon(
+                        Iconsax.export_2_copy,
+                        size: 14,
+                        color: AppColors.textSecondary,
+                      ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          conversation.lastMessage,
+                          style: textTheme.bodySmall,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Text(
-                  conversation.otherUser.name,
-                  style: textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                  TimeAgo.format(conversation.lastMessageTimestamp),
+                  style: textTheme.bodySmall,
                 ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    const Icon(
-                      Iconsax.export_2_copy,
-                      size: 14,
-                      color: AppColors.textSecondary,
-                    ),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Text(
-                        conversation.lastMessage,
-                        style: textTheme.bodySmall,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
+                const SizedBox(height: 6),
+                _buildStatusIndicator(context, conversation, textTheme),
               ],
             ),
-          ),
-          const SizedBox(width: 10),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                TimeAgo.format(conversation.lastMessageTimestamp),
-                style: textTheme.bodySmall,
-              ),
-              const SizedBox(height: 6),
-              _buildStatusIndicator(context, conversation, textTheme),
-            ],
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

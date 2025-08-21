@@ -229,35 +229,39 @@ class _SearchScreenState extends State<SearchScreen> {
           child: ClipRect(
             child: Stack(
               children: [
-                // _buildBlurredBackground(),
+                // _buildBlurredBackground(), // This line seems commented out already
                 if (_isFinished)
                   Center(
                     child: Text(
                       'No more users found.',
-                      style: Theme.of(
-                        context,
-                      ).textTheme.headlineSmall?.copyWith(color: Colors.white),
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(color: Colors.black, fontSize: 16),
                     ),
                   ),
-                CardSwiper(
-                  controller: _swiperController,
-                  cardsCount: _users.length,
-                  onSwipe: _onSwipe,
-                  onUndo: _onUndo,
-                  numberOfCardsDisplayed: 1,
-                  backCardOffset: Offset.zero,
-                  padding: EdgeInsets.zero,
-                  allowedSwipeDirection: const AllowedSwipeDirection.none(),
-                  cardBuilder:
-                      (
-                        context,
-                        index,
-                        horizontalThresholdPercentage,
-                        verticalThresholdPercentage,
-                      ) {
-                        final userProfile = _users[index];
-                        return _buildMatchCard(userProfile, index);
-                      },
+                Visibility(
+                  // Wrap CardSwiper with Visibility
+                  visible: !_isFinished,
+                  child: CardSwiper(
+                    isLoop: false,
+                    controller: _swiperController,
+                    cardsCount: _users.length,
+                    onSwipe: _onSwipe,
+                    onUndo: _onUndo,
+                    numberOfCardsDisplayed: 1,
+                    backCardOffset: Offset.zero,
+                    padding: EdgeInsets.zero,
+                    allowedSwipeDirection: const AllowedSwipeDirection.none(),
+                    cardBuilder:
+                        (
+                          context,
+                          index,
+                          horizontalThresholdPercentage,
+                          verticalThresholdPercentage,
+                        ) {
+                          final userProfile = _users[index];
+                          return _buildMatchCard(userProfile, index);
+                        },
+                  ),
                 ),
               ],
             ),

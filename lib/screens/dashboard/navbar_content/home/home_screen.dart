@@ -1,5 +1,5 @@
+import 'package:country_picker/country_picker.dart';
 import 'package:firstgenapp/common/gradient_btn.dart';
-import 'package:firstgenapp/screens/dashboard/navbar_content/chats/chats_screen.dart';
 import 'package:firstgenapp/screens/dashboard/navbar_content/communities/community_detail/community_detail_screen.dart';
 import 'package:firstgenapp/screens/dashboard/navbar_content/home/match_detail/match_detail_screen.dart';
 import 'package:firstgenapp/screens/dashboard/navbar_content/home/recent_activities/recent_activities_screen.dart';
@@ -12,6 +12,245 @@ import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 import 'package:provider/provider.dart'; // Needed for ImageFilter.blur
+
+class NewMatchesList extends StatefulWidget {
+  const NewMatchesList({super.key});
+
+  @override
+  State<NewMatchesList> createState() => _NewMatchesListState();
+}
+
+class _NewMatchesListState extends State<NewMatchesList> {
+  late Stream<List<Map<String, dynamic>>> _newMatchesStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _newMatchesStream = _fetchNewMatches();
+  }
+
+  Stream<List<Map<String, dynamic>>> _fetchNewMatches() {
+    final firebaseService = Provider.of<FirebaseService>(
+      context,
+      listen: false,
+    );
+    return firebaseService.getRecentUsers();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<List<Map<String, dynamic>>>(
+      stream: _newMatchesStream,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const SizedBox(
+            height: 180,
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+        if (snapshot.hasError) {
+          return SizedBox(
+            height: 180,
+            child: Center(child: Text("Error: ${snapshot.error}")),
+          );
+        }
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return const SizedBox(
+            height: 180,
+            child: Center(child: Text("No new matches yet.")),
+          );
+        }
+        final matches = snapshot.data!;
+        return SizedBox(
+          height: 180,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            itemCount: matches.length,
+            itemBuilder: (context, index) {
+              return _buildMatchCard(matches[index]);
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildMatchCard(Map<String, dynamic> match) {
+    final String? imageUrl = match['imageUrl'];
+    final bool hasImage = imageUrl != null && imageUrl.isNotEmpty;
+    final double distance = match['distance'] ?? 2.2;
+    final bool isOnline = match['isOnline'] ?? false;
+
+    return GestureDetector(
+      onTap: () {
+        if (context.mounted) {
+          PersistentNavBarNavigator.pushNewScreen(
+            context,
+            screen: MatchDetailScreen(userProfile: match),
+            withNavBar: false,
+          );
+        }
+      },
+      child: Container(
+        width: 116,
+        margin: const EdgeInsets.only(right: 6),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              if (hasImage)
+                Image.network(
+                  imageUrl,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      color: Colors.grey[300],
+                      child: const Center(
+                        child: Icon(Icons.broken_image, color: Colors.grey),
+                      ),
+                    );
+                  },
+                )
+              else
+                Container(
+                  color: Colors.grey[300],
+                  child: const Center(
+                    child: Icon(Icons.person, color: Colors.grey, size: 40),
+                  ),
+                ),
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.transparent,
+                      Colors.black.withOpacity(0.2),
+                      Colors.black.withOpacity(0.8),
+                    ],
+                    stops: const [0.0, 0.5, 1.0],
+                  ),
+                ),
+              ),
+              if (match['countryCode'] != null)
+                Positioned(
+                  top: 10,
+                  left: 0,
+                  right: 0,
+                  child: Center(
+                    child: _buildCountryPill(match['countryCode']!),
+                  ),
+                ),
+              Positioned(
+                bottom: 10,
+                left: 10,
+                right: 10,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildDistancePill(distance),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text.rich(
+                            TextSpan(
+                              children: [
+                                TextSpan(text: "${match['name']}"),
+                                if (match['age'] != null)
+                                  TextSpan(text: ", ${match['age']}"),
+                              ],
+                            ),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (isOnline)
+                          Padding(
+                            padding: const EdgeInsets.only(left: 4.0),
+                            child: Container(
+                              width: 8,
+                              height: 8,
+                              decoration: const BoxDecoration(
+                                color: Colors.green,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    if (match['interests'] != null &&
+                        (match['interests'] as List).isNotEmpty)
+                      Text(
+                        (match['interests'] as List<String>)
+                            .join(', ')
+                            .toUpperCase(),
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.9),
+                          fontSize: 9,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDistancePill(double distance) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.7),
+        borderRadius: BorderRadius.circular(13.0),
+        border: Border.all(color: AppColors.primaryRed, width: 1.5),
+      ),
+      child: Text(
+        "$distance km away",
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+        ),
+        maxLines: 1, // Ensures single line
+      ),
+    );
+  }
+
+  Widget _buildCountryPill(String countryCode) {
+    final country = Country.tryParse(countryCode);
+    if (country == null) return const SizedBox.shrink();
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.7),
+        borderRadius: BorderRadius.circular(13.0),
+        border: Border.all(color: AppColors.primaryRed, width: 1.5),
+      ),
+      child: Text(
+        '${country.flagEmoji} ${country.countryCode}',
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+}
 
 class HomeScreen extends StatefulWidget {
   // MODIFICATION: Add a callback function to handle tab switching.
@@ -120,10 +359,8 @@ class _HomeScreenState extends State<HomeScreen> {
       context,
       listen: false,
     );
-
     return Scaffold(
       backgroundColor: AppColors.primaryBackground,
-      // MODIFICATION: Wrapped the body with RefreshIndicator.
       body: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
         stream: firebaseService.getUserProfileStream(),
         builder: (context, snapshot) {
@@ -154,13 +391,15 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildHeader(),
+                      _buildHeader(userData), // Pass user data to the header
                       const SizedBox(height: 12),
                       _buildStatsSection(likesCount, matchesCount),
                       const SizedBox(height: 12),
                       _buildSectionHeader("New Matches"),
                       const SizedBox(height: 10),
-                      _buildNewMatchesList(),
+                      // _buildNewMatchesList(),
+                      // NEW:
+                      const NewMatchesList(),
                       const SizedBox(height: 12),
                       _buildSectionHeader("Upcoming Events"),
                       const SizedBox(height: 10),
@@ -180,9 +419,11 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(Map<String, dynamic> userData) {
     final textTheme = Theme.of(context).textTheme;
     final String currentDate = DateFormat('d MMMM').format(DateTime.now());
+    // Use the full name from user data, with a fallback.
+    final String name = userData['fullName'] ?? 'There';
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -192,14 +433,12 @@ class _HomeScreenState extends State<HomeScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                "Hi, Lily 👋",
-                // UPDATED: Inherited from theme
+                "Hi, $name 👋", // Use the dynamic name
                 style: textTheme.headlineSmall,
               ),
               const SizedBox(height: 2),
               Text(
                 "Here's what's happening in your world today.",
-                // UPDATED: Inherited from theme
                 style: textTheme.bodySmall,
               ),
             ],
@@ -210,7 +449,6 @@ class _HomeScreenState extends State<HomeScreen> {
           padding: const EdgeInsets.only(top: 4.0),
           child: Text(
             "Today, $currentDate",
-            // UPDATED: Inherited from theme
             style: textTheme.bodySmall?.copyWith(
               fontWeight: FontWeight.w500,
               color: AppColors.primaryRed,
@@ -393,18 +631,23 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildMatchCard(Map<String, dynamic> match) {
+    final String? imageUrl = match['avatar'];
+    final bool hasImage = imageUrl != null && imageUrl.isNotEmpty;
+    // Mock distance since it's not in the database.
+    final double distance = match['distance'] ?? 2.2;
+    final bool isOnline = match['isOnline'] ?? false;
+
     return GestureDetector(
       onTap: () {
         if (context.mounted) {
-          PersistentNavBarNavigator.pushNewScreen(
-            context,
-            screen: MatchDetailScreen(),
-            withNavBar: false,
-          );
+          // PersistentNavBarNavigator.pushNewScreen(
+          //   context,
+          //   screen: const MatchDetailScreen(),
+          //   withNavBar: false,
+          // );
         }
       },
       child: Container(
-        // UPDATED: Reduced width for compactness
         width: 110,
         margin: const EdgeInsets.only(right: 6),
         child: ClipRRect(
@@ -412,18 +655,26 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              Image.network(
-                match['image'],
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    color: Colors.grey[300],
-                    child: const Center(
-                      child: Icon(Icons.broken_image, color: Colors.grey),
-                    ),
-                  );
-                },
-              ),
+              if (hasImage)
+                Image.network(
+                  imageUrl,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      color: Colors.grey[300],
+                      child: const Center(
+                        child: Icon(Icons.broken_image, color: Colors.grey),
+                      ),
+                    );
+                  },
+                )
+              else
+                Container(
+                  color: Colors.grey[300],
+                  child: const Center(
+                    child: Icon(Icons.person, color: Colors.grey, size: 40),
+                  ),
+                ),
               Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
@@ -438,11 +689,14 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
               ),
-              if (match['country'] != null && match['country']!.isNotEmpty)
+              if (match['countryCode'] != null)
                 Positioned(
                   top: 10,
-                  left: 10,
-                  child: _buildCountryPill(match['country']!),
+                  left: 0,
+                  right: 0,
+                  child: Center(
+                    child: _buildCountryPill(match['countryCode']!),
+                  ),
                 ),
               Positioned(
                 bottom: 10,
@@ -451,43 +705,48 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildDistancePill(match['distance']),
+                    _buildDistancePill(distance),
                     const SizedBox(height: 4),
                     Row(
                       children: [
                         Flexible(
                           child: Text(
-                            "${match['name']}, ${match['age']}",
+                            "${match['name']}${match['age'] != null ? ', ${match['age']}' : ''}",
                             style: const TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.bold,
-                              // UPDATED: Reduced font size
                               fontSize: 14,
                             ),
+                            maxLines: 1,
                             overflow: TextOverflow.ellipsis,
+                            softWrap: false,
                           ),
                         ),
-                        const SizedBox(width: 4),
-                        if (match['isOnline'] == true)
-                          Container(
-                            width: 8,
-                            height: 8,
-                            decoration: const BoxDecoration(
-                              color: Colors.green,
-                              shape: BoxShape.circle,
+                        if (isOnline)
+                          Padding(
+                            padding: const EdgeInsets.only(left: 4.0),
+                            child: Container(
+                              width: 8,
+                              height: 8,
+                              decoration: const BoxDecoration(
+                                color: Colors.green,
+                                shape: BoxShape.circle,
+                              ),
                             ),
                           ),
                       ],
                     ),
                     const SizedBox(height: 2),
-                    Text(
-                      match['interests'],
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.9),
-                        // UPDATED: Reduced font size
-                        fontSize: 9,
+                    if (match['interests'] != null)
+                      Text(
+                        (match['interests'] as String).toUpperCase(),
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.9),
+                          fontSize: 9,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
                   ],
                 ),
               ),
@@ -500,19 +759,28 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildDistancePill(double distance) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.2),
-        borderRadius: BorderRadius.circular(20.0),
+        color: Colors.black.withOpacity(0.7),
+        borderRadius: BorderRadius.circular(13.0),
+        border: Border.all(color: AppColors.primaryRed, width: 1.5),
       ),
       child: Text(
         "$distance km away",
-        style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 10),
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+        ),
+        maxLines: 1,
       ),
     );
   }
 
-  Widget _buildCountryPill(String country) {
+  Widget _buildCountryPill(String countryCode) {
+    final country = Country.tryParse(countryCode);
+    if (country == null) return const SizedBox.shrink();
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
@@ -521,10 +789,9 @@ class _HomeScreenState extends State<HomeScreen> {
         border: Border.all(color: AppColors.primaryRed, width: 1.5),
       ),
       child: Text(
-        country,
+        '${country.flagEmoji} ${country.countryCode}',
         style: const TextStyle(
           color: Colors.white,
-          // UPDATED: Reduced font size
           fontSize: 11,
           fontWeight: FontWeight.w600,
         ),
