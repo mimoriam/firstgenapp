@@ -1,6 +1,5 @@
-// Replace the entire content of the file with this refactored version:
-
 import 'dart:async';
+
 import 'package:firstgenapp/models/chat_models.dart';
 import 'package:firstgenapp/screens/dashboard/navbar_content/chats/conversation/conversation_screen.dart';
 import 'package:firstgenapp/services/firebase_service.dart';
@@ -21,34 +20,70 @@ class ChatsScreen extends StatefulWidget {
 
 class _ChatsScreenState extends State<ChatsScreen> {
   Key _recentMatchesKey = UniqueKey();
+
+  // State for conversations and search
+  List<Conversation> _allConversations = [];
+  List<Conversation> _filteredConversations = [];
+  StreamSubscription<List<Conversation>>? _conversationsSubscription;
   final TextEditingController _searchController = TextEditingController();
-  String _searchQuery = '';
-  bool _isSearching = false;
+  bool _isSearching = false; // To toggle search bar visibility
+
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _searchController.addListener(() {
+    _listenToConversations();
+    _searchController.addListener(_filterConversations);
+  }
+
+  /// Subscribes to the conversation stream and updates the local lists.
+  void _listenToConversations() {
+    final firebaseService = Provider.of<FirebaseService>(
+      context,
+      listen: false,
+    );
+    _conversationsSubscription = firebaseService.getConversations().listen((
+      conversations,
+    ) {
       if (mounted) {
         setState(() {
-          _searchQuery = _searchController.text;
+          _allConversations = conversations;
+          _filteredConversations = conversations;
+          _isLoading = false; // Set loading to false here
+          _filterConversations();
         });
       }
     });
   }
 
+  /// Filters the conversations based on the search query.
+  void _filterConversations() {
+    final query = _searchController.text.toLowerCase();
+    setState(() {
+      _filteredConversations = _allConversations.where((conversation) {
+        final userName = conversation.otherUser.name.toLowerCase();
+        return userName.contains(query);
+      }).toList();
+    });
+  }
+
   @override
   void dispose() {
+    _conversationsSubscription?.cancel();
+    _searchController.removeListener(_filterConversations);
     _searchController.dispose();
     super.dispose();
   }
 
+  /// Handles the pull-to-refresh action.
   Future<void> _handleRefresh() async {
     setState(() {
       _recentMatchesKey = UniqueKey();
     });
   }
 
+  /// Builds the default AppBar.
   AppBar _buildNormalAppBar(TextTheme textTheme) {
     return AppBar(
       backgroundColor: AppColors.primaryBackground,
@@ -82,11 +117,21 @@ class _ChatsScreenState extends State<ChatsScreen> {
     );
   }
 
+  /// Builds the AppBar with the search text field.
   AppBar _buildSearchAppBar() {
     return AppBar(
       backgroundColor: AppColors.primaryBackground,
       elevation: 0,
       scrolledUnderElevation: 0,
+      // leading: IconButton(
+      //   icon: const Icon(Icons.arrow_back, color: AppColors.textSecondary),
+      //   onPressed: () {
+      //     setState(() {
+      //       _isSearching = false;
+      //       _searchController.clear();
+      //     });
+      //   },
+      // ),
       title: TextField(
         controller: _searchController,
         autofocus: true,
@@ -142,60 +187,43 @@ class _ChatsScreenState extends State<ChatsScreen> {
     );
   }
 
+  /// Builds the list of conversations using the filtered data.
   Widget _buildConversationsList() {
-    final firebaseService = Provider.of<FirebaseService>(
-      context,
-      listen: false,
-    );
-    final textTheme = Theme.of(context).textTheme;
+    // 1. Show a loading indicator until the initial fetch is complete.
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
 
-    return StreamBuilder<List<Conversation>>(
-      stream: firebaseService.getConversations(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting &&
-            !snapshot.hasData) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        if (snapshot.hasError) {
-          return Center(child: Text('Error: ${snapshot.error}'));
-        }
-        if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          return const Center(
-            child: Padding(
-              padding: EdgeInsets.all(16.0),
-              child: Text('No conversations yet.'),
-            ),
-          );
-        }
+    // 2. If a search is active and yields no results, show the "not found" message.
+    if (_searchController.text.isNotEmpty && _filteredConversations.isEmpty) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(16.0),
+          child: Text('No matching conversations found.'),
+        ),
+      );
+    }
 
-        final allConversations = snapshot.data!;
-        final filteredConversations = allConversations.where((conversation) {
-          return conversation.otherUser.name.toLowerCase().contains(
-            _searchQuery.toLowerCase(),
-          );
-        }).toList();
+    // 3. If the initial fetch is done and there are no conversations at all, show this message.
+    if (_allConversations.isEmpty) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(16.0),
+          child: Text('No conversations yet.'),
+        ),
+      );
+    }
 
-        if (_searchController.text.isNotEmpty &&
-            filteredConversations.isEmpty) {
-          return const Center(
-            child: Padding(
-              padding: EdgeInsets.all(16.0),
-              child: Text('No matching conversations found.'),
-            ),
-          );
-        }
-
-        return ListView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: filteredConversations.length,
-          itemBuilder: (context, index) {
-            final conversation = filteredConversations[index];
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 12.0),
-              child: _buildChatItem(context, conversation, textTheme),
-            );
-          },
+    // 4. Otherwise, display the list of conversations.
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: _filteredConversations.length,
+      itemBuilder: (context, index) {
+        final conversation = _filteredConversations[index];
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12.0),
+          child: _buildChatItem(context, conversation),
         );
       },
     );
@@ -205,11 +233,9 @@ class _ChatsScreenState extends State<ChatsScreen> {
     return Text(title, style: textTheme.titleLarge);
   }
 
-  Widget _buildChatItem(
-    BuildContext context,
-    Conversation conversation,
-    TextTheme textTheme,
-  ) {
+  /// Builds a single chat item tile.
+  Widget _buildChatItem(BuildContext context, Conversation conversation) {
+    final textTheme = Theme.of(context).textTheme;
     return GestureDetector(
       onTap: () {
         PersistentNavBarNavigator.pushNewScreen(
@@ -276,6 +302,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
     );
   }
 
+  /// Builds the unread message count or read receipt indicator.
   Widget _buildStatusIndicator(
     BuildContext context,
     Conversation conversation,
@@ -367,13 +394,8 @@ class _RecentMatchesListState extends State<RecentMatchesList> {
                     context,
                     listen: false,
                   );
-                  final otherUser = ChatUser(
-                    uid: match['uid'],
-                    name: match['name'],
-                    avatarUrl: match['avatar'],
-                  );
                   final conversation = await firebaseService
-                      .getOrCreateConversationWithUser(otherUser);
+                      .getOrCreateConversation(match['uid']);
                   if (context.mounted) {
                     PersistentNavBarNavigator.pushNewScreen(
                       context,

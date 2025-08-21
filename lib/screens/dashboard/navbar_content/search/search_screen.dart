@@ -97,7 +97,7 @@ class _SearchScreenState extends State<SearchScreen> {
       context,
       listen: false,
     );
-    firebaseService.addRecentMatch(user['uid']);
+    firebaseService.likeUser(user['uid']);
   }
 
   void _handleDiscard(int index) {
@@ -118,15 +118,12 @@ class _SearchScreenState extends State<SearchScreen> {
       context,
       listen: false,
     );
+    await firebaseService.createMatch(otherUser.uid);
     firebaseService.addRecentUser(otherUser.uid);
 
-    // OPTIMIZATION: Instead of awaiting the conversation here,
-    // we pass the already known user data directly to the next screen.
-    // This makes the UI transition feel instantaneous.
     if (mounted) {
       PersistentNavBarNavigator.pushNewScreen(
         context,
-        // Pass the other user's data directly to the ConversationScreen.
         screen: ConversationScreen(otherUser: otherUser),
         withNavBar: false,
       );

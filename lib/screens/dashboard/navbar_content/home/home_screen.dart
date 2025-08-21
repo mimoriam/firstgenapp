@@ -4,12 +4,14 @@ import 'package:firstgenapp/screens/dashboard/navbar_content/communities/communi
 import 'package:firstgenapp/screens/dashboard/navbar_content/home/match_detail/match_detail_screen.dart';
 import 'package:firstgenapp/screens/dashboard/navbar_content/home/recent_activities/recent_activities_screen.dart';
 import 'package:firstgenapp/screens/dashboard/navbar_content/home/your_matches/your_matches_screen.dart';
+import 'package:firstgenapp/services/firebase_service.dart';
 import 'package:flutter/material.dart';
 import 'package:firstgenapp/constants/appColors.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:intl/intl.dart';
-
-import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart'; // Needed for ImageFilter.blur
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
+import 'package:provider/provider.dart'; // Needed for ImageFilter.blur
 
 class HomeScreen extends StatefulWidget {
   // MODIFICATION: Add a callback function to handle tab switching.
@@ -114,41 +116,66 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final firebaseService = Provider.of<FirebaseService>(
+      context,
+      listen: false,
+    );
+
     return Scaffold(
       backgroundColor: AppColors.primaryBackground,
       // MODIFICATION: Wrapped the body with RefreshIndicator.
-      body: RefreshIndicator(
-        onRefresh: _handleRefresh,
-        child: SafeArea(
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 12.0,
-                vertical: 8.0,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildHeader(),
-                  const SizedBox(height: 12),
-                  _buildStatsSection(),
-                  const SizedBox(height: 12),
-                  _buildSectionHeader("New Matches"),
-                  const SizedBox(height: 10),
-                  _buildNewMatchesList(),
-                  const SizedBox(height: 12),
-                  _buildSectionHeader("Upcoming Events"),
-                  const SizedBox(height: 10),
-                  _buildRecentEventsList(),
-                  const SizedBox(height: 12),
-                  _buildSectionHeader("Recent Activity"),
-                  const SizedBox(height: 10),
-                  _buildRecentActivityList(),
-                ],
+      body: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+        stream: firebaseService.getUserProfileStream(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting &&
+              !snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          }
+          if (!snapshot.hasData || !snapshot.data!.exists) {
+            return Container();
+          }
+
+          final userData = snapshot.data!.data()!;
+          final likesCount = (userData['likedUsers'] as Map?)?.length ?? 0;
+          final matchesCount = (userData['matches'] as Map?)?.length ?? 0;
+
+          return RefreshIndicator(
+            onRefresh: _handleRefresh,
+            child: SafeArea(
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12.0,
+                    vertical: 8.0,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildHeader(),
+                      const SizedBox(height: 12),
+                      _buildStatsSection(likesCount, matchesCount),
+                      const SizedBox(height: 12),
+                      _buildSectionHeader("New Matches"),
+                      const SizedBox(height: 10),
+                      _buildNewMatchesList(),
+                      const SizedBox(height: 12),
+                      _buildSectionHeader("Upcoming Events"),
+                      const SizedBox(height: 10),
+                      _buildRecentEventsList(),
+                      const SizedBox(height: 12),
+                      _buildSectionHeader("Recent Activity"),
+                      const SizedBox(height: 10),
+                      _buildRecentActivityList(),
+                    ],
+                  ),
+                ),
               ),
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }
@@ -194,12 +221,16 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildStatsSection() {
+  Widget _buildStatsSection(int likesCount, int matchesCount) {
+    final firebaseService = Provider.of<FirebaseService>(
+      context,
+      listen: false,
+    );
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceAround,
       children: [
         _buildStatItem(
-          "12",
+          likesCount.toString(),
           "Likes",
           const Color(0xFFFCE8E8),
           const Color(0xFFC62828),
@@ -209,46 +240,45 @@ class _HomeScreenState extends State<HomeScreen> {
             if (context.mounted) {
               PersistentNavBarNavigator.pushNewScreen(
                 context,
-                screen: YourMatchesScreen(),
+                screen: const YourMatchesScreen(),
                 withNavBar: false,
               );
             }
           },
           child: _buildStatItem(
-            "3",
+            matchesCount.toString(),
             "New Matches",
             const Color(0xFFE8F5E9),
             const Color(0xFF2E7D32),
           ),
         ),
-        GestureDetector(
-          onTap: () {
-            if (context.mounted) {
-              PersistentNavBarNavigator.pushNewScreen(
-                context,
-                screen: ChatsScreen(),
-                withNavBar: false,
-              );
-            }
+        StreamBuilder<int>(
+          stream: firebaseService.unreadMessagesCount,
+          builder: (context, snapshot) {
+            final count = snapshot.data ?? 0;
+            return GestureDetector(
+              onTap: () {
+                if (context.mounted) {
+                  widget.onSwitchTab(2); // Switch to Chats tab
+                }
+              },
+              child: _buildStatItem(
+                count.toString(),
+                "Messages",
+                const Color(0xFFE3F2FD),
+                const Color(0xFF1565C0),
+              ),
+            );
           },
-          child: _buildStatItem(
-            "5",
-            "Messages",
-            const Color(0xFFE3F2FD),
-            const Color(0xFF1565C0),
-          ),
         ),
         GestureDetector(
           onTap: () {
             if (context.mounted) {
-              // MODIFICATION: Call the callback function instead of pushing a new screen.
-              // This will switch the main tab to index 1 (Communities)
-              // and tell it to open its own inner tab at index 2 (Upcoming Events).
               widget.onSwitchTab(3, communitySubTabIndex: 2);
             }
           },
           child: _buildStatItem(
-            "6",
+            "6", // Hardcoded as per instructions
             "Events",
             const Color(0xFFFFFDE7),
             const Color(0xFFF9A825),

@@ -511,7 +511,83 @@ class FirebaseService {
         .set(true);
   }
 
-  // MODIFICATION: Rewrote this method to fetch fresh user data from Firestore.
+  // OLD: Rewrote this method to fetch fresh user data from Firestore.
+  // Stream<List<Conversation>> getConversations() {
+  //   final currentUser = _auth.currentUser;
+  //   if (currentUser == null) return Stream.value([]);
+  //
+  //   final userConversationsRef = _database.ref(
+  //     'users/${currentUser.uid}/conversations',
+  //   );
+  //
+  //   return userConversationsRef.onValue.switchMap((event) {
+  //     if (event.snapshot.value == null) {
+  //       return Stream.value([]);
+  //     }
+  //
+  //     final conversationIdsMap = event.snapshot.value as Map;
+  //     final conversationIds = conversationIdsMap.keys.toList();
+  //
+  //     if (conversationIds.isEmpty) {
+  //       return Stream.value([]);
+  //     }
+  //
+  //     final conversationStreams = conversationIds.map((id) {
+  //       return _database.ref('conversations/$id').onValue.asyncMap((
+  //         event,
+  //       ) async {
+  //         if (event.snapshot.exists && event.snapshot.value != null) {
+  //           final encodedData = jsonEncode(event.snapshot.value);
+  //           final data = jsonDecode(encodedData) as Map<String, dynamic>;
+  //
+  //           final participants = Map<String, dynamic>.from(
+  //             data['participants'] as Map? ?? {},
+  //           );
+  //           final otherUserId = participants.keys.firstWhere(
+  //             (key) => key != currentUser.uid,
+  //             orElse: () => '',
+  //           );
+  //
+  //           if (otherUserId.isNotEmpty) {
+  //             try {
+  //               final userDoc = await _firestore
+  //                   .collection(userCollection)
+  //                   .doc(otherUserId)
+  //                   .get();
+  //               if (userDoc.exists) {
+  //                 final userData = userDoc.data()!;
+  //                 // Replace the stale user data in the conversation with fresh data
+  //                 data['users'][otherUserId] = {
+  //                   'uid': otherUserId,
+  //                   'name': userData['fullName'] ?? 'No Name',
+  //                   'avatarUrl':
+  //                       userData['profileImageUrl'] ??
+  //                       'https://picsum.photos/seed/error/200/200',
+  //                 };
+  //               }
+  //             } catch (e) {
+  //               log("Error fetching user profile for chat: $e");
+  //             }
+  //           }
+  //           return Conversation.fromJson(data, id.toString(), currentUser.uid);
+  //         }
+  //         return null;
+  //       });
+  //     }).toList();
+  //
+  //     return CombineLatestStream.list(conversationStreams).map((conversations) {
+  //       final validConversations = conversations
+  //           .where((c) => c != null)
+  //           .cast<Conversation>()
+  //           .toList();
+  //       validConversations.sort(
+  //         (a, b) => b.lastMessageTimestamp.compareTo(a.lastMessageTimestamp),
+  //       );
+  //       return validConversations;
+  //     });
+  //   });
+  // }
+
   Stream<List<Conversation>> getConversations() {
     final currentUser = _auth.currentUser;
     if (currentUser == null) return Stream.value([]);
@@ -533,42 +609,10 @@ class FirebaseService {
       }
 
       final conversationStreams = conversationIds.map((id) {
-        return _database.ref('conversations/$id').onValue.asyncMap((
-          event,
-        ) async {
+        return _database.ref('conversations/$id').onValue.map((event) {
           if (event.snapshot.exists && event.snapshot.value != null) {
             final encodedData = jsonEncode(event.snapshot.value);
             final data = jsonDecode(encodedData) as Map<String, dynamic>;
-
-            final participants = Map<String, dynamic>.from(
-              data['participants'] as Map? ?? {},
-            );
-            final otherUserId = participants.keys.firstWhere(
-              (key) => key != currentUser.uid,
-              orElse: () => '',
-            );
-
-            if (otherUserId.isNotEmpty) {
-              try {
-                final userDoc = await _firestore
-                    .collection(userCollection)
-                    .doc(otherUserId)
-                    .get();
-                if (userDoc.exists) {
-                  final userData = userDoc.data()!;
-                  // Replace the stale user data in the conversation with fresh data
-                  data['users'][otherUserId] = {
-                    'uid': otherUserId,
-                    'name': userData['fullName'] ?? 'No Name',
-                    'avatarUrl':
-                        userData['profileImageUrl'] ??
-                        'https://picsum.photos/seed/error/200/200',
-                  };
-                }
-              } catch (e) {
-                log("Error fetching user profile for chat: $e");
-              }
-            }
             return Conversation.fromJson(data, id.toString(), currentUser.uid);
           }
           return null;
@@ -581,7 +625,7 @@ class FirebaseService {
             .cast<Conversation>()
             .toList();
         validConversations.sort(
-          (a, b) => b.lastMessageTimestamp.compareTo(a.lastMessageTimestamp),
+              (a, b) => b.lastMessageTimestamp.compareTo(a.lastMessageTimestamp),
         );
         return validConversations;
       });
@@ -828,6 +872,94 @@ class FirebaseService {
     final data = jsonDecode(encodedData) as Map<String, dynamic>;
 
     return Conversation.fromJson(data, conversationId, currentUser.uid);
+  }
+
+  Future<void> likeUser(String likedUserId) async {
+    final currentUser = _auth.currentUser;
+    if (currentUser == null) return;
+
+    final currentUserRef = _firestore
+        .collection(userCollection)
+        .doc(currentUser.uid);
+    final likedUserRef = _firestore.collection(userCollection).doc(likedUserId);
+
+    return _firestore.runTransaction((transaction) async {
+      // Get the documents
+      DocumentSnapshot currentUserSnapshot = await transaction.get(
+        currentUserRef,
+      );
+      DocumentSnapshot likedUserSnapshot = await transaction.get(likedUserRef);
+
+      if (!currentUserSnapshot.exists || !likedUserSnapshot.exists) {
+        throw Exception("User document not found!");
+      }
+
+      // For the current user, add the liked user to their 'likedUsers' map.
+      transaction.update(currentUserRef, {'likedUsers.$likedUserId': true});
+
+      // For the liked user, increment their 'likesReceivedCount'.
+      transaction.update(likedUserRef, {
+        'likesReceivedCount': FieldValue.increment(1),
+      });
+    });
+  }
+
+  Future<void> createMatch(String matchedUserId) async {
+    final currentUser = _auth.currentUser;
+    if (currentUser == null) return;
+
+    final currentUserRef = _firestore
+        .collection(userCollection)
+        .doc(currentUser.uid);
+    final matchedUserRef = _firestore
+        .collection(userCollection)
+        .doc(matchedUserId);
+
+    return _firestore.runTransaction((transaction) async {
+      transaction.update(currentUserRef, {'matches.$matchedUserId': true});
+      transaction.update(matchedUserRef, {'matches.${currentUser.uid}': true});
+    });
+  }
+
+  Stream<int> get unreadMessagesCount {
+    final currentUser = _auth.currentUser;
+    if (currentUser == null) return Stream.value(0);
+
+    final userConversationsRef = _database.ref(
+      'users/${currentUser.uid}/conversations',
+    );
+
+    return userConversationsRef.onValue.switchMap((event) {
+      if (event.snapshot.value == null) {
+        return Stream.value(0);
+      }
+
+      final conversationIdsMap = event.snapshot.value as Map;
+      final conversationIds = conversationIdsMap.keys.toList();
+
+      if (conversationIds.isEmpty) {
+        return Stream.value(0);
+      }
+
+      final conversationStreams = conversationIds.map((id) {
+        return _database
+            .ref('conversations/$id/unreadCount/${currentUser.uid}')
+            .onValue;
+      }).toList();
+
+      return CombineLatestStream.list(conversationStreams).map((snapshots) {
+        int totalUnread = 0;
+        for (var snapshot in snapshots) {
+          if (snapshot.snapshot.value != null) {
+            final count = snapshot.snapshot.value;
+            if (count is int) {
+              totalUnread += count;
+            }
+          }
+        }
+        return totalUnread;
+      });
+    });
   }
 
   /// Maps [FirebaseAuthException] codes to user-friendly [AuthException] objects.
