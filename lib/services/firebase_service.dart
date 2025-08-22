@@ -298,6 +298,55 @@ class FirebaseService {
     }
   }
 
+  Future<List<DocumentSnapshot>> getAllMatches({
+    DocumentSnapshot? startAfter,
+    int limit = 12,
+  }) async {
+    final currentUser = _auth.currentUser;
+    if (currentUser == null) return [];
+
+    Query query = _firestore
+        .collection(userCollection)
+        .where('matches.${currentUser.uid}', isEqualTo: true)
+        .limit(limit);
+
+    if (startAfter != null) {
+      query = query.startAfterDocument(startAfter);
+    }
+
+    final snapshot = await query.get();
+    return snapshot.docs;
+  }
+
+  Stream<List<DocumentSnapshot>> getAllMatchesStream() {
+    final currentUser = _auth.currentUser;
+    if (currentUser == null) return Stream.value([]);
+
+    return _firestore
+        .collection(userCollection)
+        .where('matches.${currentUser.uid}', isEqualTo: true)
+        .snapshots()
+        .map((snapshot) => snapshot.docs);
+  }
+
+  Stream<int> getMatchesCount() {
+    final currentUser = _auth.currentUser;
+    if (currentUser == null) return Stream.value(0);
+
+    return _firestore
+        .collection(userCollection)
+        .doc(currentUser.uid)
+        .snapshots()
+        .map((snapshot) {
+          if (!snapshot.exists) return 0;
+          final data = snapshot.data()!;
+          if (data['matches'] is Map) {
+            return (data['matches'] as Map).length;
+          }
+          return 0;
+        });
+  }
+
   Future<List<QueryDocumentSnapshot<Map<String, dynamic>>>> searchUsers({
     required String country,
     required List<String> languages,
@@ -388,10 +437,26 @@ class FirebaseService {
     final user = _auth.currentUser;
     if (user == null) return [];
 
+    // Get the current user's data to know who they've already liked or matched with
+    final currentUserDoc = await _firestore
+        .collection(userCollection)
+        .doc(user.uid)
+        .get();
+    if (!currentUserDoc.exists) return [];
+
+    final currentUserData = currentUserDoc.data()!;
+    final likedUserIds =
+        (currentUserData['likedUsers'] as Map?)?.keys.toList() ?? [];
+    final matchedUserIds =
+        (currentUserData['matches'] as Map?)?.keys.toList() ?? [];
+    final usersToExclude = [...likedUserIds, ...matchedUserIds, user.uid];
+
     // Start with a base query that excludes the current user.
     Query<Map<String, dynamic>> query = _firestore
         .collection(userCollection)
         .where('uid', isNotEqualTo: user.uid);
+
+    // ... (the rest of the searchUsersStrict function remains the same, but it will now exclude users)
 
     // Apply strict AND filters for core preferences on the server-side.
     if (continent != null && continent != 'Global') {
@@ -407,8 +472,10 @@ class FirebaseService {
 
     try {
       final querySnapshot = await query.get();
-      List<QueryDocumentSnapshot<Map<String, dynamic>>> results =
-          querySnapshot.docs;
+      List<QueryDocumentSnapshot<Map<String, dynamic>>> results = querySnapshot
+          .docs
+          .where((doc) => !usersToExclude.contains(doc.id))
+          .toList();
 
       // === Start Client-Side Filtering for remaining AND conditions ===
 
@@ -939,6 +1006,36 @@ class FirebaseService {
     return Conversation.fromJson(data, conversationId, currentUser.uid);
   }
 
+  // Future<void> likeUser(String likedUserId) async {
+  //   final currentUser = _auth.currentUser;
+  //   if (currentUser == null) return;
+  //
+  //   final currentUserRef = _firestore
+  //       .collection(userCollection)
+  //       .doc(currentUser.uid);
+  //   final likedUserRef = _firestore.collection(userCollection).doc(likedUserId);
+  //
+  //   return _firestore.runTransaction((transaction) async {
+  //     // Get the documents
+  //     DocumentSnapshot currentUserSnapshot = await transaction.get(
+  //       currentUserRef,
+  //     );
+  //     DocumentSnapshot likedUserSnapshot = await transaction.get(likedUserRef);
+  //
+  //     if (!currentUserSnapshot.exists || !likedUserSnapshot.exists) {
+  //       throw Exception("User document not found!");
+  //     }
+  //
+  //     // For the current user, add the liked user to their 'likedUsers' map.
+  //     transaction.update(currentUserRef, {'likedUsers.$likedUserId': true});
+  //
+  //     // For the liked user, increment their 'likesReceivedCount'.
+  //     transaction.update(likedUserRef, {
+  //       'likesReceivedCount': FieldValue.increment(1),
+  //     });
+  //   });
+  // }
+
   Future<void> likeUser(String likedUserId) async {
     final currentUser = _auth.currentUser;
     if (currentUser == null) return;
@@ -959,13 +1056,21 @@ class FirebaseService {
         throw Exception("User document not found!");
       }
 
-      // For the current user, add the liked user to their 'likedUsers' map.
+      // Add the liked user to the current user's 'likedUsers' map.
       transaction.update(currentUserRef, {'likedUsers.$likedUserId': true});
 
-      // For the liked user, increment their 'likesReceivedCount'.
-      transaction.update(likedUserRef, {
-        'likesReceivedCount': FieldValue.increment(1),
-      });
+      // Check if the liked user has already liked the current user.
+      Map<String, dynamic> likedUserData =
+          likedUserSnapshot.data() as Map<String, dynamic>;
+      if (likedUserData['likedUsers'] != null &&
+          likedUserData['likedUsers'][currentUser.uid] == true) {
+        // It's a match!
+        transaction.update(currentUserRef, {'matches.$likedUserId': true});
+        transaction.update(likedUserRef, {'matches.${currentUser.uid}': true});
+
+        // Add to recent matches for both users in Realtime Database
+        await addRecentMatch(likedUserId);
+      }
     });
   }
 

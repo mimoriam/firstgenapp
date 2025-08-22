@@ -544,18 +544,10 @@ class _SearchScreenState extends State<SearchScreen> {
                   ),
                   const SizedBox(width: 12),
                   _buildCircleButton(
-                    icon: IconlyBold.message,
-                    bgColor: AppColors.textPrimary,
-                    iconColor: AppColors.primaryBackground,
-                    size: 62,
-                    onPressed: () => _onMessage(index),
-                  ),
-                  const SizedBox(width: 12),
-                  _buildCircleButton(
                     icon: Icons.favorite,
                     isGradient: true,
                     iconColor: AppColors.primaryBackground,
-                    size: 52,
+                    size: 62, // Make like button bigger
                     onPressed: () =>
                         _swiperController.swipe(CardSwiperDirection.right),
                   ),

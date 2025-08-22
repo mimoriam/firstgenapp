@@ -1,6 +1,14 @@
+// lib/screens/dashboard/navbar_content/home/your_matches/your_matches_screen.dart
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firstgenapp/models/chat_models.dart';
+import 'package:firstgenapp/screens/dashboard/navbar_content/chats/conversation/conversation_screen.dart';
+import 'package:firstgenapp/services/firebase_service.dart';
 import 'package:flutter/material.dart';
 import 'package:firstgenapp/constants/appColors.dart';
 import 'package:iconly/iconly.dart';
+import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
+import 'package:provider/provider.dart';
 
 class YourMatchesScreen extends StatefulWidget {
   const YourMatchesScreen({super.key});
@@ -10,43 +18,78 @@ class YourMatchesScreen extends StatefulWidget {
 }
 
 class _YourMatchesScreenState extends State<YourMatchesScreen> {
-  // Mock data for user matches
-  final List<Map<String, String>> _matches = [
-    {
-      "avatar": "https://randomuser.me/api/portraits/women/4.jpg",
-      "name": "James Rana",
-      "age": "20",
-      "interests": "Love Music, Love Coffee",
-    },
-    {
-      "avatar": "https://randomuser.me/api/portraits/women/5.jpg",
-      "name": "James Rana",
-      "age": "20",
-      "interests": "Love Music, Love Coffee",
-    },
-    {
-      "avatar": "https://randomuser.me/api/portraits/women/6.jpg",
-      "name": "James Rana",
-      "age": "20",
-      "interests": "Love Music, Love Coffee",
-    },
-    {
-      "avatar": "https://randomuser.me/api/portraits/men/3.jpg",
-      "name": "James Rana",
-      "age": "20",
-      "interests": "Love Music, Love Coffee",
-    },
-    {
-      "avatar": "https://randomuser.me/api/portraits/women/7.jpg",
-      "name": "James Rana",
-      "age": "20",
-      "interests": "Love Music, Love Coffee",
-    },
-  ];
+  final ScrollController _scrollController = ScrollController();
+  List<DocumentSnapshot> _matches = [];
+  bool _isLoading = false;
+  bool _hasMore = true;
+  DocumentSnapshot? _lastDocument;
+
+  @override
+  void initState() {
+    super.initState();
+    _getMatches();
+    _scrollController.addListener(() {
+      if (_scrollController.position.pixels ==
+          _scrollController.position.maxScrollExtent) {
+        _getMatches();
+      }
+    });
+  }
+
+  Future<void> _getMatches() async {
+    if (_isLoading || !_hasMore) return;
+    setState(() {
+      _isLoading = true;
+    });
+
+    final firebaseService = Provider.of<FirebaseService>(
+      context,
+      listen: false,
+    );
+    final newMatches = await firebaseService.getAllMatches(
+      startAfter: _lastDocument,
+      limit: 12,
+    );
+
+    if (newMatches.isEmpty) {
+      setState(() {
+        _hasMore = false;
+        _isLoading = false;
+      });
+    } else {
+      _lastDocument = newMatches.last;
+      setState(() {
+        _matches.addAll(newMatches);
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  int _calculateAge(Timestamp? dobTimestamp) {
+    if (dobTimestamp == null) return 0;
+    final dob = dobTimestamp.toDate();
+    final now = DateTime.now();
+    int age = now.year - dob.year;
+    if (now.month < dob.month ||
+        (now.month == dob.month && now.day < dob.day)) {
+      age--;
+    }
+    return age;
+  }
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final firebaseService = Provider.of<FirebaseService>(
+      context,
+      listen: false,
+    );
 
     return Scaffold(
       backgroundColor: AppColors.primaryBackground,
@@ -58,27 +101,30 @@ class _YourMatchesScreenState extends State<YourMatchesScreen> {
           icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        title: RichText(
-          text: TextSpan(
-            // UPDATED: Inherited from theme
-            style: textTheme.headlineSmall,
-            children: [
-              const TextSpan(text: 'Your Matches: '),
-              TextSpan(
-                text: _matches.length.toString(),
-                // UPDATED: Inherited from theme
-                style: textTheme.headlineSmall?.copyWith(
-                  color: AppColors.primaryRed,
-                ),
+        title: StreamBuilder<int>(
+          stream: firebaseService.getMatchesCount(),
+          builder: (context, snapshot) {
+            final count = snapshot.data ?? 0;
+            return RichText(
+              text: TextSpan(
+                style: textTheme.headlineSmall,
+                children: [
+                  const TextSpan(text: 'Your Matches: '),
+                  TextSpan(
+                    text: '$count',
+                    style: textTheme.headlineSmall?.copyWith(
+                      color: AppColors.primaryRed,
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            );
+          },
         ),
         actions: [
           IconButton(
             onPressed: () {},
             icon: const Icon(
-              // Icons.search,
               IconlyLight.search,
               color: AppColors.textSecondary,
               size: 22,
@@ -86,49 +132,86 @@ class _YourMatchesScreenState extends State<YourMatchesScreen> {
           ),
         ],
       ),
-      body: ListView.separated(
-        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-        itemCount: _matches.length,
-        itemBuilder: (context, index) {
-          return _buildMatchItem(_matches[index], textTheme);
+      body: StreamBuilder<List<DocumentSnapshot>>(
+        stream: firebaseService.getAllMatchesStream(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          }
+          if (!snapshot.hasData || snapshot.data!.isEmpty) {
+            return const Center(child: Text('No matches yet.'));
+          }
+
+          _matches = snapshot.data!;
+
+          return ListView.separated(
+            controller: _scrollController,
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16.0,
+              vertical: 8.0,
+            ),
+            itemCount: _matches.length + (_isLoading ? 1 : 0),
+            itemBuilder: (context, index) {
+              if (index == _matches.length) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              final matchData = _matches[index].data() as Map<String, dynamic>;
+              return _buildMatchItem(matchData, textTheme);
+            },
+            separatorBuilder: (context, index) => const SizedBox(height: 8),
+          );
         },
-        // UPDATED: Used SizedBox for cleaner spacing
-        separatorBuilder: (context, index) => const SizedBox(height: 8),
       ),
     );
   }
 
-  /// Builds a single match item.
-  Widget _buildMatchItem(Map<String, String> match, TextTheme textTheme) {
+  Widget _buildMatchItem(Map<String, dynamic> match, TextTheme textTheme) {
+    final interestsData = match['hobbies'];
+    // final interests = interestsData is List
+    //     ? interestsData.join(', ')
+    //     : 'No interests listed';
+    final age = _calculateAge(match['dateOfBirth']);
+
     return ListTile(
-      // UPDATED: Compacted ListTile
       dense: true,
       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
       leading: CircleAvatar(
-        // UPDATED: Reduced size
         radius: 26,
-        backgroundImage: NetworkImage(match['avatar']!),
+        backgroundImage: NetworkImage(
+          match['profileImageUrl'] ??
+              'https://i.pravatar.cc/150?u=${match['uid']}',
+        ),
       ),
       title: Text(
-        '${match['name']}, ${match['age']}',
-        // UPDATED: Inherited from theme with smaller font
+        '${match['fullName'] ?? 'N/A'}, $age',
         style: textTheme.labelLarge?.copyWith(
           color: AppColors.textPrimary,
           fontWeight: FontWeight.bold,
         ),
       ),
-      subtitle: Text(
-        match['interests']!,
-        // UPDATED: Inherited from theme
-        style: textTheme.bodySmall,
-      ),
+      subtitle: Text(interestsData, style: textTheme.bodySmall),
       trailing: const Icon(
         IconlyLight.message,
         color: AppColors.primaryRed,
         size: 20,
       ),
       onTap: () {
-        // Handle tap on match item
+        final otherUser = ChatUser(
+          uid: match['uid'],
+          name: match['fullName'] ?? 'No Name',
+          avatarUrl:
+              match['profileImageUrl'] ??
+              'https://i.pravatar.cc/150?u=${match['uid']}',
+        );
+
+        PersistentNavBarNavigator.pushNewScreen(
+          context,
+          screen: ConversationScreen(otherUser: otherUser),
+          withNavBar: false,
+        );
       },
     );
   }

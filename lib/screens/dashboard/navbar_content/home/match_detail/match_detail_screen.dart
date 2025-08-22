@@ -1,14 +1,22 @@
+import 'package:firstgenapp/models/chat_models.dart';
+import 'package:firstgenapp/screens/dashboard/navbar_content/chats/conversation/conversation_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firstgenapp/constants/appColors.dart';
 import 'package:iconly/iconly.dart';
 import 'dart:ui';
 import 'package:country_picker/country_picker.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
+import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 
 class MatchDetailScreen extends StatelessWidget {
   final Map<String, dynamic> userProfile;
+  final bool isMatch;
 
-  const MatchDetailScreen({super.key, required this.userProfile});
+  const MatchDetailScreen({
+    super.key,
+    required this.userProfile,
+    this.isMatch = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -246,17 +254,18 @@ class MatchDetailScreen extends StatelessWidget {
                     iconColor: AppColors.primaryBackground,
                     size: 62,
                     onPressed: () {
-                      // Implement message functionality
-                    },
-                  ),
-                  const SizedBox(width: 12),
-                  _buildCircleButton(
-                    icon: Icons.favorite,
-                    isGradient: true,
-                    iconColor: AppColors.primaryBackground,
-                    size: 52,
-                    onPressed: () {
-                      // Implement like functionality
+                      final otherUser = ChatUser(
+                        uid: userProfile['uid'],
+                        name: userProfile['name'] ?? 'No Name',
+                        avatarUrl:
+                            userProfile['imageUrl'] ??
+                            'https://picsum.photos/seed/error/200/200',
+                      );
+                      PersistentNavBarNavigator.pushNewScreen(
+                        context,
+                        screen: ConversationScreen(otherUser: otherUser),
+                        withNavBar: false,
+                      );
                     },
                   ),
                 ],
