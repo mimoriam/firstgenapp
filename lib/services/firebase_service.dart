@@ -181,6 +181,15 @@ class FirebaseService {
     }
   }
 
+  Future<void> subscribeToGeneralAnnouncements() async {
+    try {
+      await _fcm.subscribeToTopic('all_users');
+      log('Subscribed to all_users topic');
+    } catch (e) {
+      log('Error subscribing to topic: $e');
+    }
+  }
+
   Future<void> saveUserToken() async {
     final user = _auth.currentUser;
     if (user == null) return;
@@ -196,6 +205,7 @@ class FirebaseService {
       log('Error saving FCM token: $e');
     }
   }
+
 
   // MODIFICATION: Added a method to check if the user's profile document exists in Firestore.
   Future<bool> isUserProfileComplete(String userId) async {

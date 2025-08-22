@@ -118,25 +118,28 @@ class _ChatsScreenState extends State<ChatsScreen> {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    return Scaffold(
-      backgroundColor: AppColors.primaryBackground,
-      appBar: _isSearching
-          ? _buildSearchAppBar()
-          : _buildNormalAppBar(textTheme),
-      body: RefreshIndicator(
-        onRefresh: _handleRefresh,
-        child: ListView(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-          children: [
-            const SizedBox(height: 16),
-            _buildSectionHeader('Recent match', textTheme),
-            const SizedBox(height: 12),
-            RecentMatchesList(key: _recentMatchesKey),
-            const SizedBox(height: 20),
-            _buildSectionHeader('Messages', textTheme),
-            const SizedBox(height: 12),
-            _buildConversationsList(),
-          ],
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: Scaffold(
+        backgroundColor: AppColors.primaryBackground,
+        appBar: _isSearching
+            ? _buildSearchAppBar()
+            : _buildNormalAppBar(textTheme),
+        body: RefreshIndicator(
+          onRefresh: _handleRefresh,
+          child: ListView(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            children: [
+              const SizedBox(height: 16),
+              _buildSectionHeader('Recent match', textTheme),
+              const SizedBox(height: 12),
+              RecentMatchesList(key: _recentMatchesKey),
+              const SizedBox(height: 20),
+              _buildSectionHeader('Messages', textTheme),
+              const SizedBox(height: 12),
+              _buildConversationsList(),
+            ],
+          ),
         ),
       ),
     );

@@ -6,6 +6,7 @@ import 'package:firstgenapp/models/chat_models.dart';
 import 'package:firstgenapp/screens/dashboard/navbar_content/chats/conversation/conversation_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 // Top-level function for background message handling
 @pragma('vm:entry-point')
@@ -35,16 +36,10 @@ class NotificationService {
   }
 
   Future<void> _requestPermissions() async {
-    NotificationSettings settings = await _fcm.requestPermission(
-      alert: true,
-      announcement: false,
-      badge: true,
-      carPlay: false,
-      criticalAlert: false,
-      provisional: false,
-      sound: true,
-    );
-    log('User granted permission: ${settings.authorizationStatus}');
+    var status = await Permission.notification.status;
+    if (status.isDenied) {
+      await Permission.notification.request();
+    }
   }
 
   Future<void> _initLocalNotifications() async {
@@ -128,6 +123,8 @@ class NotificationService {
   void _handleNotificationNavigation(Map<String, dynamic> data) {
     final conversationId = data['conversationId'];
     final otherUserJson = data['otherUser'];
+
+    // Check if this is a chat notification
     if (conversationId != null && otherUserJson != null) {
       final otherUser = ChatUser.fromJson(jsonDecode(otherUserJson));
       navigatorKey.currentState?.push(
@@ -135,6 +132,10 @@ class NotificationService {
           builder: (context) => ConversationScreen(otherUser: otherUser),
         ),
       );
+    } else {
+      // This is a general, app-wide notification.
+      // No specific navigation is needed, the user just sees the notification.
+      log("Handled a general notification. No navigation action taken.");
     }
   }
 }

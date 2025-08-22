@@ -24,6 +24,11 @@ class _YourMatchesScreenState extends State<YourMatchesScreen> {
   bool _hasMore = true;
   DocumentSnapshot? _lastDocument;
 
+  // State for search functionality
+  bool _isSearching = false;
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+
   @override
   void initState() {
     super.initState();
@@ -33,6 +38,11 @@ class _YourMatchesScreenState extends State<YourMatchesScreen> {
           _scrollController.position.maxScrollExtent) {
         _getMatches();
       }
+    });
+    _searchController.addListener(() {
+      setState(() {
+        _searchQuery = _searchController.text;
+      });
     });
   }
 
@@ -68,6 +78,7 @@ class _YourMatchesScreenState extends State<YourMatchesScreen> {
   @override
   void dispose() {
     _scrollController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -83,6 +94,80 @@ class _YourMatchesScreenState extends State<YourMatchesScreen> {
     return age;
   }
 
+  AppBar _buildNormalAppBar(TextTheme textTheme, int count) {
+    return AppBar(
+      backgroundColor: AppColors.primaryBackground,
+      elevation: 0,
+      scrolledUnderElevation: 0,
+      leading: IconButton(
+        icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
+        onPressed: () => Navigator.of(context).pop(),
+      ),
+      title: RichText(
+        text: TextSpan(
+          style: textTheme.headlineSmall,
+          children: [
+            const TextSpan(text: 'Your Matches: '),
+            TextSpan(
+              text: '$count',
+              style: textTheme.headlineSmall?.copyWith(
+                color: AppColors.primaryRed,
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        IconButton(
+          onPressed: () {
+            setState(() {
+              _isSearching = true;
+            });
+          },
+          icon: const Icon(
+            IconlyLight.search,
+            color: AppColors.textSecondary,
+            size: 22,
+          ),
+        ),
+      ],
+    );
+  }
+
+  AppBar _buildSearchAppBar() {
+    return AppBar(
+      backgroundColor: AppColors.primaryBackground,
+      elevation: 0,
+      scrolledUnderElevation: 0,
+      leading: const Icon(IconlyLight.search, color: AppColors.textSecondary),
+      title: TextField(
+        controller: _searchController,
+        autofocus: true,
+        decoration: const InputDecoration(
+          hintText: 'Search by name...',
+          border: InputBorder.none,
+          hintStyle: TextStyle(color: AppColors.textSecondary),
+        ),
+        style: const TextStyle(color: AppColors.textPrimary, fontSize: 16),
+      ),
+      actions: [
+        IconButton(
+          onPressed: () {
+            setState(() {
+              _isSearching = false;
+              _searchController.clear();
+            });
+          },
+          icon: const Icon(
+            Icons.close,
+            color: AppColors.textSecondary,
+            size: 24,
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
@@ -91,88 +176,56 @@ class _YourMatchesScreenState extends State<YourMatchesScreen> {
       listen: false,
     );
 
-    return Scaffold(
-      backgroundColor: AppColors.primaryBackground,
-      appBar: AppBar(
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: Scaffold(
         backgroundColor: AppColors.primaryBackground,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: StreamBuilder<int>(
-          stream: firebaseService.getMatchesCount(),
-          builder: (context, snapshot) {
-            final count = snapshot.data ?? 0;
-            return RichText(
-              text: TextSpan(
-                style: textTheme.headlineSmall,
-                children: [
-                  const TextSpan(text: 'Your Matches: '),
-                  TextSpan(
-                    text: '$count',
-                    style: textTheme.headlineSmall?.copyWith(
-                      color: AppColors.primaryRed,
-                    ),
-                  ),
-                ],
+        appBar: _isSearching
+            ? _buildSearchAppBar()
+            : _buildNormalAppBar(
+                textTheme,
+                _matches.length, // Pass the current count
               ),
-            );
-          },
-        ),
-        actions: [
-          IconButton(
-            onPressed: () {},
-            icon: const Icon(
-              IconlyLight.search,
-              color: AppColors.textSecondary,
-              size: 22,
-            ),
-          ),
-        ],
-      ),
-      body: StreamBuilder<List<DocumentSnapshot>>(
-        stream: firebaseService.getAllMatchesStream(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          }
-          if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return const Center(child: Text('No matches yet.'));
-          }
+        body: _matches.isEmpty && _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : _matches.isEmpty
+            ? const Center(child: Text('No matches yet.'))
+            : Builder(
+                builder: (context) {
+                  final filteredMatches = _matches.where((doc) {
+                    final data = doc.data() as Map<String, dynamic>;
+                    final name = data['fullName'] as String? ?? '';
+                    return name.toLowerCase().contains(
+                      _searchQuery.toLowerCase(),
+                    );
+                  }).toList();
 
-          _matches = snapshot.data!;
-
-          return ListView.separated(
-            controller: _scrollController,
-            padding: const EdgeInsets.symmetric(
-              horizontal: 16.0,
-              vertical: 8.0,
-            ),
-            itemCount: _matches.length + (_isLoading ? 1 : 0),
-            itemBuilder: (context, index) {
-              if (index == _matches.length) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              final matchData = _matches[index].data() as Map<String, dynamic>;
-              return _buildMatchItem(matchData, textTheme);
-            },
-            separatorBuilder: (context, index) => const SizedBox(height: 8),
-          );
-        },
+                  return ListView.separated(
+                    controller: _scrollController,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16.0,
+                      vertical: 8.0,
+                    ),
+                    itemCount: filteredMatches.length + (_isLoading ? 1 : 0),
+                    itemBuilder: (context, index) {
+                      if (index == filteredMatches.length) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+                      final matchData =
+                          filteredMatches[index].data() as Map<String, dynamic>;
+                      return _buildMatchItem(matchData, textTheme);
+                    },
+                    separatorBuilder: (context, index) =>
+                        const SizedBox(height: 8),
+                  );
+                },
+              ),
       ),
     );
   }
 
   Widget _buildMatchItem(Map<String, dynamic> match, TextTheme textTheme) {
     final interestsData = match['hobbies'];
-    // final interests = interestsData is List
-    //     ? interestsData.join(', ')
-    //     : 'No interests listed';
     final age = _calculateAge(match['dateOfBirth']);
 
     return ListTile(

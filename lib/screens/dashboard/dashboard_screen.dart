@@ -130,6 +130,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         navBarStyle: NavBarStyle.style6,
         // FIX: Add the onItemSelected callback to update the key.
         onItemSelected: (index) {
+          FocusScope.of(context).unfocus();
           // If the search tab (index 1) is selected, generate a new key.
           if (index == 1) {
             setState(() {
