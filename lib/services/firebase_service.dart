@@ -7,6 +7,7 @@ import 'dart:math' hide log;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart' hide Query;
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firstgenapp/models/chat_models.dart';
 import 'package:firstgenapp/services/continent_service.dart';
@@ -20,6 +21,7 @@ class FirebaseService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseDatabase _database = FirebaseDatabase.instance;
   final FirebaseStorage _storage = FirebaseStorage.instance;
+  final FirebaseMessaging _fcm = FirebaseMessaging.instance;
 
   Stream<User?> get authStateChanges => _auth.authStateChanges();
   User? get currentUser => _auth.currentUser;
@@ -176,6 +178,22 @@ class FirebaseService {
       throw Exception(
         'An unexpected error occurred while saving your profile.',
       );
+    }
+  }
+
+  Future<void> saveUserToken() async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+
+    try {
+      final token = await _fcm.getToken();
+      if (token != null) {
+        await _firestore.collection(userCollection).doc(user.uid).update({
+          'fcmToken': token,
+        });
+      }
+    } catch (e) {
+      log('Error saving FCM token: $e');
     }
   }
 
@@ -913,6 +931,52 @@ class FirebaseService {
       conversationRef
           .child('unreadCount/$otherUserId')
           .set(ServerValue.increment(1));
+
+      // ADD THIS: Trigger notification
+      _sendNotification(otherUserId, text);
+    }
+  }
+
+  Future<void> _sendNotification(String recipientId, String message) async {
+    final currentUser = await getCurrentChatUser();
+    if (currentUser == null) return;
+
+    try {
+      final recipientDoc = await _firestore
+          .collection(userCollection)
+          .doc(recipientId)
+          .get();
+      if (recipientDoc.exists) {
+        final recipientToken = recipientDoc.data()?['fcmToken'];
+        if (recipientToken != null) {
+          // IMPORTANT: In a production app, this logic should be in a Cloud Function
+          // for security reasons. Sending notifications directly from the client
+          // requires exposing your server key, which is not secure.
+          log('--- SIMULATING NOTIFICATION ---');
+          log('Recipient Token: $recipientToken');
+          log('Sender: ${currentUser.name}');
+          log('Message: $message');
+          log('-----------------------------');
+
+          // Example of how you would call a Cloud Function
+          // final url = Uri.parse('YOUR_CLOUD_FUNCTION_URL');
+          // await http.post(
+          //   url,
+          //   headers: {'Content-Type': 'application/json'},
+          //   body: jsonEncode({
+          //     'token': recipientToken,
+          //     'title': 'New message from ${currentUser.name}',
+          //     'body': message,
+          //     'data': {
+          //       'conversationId': getConversationId(currentUser.uid, recipientId),
+          //       'otherUser': jsonEncode(currentUser.toJson()),
+          //     }
+          //   }),
+          // );
+        }
+      }
+    } catch (e) {
+      log('Error sending notification: $e');
     }
   }
 

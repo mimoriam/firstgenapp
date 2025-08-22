@@ -1,6 +1,8 @@
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:firstgenapp/auth_gate.dart';
 import 'package:firstgenapp/services/firebase_service.dart';
+import 'package:firstgenapp/services/notification_service.dart';
 import 'package:firstgenapp/viewmodels/SignupViewModel.dart';
 import 'package:firstgenapp/viewmodels/auth_provider.dart';
 import 'package:firstgenapp/viewmodels/profile_provider.dart';
@@ -13,11 +15,22 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'firebase_options.dart';
 
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  print("Handling a background message: ${message.messageId}");
+}
+
 Future<void> main() async {
   WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
   FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
 
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+  await NotificationService().init();
 
   final SharedPreferencesAsync asyncPrefs = SharedPreferencesAsync();
   final bool onboardingDone =
@@ -58,6 +71,8 @@ class MyApp extends StatelessWidget {
               if (userProfileViewModel?.userProfileData == null &&
                   !userProfileViewModel!.isLoading) {
                 userProfileViewModel.fetchUserProfile();
+                // Add/update user token to/from DB
+                context.read<FirebaseService>().saveUserToken();
               }
             }
             // When the user logs out, clear their profile data.
@@ -70,6 +85,7 @@ class MyApp extends StatelessWidget {
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
+        navigatorKey: navigatorKey,
         theme: AppTheme.lightTheme,
         // If onboarding is done, go to AuthGate. Otherwise, show OnboardingScreen.
         home: onboardingDone ? const AuthGate() : const OnboardingScreen(),
