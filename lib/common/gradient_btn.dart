@@ -3,7 +3,8 @@ import 'package:firstgenapp/constants/appColors.dart';
 
 class GradientButton extends StatelessWidget {
   final String text;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
+  final Widget? child;
 
   final double? insets;
 
@@ -13,6 +14,7 @@ class GradientButton extends StatelessWidget {
     super.key,
     required this.text,
     required this.onPressed,
+    this.child,
     this.insets,
     this.fontSize,
   });
@@ -37,15 +39,17 @@ class GradientButton extends StatelessWidget {
             end: Alignment.centerRight,
           ),
         ),
-        child: Text(
-          text,
-          textAlign: TextAlign.center,
-          // Apply the theme style and override the color for this specific button
-          style: buttonTextStyle?.copyWith(
-            color: Colors.white,
-            fontSize: fontSize ?? buttonTextStyle.fontSize,
-          ),
-        ),
+        child:
+            child ??
+            Text(
+              text,
+              textAlign: TextAlign.center,
+              // Apply the theme style and override the color for this specific button
+              style: buttonTextStyle?.copyWith(
+                color: Colors.white,
+                fontSize: fontSize ?? buttonTextStyle.fontSize,
+              ),
+            ),
       ),
     );
   }

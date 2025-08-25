@@ -24,7 +24,8 @@ class Comment {
 }
 
 class CommentsScreen extends StatefulWidget {
-  const CommentsScreen({super.key});
+  final String postId;
+  const CommentsScreen({super.key, required this.postId});
 
   @override
   State<CommentsScreen> createState() => _CommentsScreenState();
@@ -40,7 +41,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
       name: 'Rana Utban',
       time: '22h',
       text:
-      'Lorem ipsum dolor sit amet consectetur. Mattis felis porttitor in tortor facilisis est platea quam euismod. Nulla aliquam dictumst sagittis quam.',
+          'Lorem ipsum dolor sit amet consectetur. Mattis felis porttitor in tortor facilisis est platea quam euismod. Nulla aliquam dictumst sagittis quam.',
       likes: 12,
       replies: [
         Comment(
@@ -64,7 +65,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
       name: 'Rana Utban',
       time: '22h',
       text:
-      'Lorem ipsum dolor sit amet consectetur. Mattis felis porttitor in tortor facilisis est platea.',
+          'Lorem ipsum dolor sit amet consectetur. Mattis felis porttitor in tortor facilisis est platea.',
       likes: 12,
     ),
     Comment(
@@ -108,7 +109,8 @@ class _CommentsScreenState extends State<CommentsScreen> {
       avatarUrl: 'https://randomuser.me/api/portraits/men/72.jpg',
       name: 'Omar Ahmed',
       time: '2d',
-      text: 'I found a great article related to this topic, I will share it soon.',
+      text:
+          'I found a great article related to this topic, I will share it soon.',
       likes: 18,
     ),
   ];
@@ -131,10 +133,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
             icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
             onPressed: () => Navigator.of(context).pop(),
           ),
-          title: Text(
-            'Reiki Healing Community',
-            style: textTheme.titleLarge,
-          ),
+          title: Text('Reiki Healing Community', style: textTheme.titleLarge),
         ),
         body: Column(
           children: [
@@ -149,16 +148,11 @@ class _CommentsScreenState extends State<CommentsScreen> {
                 ),
                 child: CustomScrollView(
                   slivers: [
-                    SliverToBoxAdapter(
-                      child: _buildCommentsHeader(),
-                    ),
+                    SliverToBoxAdapter(child: _buildCommentsHeader()),
                     SliverList(
-                      delegate: SliverChildBuilderDelegate(
-                            (context, index) {
-                          return CommentTile(comment: _comments[index]);
-                        },
-                        childCount: _comments.length,
-                      ),
+                      delegate: SliverChildBuilderDelegate((context, index) {
+                        return CommentTile(comment: _comments[index]);
+                      }, childCount: _comments.length),
                     ),
                   ],
                 ),
@@ -179,10 +173,9 @@ class _CommentsScreenState extends State<CommentsScreen> {
         children: [
           Text(
             '579 Comments',
-            style: Theme.of(context)
-                .textTheme
-                .titleMedium
-                ?.copyWith(fontSize: 14),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontSize: 14),
           ),
           IconButton(
             icon: const Icon(Icons.close, color: AppColors.textSecondary),
@@ -198,19 +191,21 @@ class _CommentsScreenState extends State<CommentsScreen> {
   Widget _buildCommentInputField() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-      decoration: const BoxDecoration(
-        color: AppColors.secondaryBackground,
-      ),
+      decoration: const BoxDecoration(color: AppColors.secondaryBackground),
       child: FormBuilder(
         key: _formKey,
         child: FormBuilderTextField(
           name: 'comment',
           decoration: InputDecoration(
             hintText: 'Write a comment',
-            hintStyle:
-            const TextStyle(fontSize: 14, color: AppColors.textSecondary),
-            contentPadding:
-            const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+            hintStyle: const TextStyle(
+              fontSize: 14,
+              color: AppColors.textSecondary,
+            ),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 20,
+              vertical: 14,
+            ),
             filled: true,
             fillColor: AppColors.primaryBackground,
             border: OutlineInputBorder(
@@ -228,11 +223,12 @@ class _CommentsScreenState extends State<CommentsScreen> {
             suffixIcon: const Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.add_circle_outline,
-                    color: AppColors.textSecondary),
+                Icon(Icons.add_circle_outline, color: AppColors.textSecondary),
                 SizedBox(width: 12),
-                Icon(Icons.emoji_emotions_outlined,
-                    color: AppColors.textSecondary),
+                Icon(
+                  Icons.emoji_emotions_outlined,
+                  color: AppColors.textSecondary,
+                ),
                 SizedBox(width: 12),
                 Icon(IconlyLight.send, color: AppColors.textSecondary),
                 SizedBox(width: 12),
@@ -249,11 +245,7 @@ class CommentTile extends StatefulWidget {
   final Comment comment;
   final bool isReply;
 
-  const CommentTile({
-    super.key,
-    required this.comment,
-    this.isReply = false,
-  });
+  const CommentTile({super.key, required this.comment, this.isReply = false});
 
   @override
   State<CommentTile> createState() => _CommentTileState();
@@ -293,21 +285,20 @@ class _CommentTileState extends State<CommentTile> {
                         children: [
                           Text(
                             widget.comment.name,
-                            style: textTheme.labelLarge
-                                ?.copyWith(fontWeight: FontWeight.bold),
+                            style: textTheme.labelLarge?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                           const SizedBox(width: 8),
-                          Text(
-                            widget.comment.time,
-                            style: textTheme.bodySmall,
-                          ),
+                          Text(widget.comment.time, style: textTheme.bodySmall),
                         ],
                       ),
                       const SizedBox(height: 4),
                       Text(
                         widget.comment.text,
-                        style: textTheme.bodySmall
-                            ?.copyWith(color: AppColors.textPrimary),
+                        style: textTheme.bodySmall?.copyWith(
+                          color: AppColors.textPrimary,
+                        ),
                       ),
                       const SizedBox(height: 8),
                       Row(
@@ -316,7 +307,9 @@ class _CommentTileState extends State<CommentTile> {
                           Text(
                             'Reply',
                             style: textTheme.bodySmall?.copyWith(
-                                fontWeight: FontWeight.bold, fontSize: 11),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 11,
+                            ),
                           ),
                           if (widget.comment.replies.isNotEmpty)
                             GestureDetector(

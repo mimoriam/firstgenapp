@@ -4,22 +4,28 @@ class Community {
   final String id;
   final String name;
   final String description;
-  final String imageUrl;
+  final List<String> imageUrls;
   final String creatorId;
   final List<String> members;
   final bool isInviteOnly;
   final Timestamp createdAt;
+  final String whoFor;
+  final String whatToGain;
+  final String rules;
   final DocumentSnapshot originalDoc;
 
   Community({
     required this.id,
     required this.name,
     required this.description,
-    required this.imageUrl,
+    required this.imageUrls,
     required this.creatorId,
     required this.members,
     required this.isInviteOnly,
     required this.createdAt,
+    required this.whoFor,
+    required this.whatToGain,
+    required this.rules,
     required this.originalDoc,
   });
 
@@ -29,11 +35,14 @@ class Community {
       id: doc.id,
       name: data['name'] ?? '',
       description: data['description'] ?? '',
-      imageUrl: data['imageUrl'] ?? '',
+      imageUrls: List<String>.from(data['imageUrls'] ?? []),
       creatorId: data['creatorId'] ?? '',
       members: List<String>.from(data['members'] ?? []),
       isInviteOnly: data['isInviteOnly'] ?? false,
       createdAt: data['createdAt'] ?? Timestamp.now(),
+      whoFor: data['whoFor'] ?? '',
+      whatToGain: data['whatToGain'] ?? '',
+      rules: data['rules'] ?? '',
       originalDoc: doc,
     );
   }
@@ -42,11 +51,14 @@ class Community {
     return {
       'name': name,
       'description': description,
-      'imageUrl': imageUrl,
+      'imageUrls': imageUrls,
       'creatorId': creatorId,
       'members': members,
       'isInviteOnly': isInviteOnly,
       'createdAt': createdAt,
+      'whoFor': whoFor,
+      'whatToGain': whatToGain,
+      'rules': rules,
     };
   }
 }

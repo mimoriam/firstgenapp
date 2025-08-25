@@ -17,24 +17,29 @@ class CreateCommunityScreen extends StatefulWidget {
 
 class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
   final _formKey = GlobalKey<FormBuilderState>();
-  File? _image;
+  List<File> _images = [];
   bool _isLoading = false;
 
   Future<void> _pickImage() async {
     final picker = ImagePicker();
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
-    if (pickedFile != null) {
+    final pickedFiles = await picker.pickMultiImage(
+      imageQuality: 70,
+      maxWidth: 800,
+    );
+    if (pickedFiles.isNotEmpty) {
       setState(() {
-        _image = File(pickedFile.path);
+        _images = pickedFiles
+            .map((pickedFile) => File(pickedFile.path))
+            .toList();
       });
     }
   }
 
   void _createCommunity() async {
     if (_formKey.currentState?.saveAndValidate() ?? false) {
-      if (_image == null) {
+      if (_images.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please upload an image.')),
+          const SnackBar(content: Text('Please upload at least one image.')),
         );
         return;
       }
@@ -68,18 +73,27 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
           name: formData['name'],
           description: formData['bio'],
           creatorId: userId,
-          image: _image!,
-          isInviteOnly: formData['isInviteOnly'],
+          images: _images,
+          whoFor: formData['whoFor'],
+          whatToGain: formData['whatToGain'],
+          rules: formData['rules'],
+          isInviteOnly: formData['isInviteOnly'] ?? false,
         );
-        Navigator.of(context).pop();
+        if (mounted) {
+          Navigator.of(context).pop();
+        }
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to create community: $e')),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to create community: $e')),
+          );
+        }
       } finally {
-        setState(() {
-          _isLoading = false;
-        });
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
       }
     }
   }
@@ -113,10 +127,28 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
                 name: 'name',
               ),
               _buildTextField(
-                label: 'Write a Short Bio',
+                label: 'Short Bio/Detail',
                 hint: 'Enter your detail here',
                 maxLines: 4,
                 name: 'bio',
+              ),
+              _buildTextField(
+                label: 'Who is this community for?',
+                hint: 'e.g., "This community is for..."',
+                maxLines: 3,
+                name: 'whoFor',
+              ),
+              _buildTextField(
+                label: 'What will you gain from this community?',
+                hint: 'e.g., "You will gain..."',
+                maxLines: 3,
+                name: 'whatToGain',
+              ),
+              _buildTextField(
+                label: 'Community Rules',
+                hint: 'e.g., "1. Be respectful..."',
+                maxLines: 5,
+                name: 'rules',
               ),
               _buildImageUploadSection(),
               const SizedBox(height: 8),
@@ -124,9 +156,19 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
               const SizedBox(height: 16),
               GradientButton(
                 text: 'Create Community',
-                onPressed: _isLoading ? () {} : _createCommunity,
-                fontSize: 15,
-                insets: 14,
+                onPressed: _isLoading ? null : _createCommunity,
+                child: _isLoading
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.0,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.white,
+                          ),
+                        ),
+                      )
+                    : null,
               ),
             ],
           ),
@@ -192,14 +234,8 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
             decoration: BoxDecoration(
               color: const Color(0xFFEEEEEE),
               borderRadius: BorderRadius.circular(12),
-              image: _image != null
-                  ? DecorationImage(
-                      image: FileImage(_image!),
-                      fit: BoxFit.cover,
-                    )
-                  : null,
             ),
-            child: _image == null
+            child: _images.isEmpty
                 ? Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -214,7 +250,22 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
                       ),
                     ],
                   )
-                : null,
+                : GridView.builder(
+                    padding: const EdgeInsets.all(4),
+                    itemCount: _images.length,
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 3,
+                          crossAxisSpacing: 4,
+                          mainAxisSpacing: 4,
+                        ),
+                    itemBuilder: (context, index) {
+                      return ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.file(_images[index], fit: BoxFit.cover),
+                      );
+                    },
+                  ),
           ),
         ),
       ],

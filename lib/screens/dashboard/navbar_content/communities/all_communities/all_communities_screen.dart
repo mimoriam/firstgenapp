@@ -1,5 +1,11 @@
+import 'dart:async';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firstgenapp/models/community_models.dart';
+import 'package:firstgenapp/services/firebase_service.dart';
 import 'package:flutter/material.dart';
 import 'package:firstgenapp/constants/appColors.dart';
+import 'package:provider/provider.dart';
 
 class AllCommunitiesScreen extends StatefulWidget {
   const AllCommunitiesScreen({super.key});
@@ -9,48 +15,75 @@ class AllCommunitiesScreen extends StatefulWidget {
 }
 
 class _AllCommunitiesScreenState extends State<AllCommunitiesScreen> {
-  // Mock data for all communities
-  final List<Map<String, dynamic>> _communities = [
-    {
-      'name': 'Reiki Healing',
-      'rating': 4.3,
-      'members': '10K+',
-      'description':
-      'Reiki healing channels universal energy, restoring balance and promoting holistic well-being.',
-      'image': 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=500&q=80',
-    },
-    {
-      'name': 'Yoga & Meditation',
-      'rating': 4.8,
-      'members': '25K+',
-      'description': 'Find your inner peace and strength through the practice of yoga and meditation.',
-      'image': 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=500&q=80',
-    },
-    {
-      'name': 'Spiritual Awakening',
-      'rating': 4.5,
-      'members': '15K+',
-      'description':
-      'Explore your spiritual path and connect with like-minded individuals on their journey.',
-      'image': 'https://images.unsplash.com/photo-1475924156734-496f6cac6ec1?w=500&q=80',
-    },
-    {
-      'name': 'Holistic Health',
-      'rating': 4.6,
-      'members': '18K+',
-      'description':
-      'A community dedicated to natural and holistic approaches to health and wellness.',
-      'image': 'https://images.unsplash.com/photo-1552083375-1447ce886485?w=500&q=80',
-    },
-    {
-      'name': 'Mindfulness Practices',
-      'rating': 4.7,
-      'members': '22K+',
-      'description':
-      'Learn and share mindfulness techniques to live a more present and fulfilling life.',
-      'image': 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=500&q=80',
-    },
-  ];
+  final ScrollController _scrollController = ScrollController();
+  List<Community> _communities = [];
+  bool _isLoading = false;
+  bool _hasMore = true;
+  DocumentSnapshot? _lastDocument;
+  String _searchQuery = '';
+  Timer? _debounce;
+
+  @override
+  void initState() {
+    super.initState();
+    _getCommunities();
+    _scrollController.addListener(() {
+      if (_scrollController.position.pixels ==
+          _scrollController.position.maxScrollExtent) {
+        _getCommunities();
+      }
+    });
+  }
+
+  Future<void> _getCommunities() async {
+    if (_isLoading || !_hasMore) return;
+    setState(() {
+      _isLoading = true;
+    });
+
+    final firebaseService = Provider.of<FirebaseService>(
+      context,
+      listen: false,
+    );
+    final newCommunities = await firebaseService.getAllCommunities(
+      startAfter: _lastDocument,
+      searchQuery: _searchQuery,
+    );
+
+    if (newCommunities.isEmpty) {
+      setState(() {
+        _hasMore = false;
+      });
+    } else {
+      _lastDocument = newCommunities.last.originalDoc;
+      setState(() {
+        _communities.addAll(newCommunities);
+      });
+    }
+    setState(() {
+      _isLoading = false;
+    });
+  }
+
+  void _onSearchChanged(String query) {
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    _debounce = Timer(const Duration(milliseconds: 500), () {
+      setState(() {
+        _searchQuery = query;
+        _communities = [];
+        _lastDocument = null;
+        _hasMore = true;
+      });
+      _getCommunities();
+    });
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    _debounce?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -68,44 +101,57 @@ class _AllCommunitiesScreenState extends State<AllCommunitiesScreen> {
         ),
         title: RichText(
           text: TextSpan(
-            // UPDATED: Inherited from theme
             style: textTheme.headlineSmall,
             children: [
               const TextSpan(text: 'All Communities: '),
               TextSpan(
                 text: _communities.length.toString(),
-                // UPDATED: Inherited from theme
-                style: textTheme.headlineSmall?.copyWith(color: AppColors.primaryRed),
+                style: textTheme.headlineSmall?.copyWith(
+                  color: AppColors.primaryRed,
+                ),
               ),
             ],
           ),
         ),
-        actions: [
-          IconButton(
-            onPressed: () {},
-            icon: const Icon(
-              Icons.search,
-              color: AppColors.textSecondary,
-              size: 28,
+      ),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: TextField(
+              onChanged: _onSearchChanged,
+              decoration: InputDecoration(
+                hintText: 'Search communities...',
+                prefixIcon: const Icon(Icons.search),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(color: AppColors.inputBorder),
+                ),
+              ),
+            ),
+          ),
+          Expanded(
+            child: ListView.separated(
+              controller: _scrollController,
+              padding: const EdgeInsets.all(16.0),
+              itemCount: _communities.length + (_isLoading ? 1 : 0),
+              itemBuilder: (context, index) {
+                if (index == _communities.length) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                return _CommunityCard(community: _communities[index]);
+              },
+              separatorBuilder: (context, index) => const SizedBox(height: 10),
             ),
           ),
         ],
-      ),
-      body: ListView.separated(
-        padding: const EdgeInsets.all(16.0),
-        itemCount: _communities.length,
-        itemBuilder: (context, index) {
-          return _CommunityCard(community: _communities[index]);
-        },
-        // UPDATED: Reduced spacing
-        separatorBuilder: (context, index) => const SizedBox(height: 10),
       ),
     );
   }
 }
 
 class _CommunityCard extends StatelessWidget {
-  final Map<String, dynamic> community;
+  final Community community;
 
   const _CommunityCard({required this.community});
 
@@ -114,7 +160,6 @@ class _CommunityCard extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
 
     return SizedBox(
-      // UPDATED: Reduced height for compactness
       height: 170,
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
@@ -122,7 +167,7 @@ class _CommunityCard extends StatelessWidget {
           fit: StackFit.expand,
           children: [
             Image.network(
-              community['image'],
+              community.imageUrls.first,
               fit: BoxFit.cover,
               errorBuilder: (context, error, stackTrace) =>
                   Container(color: Colors.grey.shade300),
@@ -143,15 +188,13 @@ class _CommunityCard extends StatelessWidget {
             ),
             Positioned.fill(
               child: Padding(
-                // UPDATED: Reduced padding
                 padding: const EdgeInsets.all(12.0),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      community['name'],
-                      // UPDATED: Inherited from theme and size adjusted
+                      community.name,
                       style: textTheme.titleLarge?.copyWith(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
@@ -163,20 +206,22 @@ class _CommunityCard extends StatelessWidget {
                         const Icon(Icons.star, color: Colors.amber, size: 16),
                         const SizedBox(width: 4),
                         Text(
-                          '${community['rating']} (${community['members']} members)',
-                          // UPDATED: Font size reduced
-                          style: textTheme.bodySmall
-                              ?.copyWith(color: Colors.white.withOpacity(0.9), fontSize: 11),
+                          '${community.members.length} members',
+                          style: textTheme.bodySmall?.copyWith(
+                            color: Colors.white.withOpacity(0.9),
+                            fontSize: 11,
+                          ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      community['description'],
+                      community.description,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: textTheme.bodySmall
-                          ?.copyWith(color: Colors.white.withOpacity(0.9)),
+                      style: textTheme.bodySmall?.copyWith(
+                        color: Colors.white.withOpacity(0.9),
+                      ),
                     ),
                     const Spacer(),
                     ElevatedButton(
@@ -187,14 +232,14 @@ class _CommunityCard extends StatelessWidget {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        // UPDATED: Compacted button padding
                         padding: const EdgeInsets.symmetric(
                           horizontal: 16,
                           vertical: 6,
                         ),
-                        // UPDATED: Compacted button text style
-                        textStyle: textTheme.labelLarge
-                            ?.copyWith(fontWeight: FontWeight.bold, fontSize: 13),
+                        textStyle: textTheme.labelLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
                       ),
                       child: const Text('Join Community'),
                     ),

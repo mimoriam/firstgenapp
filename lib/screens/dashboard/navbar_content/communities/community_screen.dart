@@ -154,7 +154,23 @@ class _CommunityScreenState extends State<CommunityScreen>
   }
 }
 
-class _AllCommunitiesSection extends StatelessWidget {
+class _AllCommunitiesSection extends StatefulWidget {
+  @override
+  State<_AllCommunitiesSection> createState() => _AllCommunitiesSectionState();
+}
+
+class _AllCommunitiesSectionState extends State<_AllCommunitiesSection> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<CommunityViewModel>(
+        context,
+        listen: false,
+      ).fetchAllCommunities(isInitial: true);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
@@ -192,7 +208,7 @@ class _AllCommunitiesSection extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           SizedBox(
-            height: 85,
+            height: 80,
             child: Consumer<CommunityViewModel>(
               builder: (context, viewModel, child) {
                 if (viewModel.allCommunities.isEmpty &&
@@ -223,8 +239,10 @@ class _AllCommunitiesSection extends StatelessWidget {
                         child: Column(
                           children: [
                             CircleAvatar(
-                              radius: 28,
-                              backgroundImage: NetworkImage(community.imageUrl),
+                              radius: 24,
+                              backgroundImage: NetworkImage(
+                                community.imageUrls.first,
+                              ),
                             ),
                             const SizedBox(height: 6),
                             Text(community.name, style: textTheme.bodySmall),
@@ -255,7 +273,19 @@ class _MyFeedTab extends StatelessWidget {
             if (index == 0) {
               return _CreatePostSection();
             }
-            return _PostCard(post: viewModel.feedPosts[index - 1]);
+            final post = viewModel.feedPosts[index - 1];
+            return _PostCard(
+              post: post,
+              onLike: () => viewModel.togglePostLike(post.id),
+              onComment: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => CommentsScreen(postId: post.id),
+                  ),
+                );
+              },
+              onShare: () => viewModel.sharePost(post.id),
+            );
           },
           separatorBuilder: (context, index) => const SizedBox(height: 16),
         );
@@ -440,6 +470,10 @@ class __CreatePostSectionState extends State<_CreatePostSection> {
                         communityId: _selectedCommunityId,
                         image: _image,
                       );
+                      _formKey.currentState?.reset();
+                      setState(() {
+                        _image = null;
+                      });
                     }
                   },
                   icon: const Icon(IconlyLight.send, size: 18),
@@ -535,7 +569,7 @@ class _CommunityListCard extends StatelessWidget {
           fit: StackFit.expand,
           children: [
             Image.network(
-              community.imageUrl,
+              community.imageUrls.first,
               fit: BoxFit.cover,
               errorBuilder: (context, error, stackTrace) =>
                   Container(color: Colors.grey),
@@ -658,7 +692,16 @@ class _UpcomingEventsTab extends StatelessWidget {
 
 class _PostCard extends StatelessWidget {
   final Post post;
-  const _PostCard({required this.post});
+  final VoidCallback onLike;
+  final VoidCallback onComment;
+  final VoidCallback onShare;
+
+  const _PostCard({
+    required this.post,
+    required this.onLike,
+    required this.onComment,
+    required this.onShare,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -764,7 +807,7 @@ class _PostCard extends StatelessWidget {
             PopupMenuButton<String>(
               onSelected: (value) {
                 if (value == 'share') {
-                  debugPrint('Share post tapped');
+                  onShare();
                 } else if (value == 'hide') {
                   debugPrint('Hide post tapped');
                 }
@@ -847,41 +890,51 @@ class _PostCard extends StatelessWidget {
 
   Widget _buildPostFooter(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final firebaseService = Provider.of<FirebaseService>(
+      context,
+      listen: false,
+    );
+    final currentUserId = firebaseService.currentUser?.uid;
+    final isLiked = post.likes[currentUserId] == true;
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Row(
           children: [
-            _buildFooterIcon(
-              Icons.favorite,
-              post.likes.length.toString(),
-              AppColors.primaryRed,
-              AppColors.textSecondary,
+            GestureDetector(
+              onTap: onLike,
+              child: _buildFooterIcon(
+                isLiked ? Icons.favorite : Icons.favorite_border,
+                post.likes.length.toString(),
+                AppColors.primaryRed,
+                AppColors.textSecondary,
+              ),
             ),
             const SizedBox(width: 24),
-            _buildFooterIcon(
-              Iconsax.messages_2_copy,
-              post.commentCount.toString(),
-              const Color(0xFF0A75BA),
-              AppColors.textSecondary,
+            GestureDetector(
+              onTap: onComment,
+              child: _buildFooterIcon(
+                Iconsax.messages_2_copy,
+                post.commentCount.toString(),
+                const Color(0xFF0A75BA),
+                AppColors.textSecondary,
+              ),
             ),
             const SizedBox(width: 24),
-            _buildFooterIcon(
-              Icons.share_outlined,
-              "0", // Share count not in model yet
-              const Color(0xFF009E60),
-              AppColors.textSecondary,
+            GestureDetector(
+              onTap: onShare,
+              child: _buildFooterIcon(
+                Icons.share_outlined,
+                "0", // Share count not in model yet
+                const Color(0xFF009E60),
+                AppColors.textSecondary,
+              ),
             ),
           ],
         ),
         TextButton.icon(
-          onPressed: () {
-            if (context.mounted) {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (context) => const CommentsScreen()),
-              );
-            }
-          },
+          onPressed: onComment,
           icon: const Icon(
             IconlyLight.send,
             color: AppColors.textSecondary,

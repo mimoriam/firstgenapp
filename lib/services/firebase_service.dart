@@ -1211,11 +1211,19 @@ class FirebaseService {
 
   Future<List<Community>> getAllCommunities({
     DocumentSnapshot? startAfter,
+    String searchQuery = '',
   }) async {
     Query query = _firestore
         .collection(communityCollection)
-        .orderBy('createdAt', descending: true)
-        .limit(10);
+        .orderBy('createdAt', descending: true);
+
+    if (searchQuery.isNotEmpty) {
+      query = query
+          .where('name', isGreaterThanOrEqualTo: searchQuery)
+          .where('name', isLessThanOrEqualTo: '$searchQuery\uf8ff');
+    }
+
+    query = query.limit(10);
 
     if (startAfter != null) {
       query = query.startAfterDocument(startAfter);
@@ -1237,6 +1245,10 @@ class FirebaseService {
     final List<String> joinedCommunities = List<String>.from(
       userDoc.data()?['joinedCommunities'] ?? [],
     );
+
+    if (joinedCommunities.isEmpty) {
+      return [];
+    }
 
     // Now, get the posts from those communities
     Query query = _firestore
@@ -1353,29 +1365,42 @@ class FirebaseService {
     required String name,
     required String description,
     required String creatorId,
-    required File image,
+    required List<File> images,
     required bool isInviteOnly,
+    required String whoFor,
+    required String whatToGain,
+    required String rules,
   }) async {
     try {
       DocumentReference communityRef = _firestore
           .collection(communityCollection)
           .doc();
-      final imageUrl = await _storage
-          .ref()
-          .child('community_images')
-          .child('${communityRef.id}.jpg')
-          .putFile(image)
-          .then((task) => task.ref.getDownloadURL());
+
+      List<String> imageUrls = [];
+      for (var image in images) {
+        final imageUrl = await _storage
+            .ref()
+            .child('community_images')
+            .child(
+              '${communityRef.id}/${DateTime.now().millisecondsSinceEpoch}.jpg',
+            )
+            .putFile(image)
+            .then((task) => task.ref.getDownloadURL());
+        imageUrls.add(imageUrl);
+      }
 
       Community newCommunity = Community(
         id: communityRef.id,
         name: name,
         description: description,
-        imageUrl: imageUrl,
+        imageUrls: imageUrls,
         creatorId: creatorId,
         members: [creatorId],
         isInviteOnly: isInviteOnly,
         createdAt: Timestamp.now(),
+        whoFor: whoFor,
+        whatToGain: whatToGain,
+        rules: rules,
         originalDoc: (await communityRef.get()),
       );
 
@@ -1384,6 +1409,35 @@ class FirebaseService {
       log('Error creating community: $e');
       throw Exception('Failed to create community.');
     }
+  }
+
+  Future<void> togglePostLike(String postId, String userId) async {
+    final postRef = _firestore.collection(postCollection).doc(postId);
+    final postDoc = await postRef.get();
+    if (postDoc.exists) {
+      final post = Post.fromFirestore(postDoc);
+      final isLiked = post.likes[userId] == true;
+      postRef.update({'likes.$userId': !isLiked});
+    }
+  }
+
+  Future<void> addComment(String postId, String authorId, String text) async {
+    final postRef = _firestore.collection(postCollection).doc(postId);
+    final commentRef = _firestore.collection(commentCollection).doc();
+
+    final comment = Comment(
+      id: commentRef.id,
+      postId: postId,
+      authorId: authorId,
+      text: text,
+      timestamp: Timestamp.now(),
+      likes: {},
+    );
+
+    await _firestore.runTransaction((transaction) async {
+      transaction.set(commentRef, comment.toFirestore());
+      transaction.update(postRef, {'commentCount': FieldValue.increment(1)});
+    });
   }
 }
 

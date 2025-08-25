@@ -132,4 +132,15 @@ class CommunityViewModel extends ChangeNotifier {
       // Handle error
     }
   }
+
+  Future<void> togglePostLike(String postId) async {
+    await _firebaseService.togglePostLike(postId, _userId);
+    fetchMyFeed(isInitial: true); // Refresh feed to show updated like count
+    notifyListeners();
+  }
+
+  Future<void> sharePost(String postId) async {
+    // Implement sharing logic, e.g., using the `share_plus` package
+    print("Sharing post $postId");
+  }
 }

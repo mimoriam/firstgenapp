@@ -483,7 +483,7 @@ class _PostCard extends StatelessWidget {
           onPressed: () {
             if (context.mounted) {
               Navigator.of(context).push(
-                MaterialPageRoute(builder: (context) => const CommentsScreen()),
+                MaterialPageRoute(builder: (context) => const CommentsScreen(postId: "1",)),
               );
             }
           },
