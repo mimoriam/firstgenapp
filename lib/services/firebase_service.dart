@@ -1237,7 +1237,6 @@ class FirebaseService {
     String userId, {
     DocumentSnapshot? startAfter,
   }) async {
-    // First, get the communities the user is a part of
     final userDoc = await _firestore
         .collection(userCollection)
         .doc(userId)
@@ -1246,16 +1245,25 @@ class FirebaseService {
       userDoc.data()?['joinedCommunities'] ?? [],
     );
 
+    Query query;
     if (joinedCommunities.isEmpty) {
-      return [];
+      query = _firestore
+          .collection(postCollection)
+          .where('authorId', isEqualTo: userId)
+          .orderBy('timestamp', descending: true)
+          .limit(10);
+    } else {
+      query = _firestore
+          .collection(postCollection)
+          .where(
+            Filter.or(
+              Filter('authorId', isEqualTo: userId),
+              Filter('communityId', whereIn: joinedCommunities),
+            ),
+          )
+          .orderBy('timestamp', descending: true)
+          .limit(10);
     }
-
-    // Now, get the posts from those communities
-    Query query = _firestore
-        .collection(postCollection)
-        .where('communityId', whereIn: joinedCommunities)
-        .orderBy('timestamp', descending: true)
-        .limit(10);
 
     if (startAfter != null) {
       query = query.startAfterDocument(startAfter);

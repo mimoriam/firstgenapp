@@ -121,7 +121,7 @@ class _CommunityScreenState extends State<CommunityScreen>
                       tabAlignment: TabAlignment.start,
                       padding: EdgeInsets.zero,
                       labelPadding: const EdgeInsets.symmetric(
-                        horizontal: 16.0,
+                        horizontal: 15.0,
                       ),
                       dividerColor: Colors.transparent,
                       labelStyle: textTheme.labelLarge?.copyWith(
@@ -206,9 +206,9 @@ class _AllCommunitiesSectionState extends State<_AllCommunitiesSection> {
               ],
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 2),
           SizedBox(
-            height: 80,
+            height: 82,
             child: Consumer<CommunityViewModel>(
               builder: (context, viewModel, child) {
                 if (viewModel.allCommunities.isEmpty &&
@@ -1116,7 +1116,7 @@ class _EventCardState extends State<EventCard> {
                             });
                           },
                           fontSize: 13,
-                          insets: 10,
+                          insets: 13,
                         )
                       : OutlinedButton(
                           onPressed: () {
@@ -1136,26 +1136,6 @@ class _EventCardState extends State<EventCard> {
                         ),
                 ),
                 const SizedBox(width: 12),
-                Expanded(
-                  child: TextButton(
-                    onPressed: () {
-                      PersistentNavBarNavigator.pushNewScreen(
-                        context,
-                        screen: const CommunityDetailScreen(),
-                        withNavBar: false,
-                      );
-                    },
-                    style: buttonStyle.copyWith(
-                      backgroundColor: MaterialStateProperty.all(
-                        AppColors.secondaryBackground,
-                      ),
-                      foregroundColor: MaterialStateProperty.all(
-                        AppColors.primaryRed,
-                      ),
-                    ),
-                    child: const Text("View Community"),
-                  ),
-                ),
               ],
             ),
           ],

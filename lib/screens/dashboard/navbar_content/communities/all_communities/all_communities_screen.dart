@@ -158,6 +158,13 @@ class _CommunityCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final firebaseService = Provider.of<FirebaseService>(
+      context,
+      listen: false,
+    );
+    final userId = firebaseService.currentUser?.uid;
+    final isMember = community.members.contains(userId);
+    final isCreator = community.creatorId == userId;
 
     return SizedBox(
       height: 170,
@@ -241,7 +248,11 @@ class _CommunityCard extends StatelessWidget {
                           fontSize: 13,
                         ),
                       ),
-                      child: const Text('Join Community'),
+                      child: Text(
+                        isMember || isCreator
+                            ? 'View Community'
+                            : 'Join Community',
+                      ),
                     ),
                   ],
                 ),
