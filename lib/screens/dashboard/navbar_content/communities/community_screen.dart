@@ -479,7 +479,7 @@ class __CreatePostSectionState extends State<_CreatePostSection> {
                       Padding(
                         padding: const EdgeInsets.only(left: 12.0, top: 8.0),
                         child: Text(
-                          postContentField!.errorText!,
+                          postContentField?.errorText ?? "Error",
                           style: TextStyle(
                             color: Theme.of(context).colorScheme.error,
                             fontSize: 12,
