@@ -1419,14 +1419,54 @@ class FirebaseService {
     }
   }
 
+  Future<Map<String, dynamic>?> getUserData(String userId) async {
+    try {
+      final docSnapshot = await _firestore
+          .collection(userCollection)
+          .doc(userId)
+          .get();
+      if (docSnapshot.exists) {
+        return docSnapshot.data();
+      } else {
+        return null;
+      }
+    } catch (e) {
+      log('Error getting user data: $e');
+      return null;
+    }
+  }
+
+  Future<String?> getCommunityNameById(String communityId) async {
+    try {
+      final docSnapshot = await _firestore
+          .collection(communityCollection)
+          .doc(communityId)
+          .get();
+      if (docSnapshot.exists) {
+        return docSnapshot.data()?['name'];
+      }
+      return null;
+    } catch (e) {
+      log('Error getting community name: $e');
+      return null;
+    }
+  }
+
   Future<void> togglePostLike(String postId, String userId) async {
     final postRef = _firestore.collection(postCollection).doc(postId);
-    final postDoc = await postRef.get();
-    if (postDoc.exists) {
-      final post = Post.fromFirestore(postDoc);
-      final isLiked = post.likes[userId] == true;
-      postRef.update({'likes.$userId': !isLiked});
-    }
+
+    return _firestore.runTransaction((transaction) async {
+      final postDoc = await transaction.get(postRef);
+      if (postDoc.exists) {
+        final post = Post.fromFirestore(postDoc);
+        final isLiked = post.likes[userId] == true;
+        if (isLiked) {
+          transaction.update(postRef, {'likes.$userId': FieldValue.delete()});
+        } else {
+          transaction.update(postRef, {'likes.$userId': true});
+        }
+      }
+    });
   }
 
   Future<void> addComment(String postId, String authorId, String text) async {

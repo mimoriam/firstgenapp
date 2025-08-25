@@ -276,12 +276,11 @@ class _MyFeedTab extends StatelessWidget {
             final post = viewModel.feedPosts[index - 1];
             return _PostCard(
               post: post,
-              onLike: () => viewModel.togglePostLike(post.id),
               onComment: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => CommentsScreen(postId: post.id),
-                  ),
+                PersistentNavBarNavigator.pushNewScreen(
+                  context,
+                  screen: CommentsScreen(postId: post.id),
+                  withNavBar: false, // Here is the change
                 );
               },
               onShare: () => viewModel.sharePost(post.id),
@@ -303,6 +302,7 @@ class __CreatePostSectionState extends State<_CreatePostSection> {
   final _formKey = GlobalKey<FormBuilderState>();
   File? _image;
   String? _selectedCommunityId;
+  bool _isPosting = false;
 
   Future<void> _pickImage() async {
     final picker = ImagePicker();
@@ -351,6 +351,13 @@ class __CreatePostSectionState extends State<_CreatePostSection> {
                       name: 'post_content',
                       maxLines: 5,
                       minLines: 1,
+                      validator: (value) {
+                        if ((value == null || value.isEmpty) &&
+                            _image == null) {
+                          return 'Please write something or add an image.';
+                        }
+                        return null;
+                      },
                       decoration: InputDecoration(
                         hintText:
                             "What's on your mind? Ask a question or share your story..",
@@ -427,7 +434,42 @@ class __CreatePostSectionState extends State<_CreatePostSection> {
           if (_image != null)
             Padding(
               padding: const EdgeInsets.only(top: 8.0),
-              child: Image.file(_image!, height: 100),
+              child: Stack(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.file(
+                      _image!,
+                      height: 150,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _image = null;
+                        });
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: const BoxDecoration(
+                          color: Colors.black54,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.close,
+                          color: Colors.white,
+                          size: 18,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           const SizedBox(height: 16),
           Padding(
@@ -452,6 +494,12 @@ class __CreatePostSectionState extends State<_CreatePostSection> {
                         child: Text(community.name),
                       );
                     }),
+                    ...viewModel.createdCommunities.map((community) {
+                      return DropdownMenuItem(
+                        value: community.id,
+                        child: Text(community.name),
+                      );
+                    }),
                   ],
                   onChanged: (value) {
                     setState(() {
@@ -461,23 +509,47 @@ class __CreatePostSectionState extends State<_CreatePostSection> {
                 ),
                 const Spacer(),
                 ElevatedButton.icon(
-                  onPressed: () {
-                    if (_formKey.currentState?.saveAndValidate() ?? false) {
-                      final postContent =
-                          _formKey.currentState?.value['post_content'];
-                      viewModel.createPost(
-                        content: postContent,
-                        communityId: _selectedCommunityId,
-                        image: _image,
-                      );
-                      _formKey.currentState?.reset();
-                      setState(() {
-                        _image = null;
-                      });
-                    }
-                  },
-                  icon: const Icon(IconlyLight.send, size: 18),
-                  label: const Text('Post Now'),
+                  onPressed: _isPosting
+                      ? null
+                      : () {
+                          if (_formKey.currentState?.saveAndValidate() ??
+                              false) {
+                            setState(() {
+                              _isPosting = true;
+                            });
+                            final postContent =
+                                _formKey.currentState?.value['post_content'] ??
+                                '';
+                            viewModel
+                                .createPost(
+                                  content: postContent,
+                                  communityId: _selectedCommunityId,
+                                  image: _image,
+                                )
+                                .then((_) {
+                                  _formKey.currentState?.reset();
+                                  setState(() {
+                                    _image = null;
+                                    _isPosting = false;
+                                  });
+                                });
+                          }
+                        },
+                  icon: _isPosting
+                      ? Container(
+                          width: 20,
+                          height: 20,
+                          child: const CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
+                          ),
+                        )
+                      : const Icon(IconlyLight.send, size: 18),
+                  label: _isPosting
+                      ? const SizedBox.shrink()
+                      : const Text('Post Now'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primaryRed,
                     foregroundColor: Colors.white,
@@ -692,13 +764,11 @@ class _UpcomingEventsTab extends StatelessWidget {
 
 class _PostCard extends StatelessWidget {
   final Post post;
-  final VoidCallback onLike;
   final VoidCallback onComment;
   final VoidCallback onShare;
 
   const _PostCard({
     required this.post,
-    required this.onLike,
     required this.onComment,
     required this.onShare,
   });
@@ -732,134 +802,161 @@ class _PostCard extends StatelessWidget {
 
   Widget _buildPostHeader(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    // In a real app, you would fetch author and community details based on IDs
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    final firebaseService = Provider.of<FirebaseService>(
+      context,
+      listen: false,
+    );
+
+    return FutureBuilder<Map<String, dynamic>?>(
+      future: firebaseService.getUserData(post.authorId),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const SizedBox.shrink(); // Or a loading indicator
+        }
+        final authorData = snapshot.data;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            RichText(
-              text: TextSpan(
-                style: textTheme.bodySmall,
-                children: [
-                  const TextSpan(text: 'Posted in '),
-                  TextSpan(
-                    text: post.communityId ?? "My Feed",
-                    style: const TextStyle(
-                      color: AppColors.primaryRed,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            TextButton(
-              onPressed: () {
-                if (context.mounted) {
-                  PersistentNavBarNavigator.pushNewScreen(
-                    context,
-                    screen: const CommunityDetailScreen(),
-                    withNavBar: false,
+            if (post.communityId != null)
+              FutureBuilder<String?>(
+                future: firebaseService.getCommunityNameById(post.communityId!),
+                builder: (context, communitySnapshot) {
+                  return Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      RichText(
+                        text: TextSpan(
+                          style: textTheme.bodySmall,
+                          children: [
+                            const TextSpan(text: 'Posted in '),
+                            TextSpan(
+                              text: communitySnapshot.data ?? "...",
+                              style: const TextStyle(
+                                color: AppColors.primaryRed,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          if (context.mounted) {
+                            PersistentNavBarNavigator.pushNewScreen(
+                              context,
+                              screen: const CommunityDetailScreen(),
+                              withNavBar: false,
+                            );
+                          }
+                        },
+                        child: Text(
+                          'View Community',
+                          style: textTheme.bodySmall?.copyWith(
+                            color: AppColors.primaryRed,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
                   );
-                }
-              },
-              child: Text(
-                'View Community',
-                style: textTheme.bodySmall?.copyWith(
-                  color: AppColors.primaryRed,
-                  fontWeight: FontWeight.bold,
+                },
+              ),
+            if (post.communityId != null)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                child: Divider(height: 1, color: Colors.grey.shade200),
+              ),
+            Row(
+              children: [
+                CircleAvatar(
+                  backgroundImage: NetworkImage(
+                    authorData?['profileImageUrl'] ??
+                        "https://randomuser.me/api/portraits/women/1.jpg",
+                  ),
                 ),
-              ),
-            ),
-          ],
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8.0),
-          child: Divider(height: 1, color: Colors.grey.shade200),
-        ),
-        Row(
-          children: [
-            const CircleAvatar(
-              backgroundImage: NetworkImage(
-                "https://randomuser.me/api/portraits/women/1.jpg",
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "Author Name", // Fetch author name
-                    style: textTheme.labelLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                  Text(
-                    TimeAgo.format(post.timestamp.toDate().toIso8601String()),
-                    style: textTheme.bodySmall,
-                  ),
-                ],
-              ),
-            ),
-            PopupMenuButton<String>(
-              onSelected: (value) {
-                if (value == 'share') {
-                  onShare();
-                } else if (value == 'hide') {
-                  debugPrint('Hide post tapped');
-                }
-              },
-              icon: const Icon(Icons.more_vert, color: AppColors.textSecondary),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-                PopupMenuItem<String>(
-                  value: 'share',
-                  child: Row(
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(
-                        Icons.share_outlined,
-                        color: AppColors.textSecondary,
-                      ),
-                      const SizedBox(width: 8),
                       Text(
-                        'Share Post',
+                        authorData?['fullName'] ?? "Author Name",
                         style: textTheme.labelLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
                           color: AppColors.textPrimary,
-                          fontWeight: FontWeight.w600,
                         ),
+                      ),
+                      Text(
+                        TimeAgo.format(
+                          post.timestamp.toDate().toIso8601String(),
+                        ),
+                        style: textTheme.bodySmall,
                       ),
                     ],
                   ),
                 ),
-                PopupMenuItem<String>(
-                  value: 'hide',
-                  child: Row(
-                    children: [
-                      const Icon(
-                        IconlyLight.hide,
-                        color: AppColors.textSecondary,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Hide Post',
-                        style: textTheme.labelLarge?.copyWith(
-                          color: AppColors.textPrimary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
+                PopupMenuButton<String>(
+                  onSelected: (value) {
+                    if (value == 'share') {
+                      onShare();
+                    } else if (value == 'hide') {
+                      debugPrint('Hide post tapped');
+                    }
+                  },
+                  icon: const Icon(
+                    Icons.more_vert,
+                    color: AppColors.textSecondary,
                   ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  itemBuilder: (BuildContext context) =>
+                      <PopupMenuEntry<String>>[
+                        PopupMenuItem<String>(
+                          value: 'share',
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.share_outlined,
+                                color: AppColors.textSecondary,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Share Post',
+                                style: textTheme.labelLarge?.copyWith(
+                                  color: AppColors.textPrimary,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        PopupMenuItem<String>(
+                          value: 'hide',
+                          child: Row(
+                            children: [
+                              const Icon(
+                                IconlyLight.hide,
+                                color: AppColors.textSecondary,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Hide Post',
+                                style: textTheme.labelLarge?.copyWith(
+                                  color: AppColors.textPrimary,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                 ),
               ],
             ),
           ],
-        ),
-      ],
+        );
+      },
     );
   }
 
@@ -889,13 +986,63 @@ class _PostCard extends StatelessWidget {
   }
 
   Widget _buildPostFooter(BuildContext context) {
+    return _PostActions(post: post, onComment: onComment, onShare: onShare);
+  }
+}
+
+class _PostActions extends StatefulWidget {
+  final Post post;
+  final VoidCallback onComment;
+  final VoidCallback onShare;
+
+  const _PostActions({
+    required this.post,
+    required this.onComment,
+    required this.onShare,
+  });
+
+  @override
+  __PostActionsState createState() => __PostActionsState();
+}
+
+class __PostActionsState extends State<_PostActions> {
+  late Map<String, bool> _likes;
+  late int _commentCount;
+
+  @override
+  void initState() {
+    super.initState();
+    _likes = widget.post.likes;
+    _commentCount = widget.post.commentCount;
+  }
+
+  void _toggleLike() {
+    final firebaseService = Provider.of<FirebaseService>(
+      context,
+      listen: false,
+    );
+    final userId = firebaseService.currentUser!.uid;
+
+    setState(() {
+      if (_likes.containsKey(userId)) {
+        _likes.remove(userId);
+      } else {
+        _likes[userId] = true;
+      }
+    });
+
+    firebaseService.togglePostLike(widget.post.id, userId);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final firebaseService = Provider.of<FirebaseService>(
       context,
       listen: false,
     );
     final currentUserId = firebaseService.currentUser?.uid;
-    final isLiked = post.likes[currentUserId] == true;
+    final isLiked = _likes[currentUserId] == true;
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -903,27 +1050,27 @@ class _PostCard extends StatelessWidget {
         Row(
           children: [
             GestureDetector(
-              onTap: onLike,
+              onTap: _toggleLike,
               child: _buildFooterIcon(
                 isLiked ? Icons.favorite : Icons.favorite_border,
-                post.likes.length.toString(),
+                _likes.length.toString(),
                 AppColors.primaryRed,
                 AppColors.textSecondary,
               ),
             ),
             const SizedBox(width: 24),
             GestureDetector(
-              onTap: onComment,
+              onTap: widget.onComment,
               child: _buildFooterIcon(
                 Iconsax.messages_2_copy,
-                post.commentCount.toString(),
+                _commentCount.toString(),
                 const Color(0xFF0A75BA),
                 AppColors.textSecondary,
               ),
             ),
             const SizedBox(width: 24),
             GestureDetector(
-              onTap: onShare,
+              onTap: widget.onShare,
               child: _buildFooterIcon(
                 Icons.share_outlined,
                 "0", // Share count not in model yet
@@ -934,7 +1081,7 @@ class _PostCard extends StatelessWidget {
           ],
         ),
         TextButton.icon(
-          onPressed: onComment,
+          onPressed: widget.onComment,
           icon: const Icon(
             IconlyLight.send,
             color: AppColors.textSecondary,

@@ -135,7 +135,8 @@ class CommunityViewModel extends ChangeNotifier {
 
   Future<void> togglePostLike(String postId) async {
     await _firebaseService.togglePostLike(postId, _userId);
-    fetchMyFeed(isInitial: true); // Refresh feed to show updated like count
+    // No need to refresh the whole feed, the local state will update
+    // fetchMyFeed(isInitial: true);
     notifyListeners();
   }
 
