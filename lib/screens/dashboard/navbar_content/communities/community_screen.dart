@@ -190,7 +190,23 @@ class _CommunityScreenState extends State<CommunityScreen>
   }
 }
 
-class _AllCommunitiesSection extends StatelessWidget {
+class _AllCommunitiesSection extends StatefulWidget {
+  @override
+  State<_AllCommunitiesSection> createState() => _AllCommunitiesSectionState();
+}
+
+class _AllCommunitiesSectionState extends State<_AllCommunitiesSection> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<CommunityViewModel>(
+        context,
+        listen: false,
+      ).fetchAllCommunities(isInitial: true);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
@@ -357,6 +373,7 @@ class __CreatePostSectionState extends State<_CreatePostSection> {
 
     return FormBuilder(
       key: _formKey,
+      autovalidateMode: AutovalidateMode.onUserInteraction,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -406,14 +423,11 @@ class __CreatePostSectionState extends State<_CreatePostSection> {
                             name: 'post_content',
                             maxLines: 5,
                             minLines: 1,
-                            onChanged: (_) {
-                              // FIX: Trigger rebuild on change to update border color
-                              setState(() {});
-                            },
+                            // FIX: Remove setState from onChanged to prevent keyboard flicker
+                            onChanged: (_) {},
                             validator: (value) {
-                              if ((value == null || value.isEmpty) &&
-                                  _image == null) {
-                                return 'Please write something or add an image.';
+                              if ((value == null || value.isEmpty)) {
+                                return 'Please write something to post.';
                               }
                               return null;
                             },
@@ -431,9 +445,7 @@ class __CreatePostSectionState extends State<_CreatePostSection> {
                               focusedBorder: InputBorder.none,
                               errorBorder: InputBorder.none,
                               focusedErrorBorder: InputBorder.none,
-                              errorText: "",
-                              // FIX: Remove the default error message display
-                              errorStyle: const TextStyle(height: 0),
+                              errorText: postContentField?.errorText,
                             ),
                           ),
                           Padding(
@@ -475,17 +487,6 @@ class __CreatePostSectionState extends State<_CreatePostSection> {
                         ],
                       ),
                     ),
-                    if (hasError)
-                      Padding(
-                        padding: const EdgeInsets.only(left: 12.0, top: 8.0),
-                        child: Text(
-                          postContentField?.errorText ?? "Error",
-                          style: TextStyle(
-                            color: Theme.of(context).colorScheme.error,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ),
                   ],
                 ),
               ),
@@ -599,11 +600,17 @@ class __CreatePostSectionState extends State<_CreatePostSection> {
                                   image: _image,
                                 )
                                 .then((_) {
+                                  // FIX: Clear the form and reset state
                                   _formKey.currentState?.reset();
                                   setState(() {
                                     _image = null;
                                     _isPosting = false;
                                   });
+
+                                  // FIX: Unfocus the text field to hide the keyboard
+                                  if (context.mounted) {
+                                    FocusScope.of(context).unfocus();
+                                  }
                                 });
                           }
                         },
@@ -879,7 +886,6 @@ class _PostCard extends StatelessWidget {
       context,
       listen: false,
     );
-
     return FutureBuilder<Map<String, dynamic>?>(
       future: firebaseService.getUserData(post.authorId),
       builder: (context, snapshot) {
