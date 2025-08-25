@@ -80,10 +80,8 @@ class _CommunityScreenState extends State<CommunityScreen>
             GestureDetector(
               onTap: () {
                 if (context.mounted) {
-                  final viewModel = Provider.of<CommunityViewModel>(
-                    context,
-                    listen: false,
-                  );
+                  final viewModel =
+                  Provider.of<CommunityViewModel>(context, listen: false);
                   PersistentNavBarNavigator.pushNewScreen(
                     context,
                     screen: ChangeNotifierProvider.value(
@@ -107,40 +105,39 @@ class _CommunityScreenState extends State<CommunityScreen>
         ),
         body: CustomRefreshIndicator(
           onRefresh: _handleRefresh,
-          builder:
-              (
-                BuildContext context,
-                Widget child,
-                IndicatorController controller,
+          builder: (
+              BuildContext context,
+              Widget child,
+              IndicatorController controller,
               ) {
-                return AnimatedBuilder(
-                  animation: controller,
-                  builder: (BuildContext context, _) {
-                    return Stack(
-                      alignment: Alignment.topCenter,
-                      children: <Widget>[
-                        if (!controller.isIdle)
-                          Positioned(
-                            top: 35.0 * controller.value,
-                            child: SizedBox(
-                              height: 30,
-                              width: 30,
-                              child: CircularProgressIndicator(
-                                value: !controller.isLoading
-                                    ? controller.value.clamp(0.0, 1.0)
-                                    : null,
-                              ),
-                            ),
+            return AnimatedBuilder(
+              animation: controller,
+              builder: (BuildContext context, _) {
+                return Stack(
+                  alignment: Alignment.topCenter,
+                  children: <Widget>[
+                    if (!controller.isIdle)
+                      Positioned(
+                        top: 35.0 * controller.value,
+                        child: SizedBox(
+                          height: 30,
+                          width: 30,
+                          child: CircularProgressIndicator(
+                            value: !controller.isLoading
+                                ? controller.value.clamp(0.0, 1.0)
+                                : null,
                           ),
-                        Transform.translate(
-                          offset: Offset(0, 100.0 * controller.value),
-                          child: child,
                         ),
-                      ],
-                    );
-                  },
+                      ),
+                    Transform.translate(
+                      offset: Offset(0, 100.0 * controller.value),
+                      child: child,
+                    ),
+                  ],
                 );
               },
+            );
+          },
           child: NestedScrollView(
             headerSliverBuilder: (context, innerBoxIsScrolled) {
               return [
@@ -190,7 +187,23 @@ class _CommunityScreenState extends State<CommunityScreen>
   }
 }
 
-class _AllCommunitiesSection extends StatelessWidget {
+class _AllCommunitiesSection extends StatefulWidget {
+  @override
+  State<_AllCommunitiesSection> createState() => _AllCommunitiesSectionState();
+}
+
+class _AllCommunitiesSectionState extends State<_AllCommunitiesSection> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<CommunityViewModel>(
+        context,
+        listen: false,
+      ).fetchAllCommunities(isInitial: true);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
@@ -257,7 +270,7 @@ class _AllCommunitiesSection extends StatelessWidget {
                           }
                         },
                         child: SizedBox(
-                          width: 60,
+                          width: 60, // Constrain width
                           child: Column(
                             children: [
                               CircleAvatar(
@@ -267,6 +280,7 @@ class _AllCommunitiesSection extends StatelessWidget {
                                 ),
                               ),
                               const SizedBox(height: 6),
+                              // FIX: Allow text to wrap to 2 lines and add ellipsis
                               Text(
                                 community.name,
                                 style: textTheme.bodySmall,
@@ -346,12 +360,13 @@ class __CreatePostSectionState extends State<_CreatePostSection> {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    final viewModel = Provider.of<CommunityViewModel>(context);
+    final viewModel = Provider.of<CommunityViewModel>(context, listen: false);
     final userProfileViewModel = Provider.of<UserProfileViewModel>(context);
     final userData = userProfileViewModel.userProfileData;
     final imageUrl = userData?['profileImageUrl'];
     final hasPhoto = imageUrl != null && imageUrl.isNotEmpty;
 
+    // Determine if the field has an error to adjust the border color
     final postContentField = _formKey.currentState?.fields['post_content'];
     final hasError = postContentField != null && postContentField.hasError;
 
@@ -386,6 +401,7 @@ class __CreatePostSectionState extends State<_CreatePostSection> {
               ),
               const SizedBox(width: 12),
               Expanded(
+                // FIX: Refactor the text field and icons to handle validation errors gracefully.
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -406,10 +422,6 @@ class __CreatePostSectionState extends State<_CreatePostSection> {
                             name: 'post_content',
                             maxLines: 5,
                             minLines: 1,
-                            onChanged: (_) {
-                              // FIX: Trigger rebuild on change to update border color
-                              setState(() {});
-                            },
                             validator: (value) {
                               if ((value == null || value.isEmpty) &&
                                   _image == null) {
@@ -431,8 +443,6 @@ class __CreatePostSectionState extends State<_CreatePostSection> {
                               focusedBorder: InputBorder.none,
                               errorBorder: InputBorder.none,
                               focusedErrorBorder: InputBorder.none,
-                              // FIX: Remove the default error message display
-                              errorStyle: const TextStyle(height: 0),
                             ),
                           ),
                           Padding(
@@ -452,7 +462,9 @@ class __CreatePostSectionState extends State<_CreatePostSection> {
                                   ),
                                 ),
                                 IconButton(
-                                  onPressed: () {},
+                                  onPressed: () {
+                                    // TODO: Implement attachment logic
+                                  },
                                   icon: const Icon(
                                     Icons.attach_file_outlined,
                                     color: AppColors.textSecondary,
@@ -461,7 +473,9 @@ class __CreatePostSectionState extends State<_CreatePostSection> {
                                 ),
                                 const SizedBox(width: 12),
                                 IconButton(
-                                  onPressed: () {},
+                                  onPressed: () {
+                                    // TODO: Implement emoji logic
+                                  },
                                   icon: const Icon(
                                     Icons.emoji_emotions_outlined,
                                     color: AppColors.textSecondary,
@@ -550,8 +564,9 @@ class __CreatePostSectionState extends State<_CreatePostSection> {
                     ...viewModel.joinedCommunities.map((community) {
                       return DropdownMenuItem(
                         value: community.id,
+                        // FIX: Handle text overflow in dropdown
                         child: SizedBox(
-                          width: 100,
+                          width: 100, // Adjust width as needed
                           child: Text(
                             community.name,
                             overflow: TextOverflow.ellipsis,

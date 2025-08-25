@@ -42,6 +42,16 @@ class CommunityViewModel extends ChangeNotifier {
     fetchMyCommunities();
   }
 
+  // FIX: Add a comprehensive refresh method
+  Future<void> refreshAllData() async {
+    await Future.wait([
+      fetchAllCommunities(isInitial: true),
+      fetchMyFeed(isInitial: true),
+      fetchMyCommunities(),
+    ]);
+    notifyListeners();
+  }
+
   Future<void> fetchAllCommunities({bool isInitial = false}) async {
     if (_isLoadingAll || !_hasMoreAll) return;
     _isLoadingAll = true;

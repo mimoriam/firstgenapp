@@ -5,6 +5,7 @@ import 'package:firstgenapp/services/firebase_service.dart';
 import 'package:firstgenapp/viewmodels/community_viewmodel.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
+import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:iconly/iconly.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
@@ -113,10 +114,11 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
           isInviteOnly: formData['isInviteOnly'] ?? false,
         );
         if (mounted) {
-          Provider.of<CommunityViewModel>(
+          // FIX: Call the new refresh method to update all community data
+          await Provider.of<CommunityViewModel>(
             context,
             listen: false,
-          ).fetchAllCommunities(isInitial: true);
+          ).refreshAllData();
           Navigator.of(context).pop();
         }
       } catch (e) {
@@ -162,30 +164,45 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
                 label: 'Name',
                 hint: 'Enter Community Name',
                 name: 'name',
+                validator: FormBuilderValidators.required(
+                  errorText: 'Community name is required.',
+                ),
               ),
               _buildTextField(
                 label: 'Short Bio/Detail',
                 hint: 'Enter your detail here',
                 maxLines: 4,
                 name: 'bio',
+                validator: FormBuilderValidators.required(
+                  errorText: 'Bio is required.',
+                ),
               ),
               _buildTextField(
                 label: 'Who is this community for?',
                 hint: 'e.g., "This community is for..."',
                 maxLines: 3,
                 name: 'whoFor',
+                validator: FormBuilderValidators.required(
+                  errorText: 'This field is required.',
+                ),
               ),
               _buildTextField(
                 label: 'What will you gain from this community?',
                 hint: 'e.g., "You will gain..."',
                 maxLines: 3,
                 name: 'whatToGain',
+                validator: FormBuilderValidators.required(
+                  errorText: 'This field is required.',
+                ),
               ),
               _buildTextField(
                 label: 'Community Rules',
                 hint: 'e.g., "1. Be respectful..."',
                 maxLines: 5,
                 name: 'rules',
+                validator: FormBuilderValidators.required(
+                  errorText: 'Rules are required.',
+                ),
               ),
               _buildImageUploadSection(),
               const SizedBox(height: 8),
@@ -219,6 +236,7 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
     required String hint,
     required String name,
     int maxLines = 1,
+    String? Function(String?)? validator,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16.0),
@@ -235,6 +253,7 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
           FormBuilderTextField(
             name: name,
             maxLines: maxLines,
+            validator: validator,
             decoration: InputDecoration(
               hintText: hint,
               hintStyle: const TextStyle(
