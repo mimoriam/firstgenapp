@@ -10,6 +10,7 @@ import 'package:firebase_database/firebase_database.dart' hide Query;
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firstgenapp/models/chat_models.dart';
+import 'package:firstgenapp/models/community_models.dart';
 import 'package:firstgenapp/services/continent_service.dart';
 import 'package:firstgenapp/utils/authException.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -27,6 +28,9 @@ class FirebaseService {
   User? get currentUser => _auth.currentUser;
 
   final userCollection = "users";
+  final communityCollection = "communities";
+  final postCollection = "posts";
+  final commentCollection = "comments";
 
   // Email/Password Login
   Future<UserCredential> loginWithEmail({
@@ -205,7 +209,6 @@ class FirebaseService {
       log('Error saving FCM token: $e');
     }
   }
-
 
   // MODIFICATION: Added a method to check if the user's profile document exists in Firestore.
   Future<bool> isUserProfileComplete(String userId) async {
@@ -1206,45 +1209,222 @@ class FirebaseService {
     });
   }
 
-  /// Maps [FirebaseAuthException] codes to user-friendly [AuthException] objects.
-  AuthException _handleAuthException(FirebaseAuthException e) {
-    log('FirebaseAuthException: code=${e.code}, message=${e.message}');
-    String message;
-    switch (e.code) {
-      case 'user-not-found':
-        message = 'No user found for that email.';
-        break;
-      case 'wrong-password':
-        message = 'Incorrect password. Please try again.';
-        break;
-      case 'email-already-in-use':
-        message = 'An account already exists for that email.';
-        break;
-      case 'weak-password':
-        message = 'The password provided is too weak.';
-        break;
-      case 'invalid-email':
-        message = 'The email address is not valid.';
-        break;
-      case 'invalid-credential':
-        message = "Wrong email/password combination.";
-        break;
-      case 'user-disabled':
-        message = 'This user account has been disabled.';
-        break;
-      case 'too-many-requests':
-        message =
-            'Access to this account has been temporarily disabled due to many failed login attempts. You can immediately restore it by resetting your password or you can try again later.';
-        break;
-      case 'network-request-failed':
-        message = 'Network error. Please check your connection and try again.';
-        break;
-      case 'account-exists-with-different-credential':
-        message = 'An account already exists with this email address.';
-        break;
-      default:
-        message = 'An unknown authentication error occurred.';
+  Future<List<Community>> getAllCommunities({
+    DocumentSnapshot? startAfter,
+  }) async {
+    Query query = _firestore
+        .collection(communityCollection)
+        .orderBy('createdAt', descending: true)
+        .limit(10);
+
+    if (startAfter != null) {
+      query = query.startAfterDocument(startAfter);
     }
-    return AuthException(message, code: e.code);
+
+    final snapshot = await query.get();
+    return snapshot.docs.map((doc) => Community.fromFirestore(doc)).toList();
   }
+
+  Future<List<Post>> getFeedForUser(
+    String userId, {
+    DocumentSnapshot? startAfter,
+  }) async {
+    // First, get the communities the user is a part of
+    final userDoc = await _firestore
+        .collection(userCollection)
+        .doc(userId)
+        .get();
+    final List<String> joinedCommunities = List<String>.from(
+      userDoc.data()?['joinedCommunities'] ?? [],
+    );
+
+    // Now, get the posts from those communities
+    Query query = _firestore
+        .collection(postCollection)
+        .where('communityId', whereIn: joinedCommunities)
+        .orderBy('timestamp', descending: true)
+        .limit(10);
+
+    if (startAfter != null) {
+      query = query.startAfterDocument(startAfter);
+    }
+
+    final snapshot = await query.get();
+    return snapshot.docs.map((doc) => Post.fromFirestore(doc)).toList();
+  }
+
+  Future<List<Community>> getCreatedCommunities(String userId) async {
+    final snapshot = await _firestore
+        .collection(communityCollection)
+        .where('creatorId', isEqualTo: userId)
+        .get();
+    return snapshot.docs.map((doc) => Community.fromFirestore(doc)).toList();
+  }
+
+  Future<List<Community>> getJoinedCommunities(String userId) async {
+    final userDoc = await _firestore
+        .collection(userCollection)
+        .doc(userId)
+        .get();
+    final List<String> joinedCommunityIds = List<String>.from(
+      userDoc.data()?['joinedCommunities'] ?? [],
+    );
+
+    if (joinedCommunityIds.isEmpty) {
+      return [];
+    }
+
+    final snapshot = await _firestore
+        .collection(communityCollection)
+        .where(FieldPath.documentId, whereIn: joinedCommunityIds)
+        .get();
+    return snapshot.docs.map((doc) => Community.fromFirestore(doc)).toList();
+  }
+
+  Future<String> uploadPostImage(String postId, File image) async {
+    try {
+      final ref = _storage.ref().child('post_images').child('$postId.jpg');
+      await ref.putFile(image);
+      return await ref.getDownloadURL();
+    } on FirebaseException catch (e) {
+      log('FirebaseException in uploadPostImage: ${e.code}', error: e);
+      throw Exception('Failed to upload post image.');
+    } catch (e) {
+      log('An unexpected error occurred in uploadPostImage', error: e);
+      throw Exception(
+        'An unexpected error occurred while uploading your image.',
+      );
+    }
+  }
+
+  Future<void> createPost({
+    required String content,
+    required String authorId,
+    String? communityId,
+    File? image,
+  }) async {
+    try {
+      DocumentReference postRef = _firestore.collection(postCollection).doc();
+      String? imageUrl;
+      if (image != null) {
+        imageUrl = await uploadPostImage(postRef.id, image);
+      }
+
+      Post newPost = Post(
+        id: postRef.id,
+        authorId: authorId,
+        communityId: communityId,
+        content: content,
+        imageUrl: imageUrl,
+        timestamp: Timestamp.now(),
+        likes: {},
+        commentCount: 0,
+        originalDoc: (await postRef.get()),
+      );
+
+      await postRef.set(newPost.toFirestore());
+    } catch (e) {
+      log('Error creating post: $e');
+      throw Exception('Failed to create post.');
+    }
+  }
+
+  Future<void> updatePost(String postId, String newContent) async {
+    try {
+      await _firestore.collection(postCollection).doc(postId).update({
+        'content': newContent,
+      });
+    } catch (e) {
+      log('Error updating post: $e');
+      throw Exception('Failed to update post.');
+    }
+  }
+
+  Future<void> deletePost(String postId) async {
+    try {
+      await _firestore.collection(postCollection).doc(postId).delete();
+    } catch (e) {
+      log('Error deleting post: $e');
+      throw Exception('Failed to delete post.');
+    }
+  }
+
+  Future<void> createCommunity({
+    required String name,
+    required String description,
+    required String creatorId,
+    required File image,
+    required bool isInviteOnly,
+  }) async {
+    try {
+      DocumentReference communityRef = _firestore
+          .collection(communityCollection)
+          .doc();
+      final imageUrl = await _storage
+          .ref()
+          .child('community_images')
+          .child('${communityRef.id}.jpg')
+          .putFile(image)
+          .then((task) => task.ref.getDownloadURL());
+
+      Community newCommunity = Community(
+        id: communityRef.id,
+        name: name,
+        description: description,
+        imageUrl: imageUrl,
+        creatorId: creatorId,
+        members: [creatorId],
+        isInviteOnly: isInviteOnly,
+        createdAt: Timestamp.now(),
+        originalDoc: (await communityRef.get()),
+      );
+
+      await communityRef.set(newCommunity.toFirestore());
+    } catch (e) {
+      log('Error creating community: $e');
+      throw Exception('Failed to create community.');
+    }
+  }
+}
+
+/// Maps [FirebaseAuthException] codes to user-friendly [AuthException] objects.
+AuthException _handleAuthException(FirebaseAuthException e) {
+  log('FirebaseAuthException: code=${e.code}, message=${e.message}');
+  String message;
+  switch (e.code) {
+    case 'user-not-found':
+      message = 'No user found for that email.';
+      break;
+    case 'wrong-password':
+      message = 'Incorrect password. Please try again.';
+      break;
+    case 'email-already-in-use':
+      message = 'An account already exists for that email.';
+      break;
+    case 'weak-password':
+      message = 'The password provided is too weak.';
+      break;
+    case 'invalid-email':
+      message = 'The email address is not valid.';
+      break;
+    case 'invalid-credential':
+      message = "Wrong email/password combination.";
+      break;
+    case 'user-disabled':
+      message = 'This user account has been disabled.';
+      break;
+    case 'too-many-requests':
+      message =
+          'Access to this account has been temporarily disabled due to many failed login attempts. You can immediately restore it by resetting your password or you can try again later.';
+      break;
+    case 'network-request-failed':
+      message = 'Network error. Please check your connection and try again.';
+      break;
+    case 'account-exists-with-different-credential':
+      message = 'An account already exists with this email address.';
+      break;
+    default:
+      message = 'An unknown authentication error occurred.';
+  }
+  return AuthException(message, code: e.code);
 }

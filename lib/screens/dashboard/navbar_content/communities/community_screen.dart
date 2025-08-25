@@ -1,15 +1,23 @@
+import 'dart:io';
+
 import 'package:firstgenapp/common/gradient_btn.dart';
+import 'package:firstgenapp/models/community_models.dart';
+import 'package:firstgenapp/services/firebase_service.dart';
+import 'package:firstgenapp/utils/time_ago.dart';
+import 'package:firstgenapp/viewmodels/community_viewmodel.dart';
+import 'package:flutter/material.dart';
 import 'package:firstgenapp/constants/appColors.dart';
 import 'package:firstgenapp/screens/dashboard/navbar_content/communities/all_communities/all_communities_screen.dart';
 import 'package:firstgenapp/screens/dashboard/navbar_content/communities/comments/comments_screen.dart';
 import 'package:firstgenapp/screens/dashboard/navbar_content/communities/community_detail/community_detail_screen.dart';
 import 'package:firstgenapp/screens/dashboard/navbar_content/communities/create_community/create_community_screen.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_keyboard_visibility/flutter_keyboard_visibility.dart';
 import 'package:iconly/iconly.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
+import 'package:provider/provider.dart';
 
 class CommunityScreen extends StatefulWidget {
   final int? initialIndex;
@@ -22,7 +30,6 @@ class CommunityScreen extends StatefulWidget {
 class _CommunityScreenState extends State<CommunityScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  final _formKey = GlobalKey<FormBuilderState>();
 
   @override
   void initState() {
@@ -40,147 +47,116 @@ class _CommunityScreenState extends State<CommunityScreen>
     super.dispose();
   }
 
-  // Mock Data
-  final List<Map<String, String>> _communities = [
-    {
-      'name': 'Latino Link',
-      'avatar': 'https://randomuser.me/api/portraits/women/68.jpg',
-    },
-    {
-      'name': 'Desi Vibes',
-      'avatar': 'https://randomuser.me/api/portraits/women/69.jpg',
-    },
-    {
-      'name': 'Asia Pulse',
-      'avatar': 'https://randomuser.me/api/portraits/men/70.jpg',
-    },
-    {
-      'name': 'Global Fam',
-      'avatar': 'https://randomuser.me/api/portraits/men/71.jpg',
-    },
-    {
-      'name': 'Culture Mix',
-      'avatar': 'https://randomuser.me/api/portraits/women/72.jpg',
-    },
-    {
-      'name': 'Heritage Hub',
-      'avatar': 'https://randomuser.me/api/portraits/men/73.jpg',
-    },
-  ];
-
-  final List<Map<String, dynamic>> _posts = [
-    {
-      'name': 'Ariana',
-      'avatar': 'https://randomuser.me/api/portraits/women/1.jpg',
-      'time': '17 July at 08:02 AM',
-      'community': 'Reiki Healing',
-      'image':
-      'https://images.unsplash.com/photo-1593113598332-cd288d649433?w=500&q=80',
-      'caption':
-      'My daughter just got diagnosed with ANOREXIA. Feeling overwhelmed. Any advice?',
-      'likes': 45,
-      'comments': 12,
-      'shares': 2,
-    },
-    {
-      'name': 'Ariana',
-      'avatar': 'https://randomuser.me/api/portraits/women/1.jpg',
-      'time': '17 July at 08:00 AM',
-      'community': 'Reiki Healing',
-      'title': 'This is what I learned in my recent course',
-      'quote':
-      '"The whole secret of existence lies in the pursuit of meaning, purpose, and connection. It is a delicate dance between self-discovery, compassion for others, and embracing the ever-unfolding mysteries of life. Finding harmony in the ebb and flow of experiences, we unlock the profound beauty that resides within our shared journey."',
-      'likes': 45,
-      'comments': 12,
-      'shares': 2,
-    },
-  ];
-
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    return KeyboardDismissOnTap(
-      dismissOnCapturedTaps: true,
-      child: Scaffold(
-        backgroundColor: AppColors.primaryBackground,
-        appBar: AppBar(
+    final firebaseService = Provider.of<FirebaseService>(
+      context,
+      listen: false,
+    );
+    final userId = firebaseService.currentUser?.uid;
+
+    if (userId == null) {
+      return const Scaffold(
+        body: Center(child: Text("Please log in to see communities.")),
+      );
+    }
+
+    return ChangeNotifierProvider(
+      create: (_) => CommunityViewModel(firebaseService, userId),
+      child: KeyboardDismissOnTap(
+        dismissOnCapturedTaps: true,
+        child: Scaffold(
           backgroundColor: AppColors.primaryBackground,
-          elevation: 0,
-          scrolledUnderElevation: 0,
-          title: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Explore Communities', style: textTheme.headlineSmall),
-              const SizedBox(height: 4),
-              Text('Culture starts with connection',
-                  style: textTheme.bodySmall),
-            ],
-          ),
-          actions: [
-            GestureDetector(
-              onTap: () {
-                if (context.mounted) {
-                  PersistentNavBarNavigator.pushNewScreen(
-                    context,
-                    screen: const CreateCommunityScreen(),
-                    withNavBar: false,
-                  );
-                }
-              },
-              child: Container(
-                margin: const EdgeInsets.only(right: 16),
-                child: const Icon(
-                  Iconsax.add_square_copy,
-                  color: AppColors.primaryRed,
-                  size: 24,
+          appBar: AppBar(
+            backgroundColor: AppColors.primaryBackground,
+            elevation: 0,
+            scrolledUnderElevation: 0,
+            title: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Explore Communities', style: textTheme.headlineSmall),
+                const SizedBox(height: 4),
+                Text(
+                  'Culture starts with connection',
+                  style: textTheme.bodySmall,
                 ),
-              ),
+              ],
             ),
-          ],
-        ),
-        body: NestedScrollView(
-          headerSliverBuilder: (context, innerBoxIsScrolled) {
-            return [
-              SliverToBoxAdapter(child: _buildAllCommunities()),
-              SliverPersistentHeader(
-                delegate: _SliverAppBarDelegate(
-                  TabBar(
-                    controller: _tabController,
-                    labelColor: AppColors.primaryRed,
-                    unselectedLabelColor: AppColors.textSecondary,
-                    indicatorColor: AppColors.primaryRed,
-                    indicatorSize: TabBarIndicatorSize.label,
-                    isScrollable: true,
-                    tabAlignment: TabAlignment.start,
-                    padding: EdgeInsets.zero,
-                    labelPadding:
-                    const EdgeInsets.symmetric(horizontal: 16.0),
-                    dividerColor: Colors.transparent,
-                    labelStyle: textTheme.labelLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                    unselectedLabelStyle: textTheme.labelLarge,
-                    tabs: const [
-                      Tab(text: 'My feed'),
-                      Tab(text: 'My communities'),
-                      Tab(text: 'Upcoming Events'),
-                    ],
+            actions: [
+              GestureDetector(
+                onTap: () {
+                  if (context.mounted) {
+                    PersistentNavBarNavigator.pushNewScreen(
+                      context,
+                      screen: const CreateCommunityScreen(),
+                      withNavBar: false,
+                    );
+                  }
+                },
+                child: Container(
+                  margin: const EdgeInsets.only(right: 16),
+                  child: const Icon(
+                    Iconsax.add_square_copy,
+                    color: AppColors.primaryRed,
+                    size: 24,
                   ),
                 ),
-                pinned: true,
               ),
-            ];
-          },
-          body: TabBarView(
-            controller: _tabController,
-            children: [buildFeed(), _MyCommunitiesTab(), _UpcomingEventsTab()],
+            ],
+          ),
+          body: NestedScrollView(
+            headerSliverBuilder: (context, innerBoxIsScrolled) {
+              return [
+                SliverToBoxAdapter(child: _AllCommunitiesSection()),
+                SliverPersistentHeader(
+                  delegate: _SliverAppBarDelegate(
+                    TabBar(
+                      controller: _tabController,
+                      labelColor: AppColors.primaryRed,
+                      unselectedLabelColor: AppColors.textSecondary,
+                      indicatorColor: AppColors.primaryRed,
+                      indicatorSize: TabBarIndicatorSize.label,
+                      isScrollable: true,
+                      tabAlignment: TabAlignment.start,
+                      padding: EdgeInsets.zero,
+                      labelPadding: const EdgeInsets.symmetric(
+                        horizontal: 16.0,
+                      ),
+                      dividerColor: Colors.transparent,
+                      labelStyle: textTheme.labelLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                      unselectedLabelStyle: textTheme.labelLarge,
+                      tabs: const [
+                        Tab(text: 'My feed'),
+                        Tab(text: 'My communities'),
+                        Tab(text: 'Upcoming Events'),
+                      ],
+                    ),
+                  ),
+                  pinned: true,
+                ),
+              ];
+            },
+            body: TabBarView(
+              controller: _tabController,
+              children: [
+                _MyFeedTab(),
+                _MyCommunitiesTab(),
+                _UpcomingEventsTab(),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
+}
 
-  Widget _buildAllCommunities() {
+class _AllCommunitiesSection extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     return Padding(
       padding: const EdgeInsets.only(top: 16.0, bottom: 8.0),
@@ -217,35 +193,46 @@ class _CommunityScreenState extends State<CommunityScreen>
           const SizedBox(height: 8),
           SizedBox(
             height: 85,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              itemCount: _communities.length,
-              itemBuilder: (context, index) {
-                final community = _communities[index];
-                return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                  child: GestureDetector(
-                    onTap: () {
-                      if (context.mounted) {
-                        PersistentNavBarNavigator.pushNewScreen(
-                          context,
-                          screen: const CommunityDetailScreen(),
-                          withNavBar: false,
-                        );
-                      }
-                    },
-                    child: Column(
-                      children: [
-                        CircleAvatar(
-                          radius: 28,
-                          backgroundImage: NetworkImage(community['avatar']!),
+            child: Consumer<CommunityViewModel>(
+              builder: (context, viewModel, child) {
+                if (viewModel.allCommunities.isEmpty &&
+                    viewModel.isLoadingAll) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (viewModel.allCommunities.isEmpty) {
+                  return const Center(child: Text("No communities found."));
+                }
+                return ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  itemCount: viewModel.allCommunities.length,
+                  itemBuilder: (context, index) {
+                    final community = viewModel.allCommunities[index];
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                      child: GestureDetector(
+                        onTap: () {
+                          if (context.mounted) {
+                            PersistentNavBarNavigator.pushNewScreen(
+                              context,
+                              screen: const CommunityDetailScreen(),
+                              withNavBar: false,
+                            );
+                          }
+                        },
+                        child: Column(
+                          children: [
+                            CircleAvatar(
+                              radius: 28,
+                              backgroundImage: NetworkImage(community.imageUrl),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(community.name, style: textTheme.bodySmall),
+                          ],
                         ),
-                        const SizedBox(height: 6),
-                        Text(community['name']!, style: textTheme.bodySmall),
-                      ],
-                    ),
-                  ),
+                      ),
+                    );
+                  },
                 );
               },
             ),
@@ -254,9 +241,54 @@ class _CommunityScreenState extends State<CommunityScreen>
       ),
     );
   }
+}
 
-  Widget _buildCreatePostSection() {
+class _MyFeedTab extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<CommunityViewModel>(
+      builder: (context, viewModel, child) {
+        return ListView.separated(
+          padding: const EdgeInsets.all(16.0),
+          itemCount: viewModel.feedPosts.length + 1,
+          itemBuilder: (context, index) {
+            if (index == 0) {
+              return _CreatePostSection();
+            }
+            return _PostCard(post: viewModel.feedPosts[index - 1]);
+          },
+          separatorBuilder: (context, index) => const SizedBox(height: 16),
+        );
+      },
+    );
+  }
+}
+
+class _CreatePostSection extends StatefulWidget {
+  @override
+  __CreatePostSectionState createState() => __CreatePostSectionState();
+}
+
+class __CreatePostSectionState extends State<_CreatePostSection> {
+  final _formKey = GlobalKey<FormBuilderState>();
+  File? _image;
+  String? _selectedCommunityId;
+
+  Future<void> _pickImage() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      setState(() {
+        _image = File(pickedFile.path);
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final viewModel = Provider.of<CommunityViewModel>(context, listen: false);
+
     return FormBuilder(
       key: _formKey,
       child: Column(
@@ -291,14 +323,18 @@ class _CommunityScreenState extends State<CommunityScreen>
                       minLines: 1,
                       decoration: InputDecoration(
                         hintText:
-                        "What's on your mind? Ask a question or share your story..",
+                            "What's on your mind? Ask a question or share your story..",
                         hintStyle: textTheme.bodySmall?.copyWith(
                           color: AppColors.textSecondary,
                         ),
                         filled: true,
                         fillColor: Colors.white,
-                        contentPadding:
-                        const EdgeInsets.fromLTRB(12, 16, 12, 40),
+                        contentPadding: const EdgeInsets.fromLTRB(
+                          12,
+                          16,
+                          12,
+                          40,
+                        ),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide(color: Colors.grey.shade200),
@@ -310,7 +346,9 @@ class _CommunityScreenState extends State<CommunityScreen>
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: const BorderSide(
-                              color: AppColors.primaryRed, width: 1.5),
+                            color: AppColors.primaryRed,
+                            width: 1.5,
+                          ),
                         ),
                       ),
                     ),
@@ -318,23 +356,35 @@ class _CommunityScreenState extends State<CommunityScreen>
                       bottom: 8,
                       right: 12,
                       child: Row(
-                        children: const [
-                          Icon(
-                            IconlyLight.camera,
-                            color: AppColors.textSecondary,
-                            size: 22,
+                        children: [
+                          IconButton(
+                            onPressed: _pickImage,
+                            icon: const Icon(
+                              IconlyLight.camera,
+                              color: AppColors.textSecondary,
+                              size: 22,
+                            ),
                           ),
-                          SizedBox(width: 12),
-                          Icon(
-                            Icons.attach_file_outlined,
-                            color: AppColors.textSecondary,
-                            size: 22,
+                          IconButton(
+                            onPressed: () {
+                              // TODO: Implement attachment logic
+                            },
+                            icon: const Icon(
+                              Icons.attach_file_outlined,
+                              color: AppColors.textSecondary,
+                              size: 22,
+                            ),
                           ),
-                          SizedBox(width: 12),
-                          Icon(
-                            Icons.emoji_emotions_outlined,
-                            color: AppColors.textSecondary,
-                            size: 22,
+                          const SizedBox(width: 12),
+                          IconButton(
+                            onPressed: () {
+                              // TODO: Implement emoji logic
+                            },
+                            icon: const Icon(
+                              Icons.emoji_emotions_outlined,
+                              color: AppColors.textSecondary,
+                              size: 22,
+                            ),
                           ),
                         ],
                       ),
@@ -344,6 +394,11 @@ class _CommunityScreenState extends State<CommunityScreen>
               ),
             ],
           ),
+          if (_image != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 8.0),
+              child: Image.file(_image!, height: 100),
+            ),
           const SizedBox(height: 16),
           Padding(
             padding: const EdgeInsets.only(bottom: 2),
@@ -355,18 +410,37 @@ class _CommunityScreenState extends State<CommunityScreen>
                   size: 20,
                 ),
                 const SizedBox(width: 4),
-                Text('Add your post in', style: textTheme.labelLarge),
-                const Icon(Icons.arrow_drop_down,
-                    color: AppColors.textSecondary),
+                DropdownButton<String>(
+                  value: _selectedCommunityId,
+                  hint: Text('Post to...', style: textTheme.labelLarge),
+                  underline: const SizedBox(),
+                  items: [
+                    const DropdownMenuItem(value: null, child: Text('My Feed')),
+                    ...viewModel.joinedCommunities.map((community) {
+                      return DropdownMenuItem(
+                        value: community.id,
+                        child: Text(community.name),
+                      );
+                    }),
+                  ],
+                  onChanged: (value) {
+                    setState(() {
+                      _selectedCommunityId = value;
+                    });
+                  },
+                ),
                 const Spacer(),
                 ElevatedButton.icon(
                   onPressed: () {
-                    // TODO: Post now implementation
-                    // Example of how to get the value:
-                    // if (_formKey.currentState?.saveAndValidate() ?? false) {
-                    //   final postContent = _formKey.currentState?.value['post_content'];
-                    //   debugPrint(postContent);
-                    // }
+                    if (_formKey.currentState?.saveAndValidate() ?? false) {
+                      final postContent =
+                          _formKey.currentState?.value['post_content'];
+                      viewModel.createPost(
+                        content: postContent,
+                        communityId: _selectedCommunityId,
+                        image: _image,
+                      );
+                    }
                   },
                   icon: const Icon(IconlyLight.send, size: 18),
                   label: const Text('Post Now'),
@@ -389,91 +463,53 @@ class _CommunityScreenState extends State<CommunityScreen>
       ),
     );
   }
-
-  Widget buildFeed() {
-    return ListView.separated(
-      padding: const EdgeInsets.all(16.0),
-      itemCount: _posts.length + 1,
-      itemBuilder: (context, index) {
-        if (index == 0) {
-          return _buildCreatePostSection();
-        }
-        return _PostCard(post: _posts[index - 1]);
-      },
-      separatorBuilder: (context, index) => const SizedBox(height: 16),
-    );
-  }
 }
 
 class _MyCommunitiesTab extends StatelessWidget {
-  final List<Map<String, dynamic>> _createdCommunities = [
-    {
-      'name': 'Reiki Healing',
-      'rating': 4.3,
-      'members': '10K+',
-      'image':
-      'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=500&q=80',
-    },
-    {
-      'name': 'Yoga & Meditation',
-      'rating': 4.8,
-      'members': '25K+',
-      'image':
-      'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=500&q=80',
-    },
-  ];
-
-  final List<Map<String, dynamic>> _joinedCommunities = [
-    {
-      'name': 'Spiritual Awakening',
-      'rating': 4.5,
-      'members': '15K+',
-      'image':
-      'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=500&q=80',
-    },
-    {
-      'name': 'Holistic Health',
-      'rating': 4.6,
-      'members': '18K+',
-      'image':
-      'https://images.unsplash.com/photo-1475924156734-496f6cac6ec1?w=500&q=80',
-    },
-    {
-      'name': 'Mindfulness Practices',
-      'rating': 4.7,
-      'members': '22K+',
-      'image':
-      'https://images.unsplash.com/photo-1552083375-1447ce886485?w=500&q=80',
-    },
-  ];
-
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(16.0),
-      children: [
-        _buildSectionTitle('Communities I Created', context),
-        const SizedBox(height: 12),
-        ListView.separated(
-          physics: const NeverScrollableScrollPhysics(),
-          shrinkWrap: true,
-          itemCount: _createdCommunities.length,
-          itemBuilder: (context, index) =>
-              _CommunityListCard(community: _createdCommunities[index]),
-          separatorBuilder: (context, index) => const SizedBox(height: 12),
-        ),
-        const SizedBox(height: 24),
-        _buildSectionTitle('Communities I Joined', context),
-        const SizedBox(height: 12),
-        ListView.separated(
-          physics: const NeverScrollableScrollPhysics(),
-          shrinkWrap: true,
-          itemCount: _joinedCommunities.length,
-          itemBuilder: (context, index) =>
-              _CommunityListCard(community: _joinedCommunities[index]),
-          separatorBuilder: (context, index) => const SizedBox(height: 12),
-        ),
-      ],
+    return Consumer<CommunityViewModel>(
+      builder: (context, viewModel, child) {
+        if (viewModel.isLoadingMyCommunities) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        return ListView(
+          padding: const EdgeInsets.all(16.0),
+          children: [
+            _buildSectionTitle('Communities I Created', context),
+            const SizedBox(height: 12),
+            if (viewModel.createdCommunities.isEmpty)
+              const Text("You haven't created any communities yet.")
+            else
+              ListView.separated(
+                physics: const NeverScrollableScrollPhysics(),
+                shrinkWrap: true,
+                itemCount: viewModel.createdCommunities.length,
+                itemBuilder: (context, index) => _CommunityListCard(
+                  community: viewModel.createdCommunities[index],
+                ),
+                separatorBuilder: (context, index) =>
+                    const SizedBox(height: 12),
+              ),
+            const SizedBox(height: 24),
+            _buildSectionTitle('Communities I Joined', context),
+            const SizedBox(height: 12),
+            if (viewModel.joinedCommunities.isEmpty)
+              const Text("You haven't joined any communities yet.")
+            else
+              ListView.separated(
+                physics: const NeverScrollableScrollPhysics(),
+                shrinkWrap: true,
+                itemCount: viewModel.joinedCommunities.length,
+                itemBuilder: (context, index) => _CommunityListCard(
+                  community: viewModel.joinedCommunities[index],
+                ),
+                separatorBuilder: (context, index) =>
+                    const SizedBox(height: 12),
+              ),
+          ],
+        );
+      },
     );
   }
 
@@ -483,7 +519,7 @@ class _MyCommunitiesTab extends StatelessWidget {
 }
 
 class _CommunityListCard extends StatelessWidget {
-  final Map<String, dynamic> community;
+  final Community community;
 
   const _CommunityListCard({required this.community});
 
@@ -499,7 +535,7 @@ class _CommunityListCard extends StatelessWidget {
           fit: StackFit.expand,
           children: [
             Image.network(
-              community['image'],
+              community.imageUrl,
               fit: BoxFit.cover,
               errorBuilder: (context, error, stackTrace) =>
                   Container(color: Colors.grey),
@@ -527,7 +563,7 @@ class _CommunityListCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    community['name'],
+                    community.name,
                     style: textTheme.headlineSmall?.copyWith(
                       color: Colors.white,
                     ),
@@ -538,7 +574,7 @@ class _CommunityListCard extends StatelessWidget {
                       const Icon(Icons.star, color: Colors.amber, size: 18),
                       const SizedBox(width: 6),
                       Text(
-                        '${community['rating']} (${community['members']} members)',
+                        '${community.members.length} members',
                         style: textTheme.bodyMedium?.copyWith(
                           color: Colors.white,
                         ),
@@ -592,7 +628,7 @@ class _UpcomingEventsTab extends StatelessWidget {
       "date": "8 December, 2025",
       "location": "Spice Garden Kitchen",
       "description":
-      "Soothing audio and gentle vibrations to ease discomfort. Soothing audio and gentle vibrations to.",
+          "Soothing audio and gentle vibrations to ease discomfort. Soothing audio and gentle vibrations to.",
       "attendees": 31,
       "isInterested": true,
       "hasVideo": false,
@@ -603,7 +639,7 @@ class _UpcomingEventsTab extends StatelessWidget {
       "date": "15 December, 2025",
       "location": "The Grand Hall",
       "description":
-      "Experience the rich musical traditions from around the world. A night of melody and harmony.",
+          "Experience the rich musical traditions from around the world. A night of melody and harmony.",
       "attendees": 85,
       "isInterested": false,
     },
@@ -611,7 +647,6 @@ class _UpcomingEventsTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // UPDATED: Removed header and simplified to a single ListView
     return ListView.separated(
       padding: const EdgeInsets.all(16.0),
       itemCount: _events.length,
@@ -622,7 +657,7 @@ class _UpcomingEventsTab extends StatelessWidget {
 }
 
 class _PostCard extends StatelessWidget {
-  final Map<String, dynamic> post;
+  final Post post;
   const _PostCard({required this.post});
 
   @override
@@ -654,6 +689,7 @@ class _PostCard extends StatelessWidget {
 
   Widget _buildPostHeader(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    // In a real app, you would fetch author and community details based on IDs
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -666,7 +702,7 @@ class _PostCard extends StatelessWidget {
                 children: [
                   const TextSpan(text: 'Posted in '),
                   TextSpan(
-                    text: post['community'],
+                    text: post.communityId ?? "My Feed",
                     style: const TextStyle(
                       color: AppColors.primaryRed,
                       fontWeight: FontWeight.bold,
@@ -701,20 +737,27 @@ class _PostCard extends StatelessWidget {
         ),
         Row(
           children: [
-            CircleAvatar(backgroundImage: NetworkImage(post['avatar'])),
+            const CircleAvatar(
+              backgroundImage: NetworkImage(
+                "https://randomuser.me/api/portraits/women/1.jpg",
+              ),
+            ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    post['name'],
+                    "Author Name", // Fetch author name
                     style: textTheme.labelLarge?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: AppColors.textPrimary,
                     ),
                   ),
-                  Text(post['time'], style: textTheme.bodySmall),
+                  Text(
+                    TimeAgo.format(post.timestamp.toDate().toIso8601String()),
+                    style: textTheme.bodySmall,
+                  ),
                 ],
               ),
             ),
@@ -782,43 +825,19 @@ class _PostCard extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (post['title'] != null)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8.0),
-            child: Text(
-              post['title'],
-              style: textTheme.labelLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary,
-              ),
-            ),
-          ),
-        if (post['image'] != null)
+        if (post.imageUrl != null)
           ClipRRect(
             borderRadius: BorderRadius.circular(12),
-            child: Image.network(post['image']),
+            child: Image.network(post.imageUrl!),
           ),
-        if (post['caption'] != null)
+        if (post.content.isNotEmpty)
           Padding(
             padding: const EdgeInsets.only(top: 12.0),
             child: Text(
-              post['caption'],
+              post.content,
               style: textTheme.bodyMedium?.copyWith(
                 color: AppColors.textPrimary,
                 fontSize: 14,
-              ),
-            ),
-          ),
-        if (post['quote'] != null)
-          Container(
-            margin: const EdgeInsets.only(top: 8.0),
-            padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-            child: Text(
-              post['quote'],
-              style: textTheme.bodyMedium?.copyWith(
-                fontStyle: FontStyle.italic,
-                color: AppColors.textPrimary.withAlpha(204),
-                fontWeight: FontWeight.normal,
               ),
             ),
           ),
@@ -835,21 +854,21 @@ class _PostCard extends StatelessWidget {
           children: [
             _buildFooterIcon(
               Icons.favorite,
-              post['likes'].toString(),
+              post.likes.length.toString(),
               AppColors.primaryRed,
               AppColors.textSecondary,
             ),
             const SizedBox(width: 24),
             _buildFooterIcon(
               Iconsax.messages_2_copy,
-              post['comments'].toString(),
+              post.commentCount.toString(),
               const Color(0xFF0A75BA),
               AppColors.textSecondary,
             ),
             const SizedBox(width: 24),
             _buildFooterIcon(
               Icons.share_outlined,
-              post['shares'].toString(),
+              "0", // Share count not in model yet
               const Color(0xFF009E60),
               AppColors.textSecondary,
             ),
@@ -884,11 +903,11 @@ class _PostCard extends StatelessWidget {
   }
 
   Widget _buildFooterIcon(
-      IconData icon,
-      String count,
-      Color iconColor,
-      Color color,
-      ) {
+    IconData icon,
+    String count,
+    Color iconColor,
+    Color color,
+  ) {
     return Row(
       children: [
         Icon(icon, color: iconColor, size: 20),
@@ -918,10 +937,10 @@ class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
 
   @override
   Widget build(
-      BuildContext context,
-      double shrinkOffset,
-      bool overlapsContent,
-      ) {
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
     return Container(color: AppColors.primaryBackground, child: _tabBar);
   }
 
@@ -938,7 +957,7 @@ class EventCard extends StatefulWidget {
   const EventCard({super.key, required this.event, this.copied});
 
   @override
-  State<EventCard> createState() => _EventCardState();
+  _EventCardState createState() => _EventCardState();
 }
 
 class _EventCardState extends State<EventCard> {
@@ -1037,31 +1056,31 @@ class _EventCardState extends State<EventCard> {
                 Expanded(
                   child: _isInterested
                       ? GradientButton(
-                    text: "I'm Interested",
-                    onPressed: () {
-                      setState(() {
-                        _isInterested = false;
-                      });
-                    },
-                    fontSize: 13,
-                    insets: 10,
-                  )
+                          text: "I'm Interested",
+                          onPressed: () {
+                            setState(() {
+                              _isInterested = false;
+                            });
+                          },
+                          fontSize: 13,
+                          insets: 10,
+                        )
                       : OutlinedButton(
-                    onPressed: () {
-                      setState(() {
-                        _isInterested = true;
-                      });
-                    },
-                    style: buttonStyle.copyWith(
-                      side: WidgetStateProperty.all(
-                        const BorderSide(color: AppColors.primaryRed),
-                      ),
-                      foregroundColor: WidgetStateProperty.all(
-                        AppColors.primaryRed,
-                      ),
-                    ),
-                    child: const Text("I'm Interested"),
-                  ),
+                          onPressed: () {
+                            setState(() {
+                              _isInterested = true;
+                            });
+                          },
+                          style: buttonStyle.copyWith(
+                            side: MaterialStateProperty.all(
+                              const BorderSide(color: AppColors.primaryRed),
+                            ),
+                            foregroundColor: MaterialStateProperty.all(
+                              AppColors.primaryRed,
+                            ),
+                          ),
+                          child: const Text("I'm Interested"),
+                        ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -1074,10 +1093,10 @@ class _EventCardState extends State<EventCard> {
                       );
                     },
                     style: buttonStyle.copyWith(
-                      backgroundColor: WidgetStateProperty.all(
+                      backgroundColor: MaterialStateProperty.all(
                         AppColors.secondaryBackground,
                       ),
-                      foregroundColor: WidgetStateProperty.all(
+                      foregroundColor: MaterialStateProperty.all(
                         AppColors.primaryRed,
                       ),
                     ),
