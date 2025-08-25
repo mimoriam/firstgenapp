@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:firstgenapp/common/gradient_btn.dart';
 import 'package:firstgenapp/constants/appColors.dart';
 import 'package:firstgenapp/services/firebase_service.dart';
+import 'package:firstgenapp/viewmodels/community_viewmodel.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:iconly/iconly.dart';
@@ -21,16 +22,29 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
   bool _isLoading = false;
 
   Future<void> _pickImage() async {
+    if (_images.length >= 4) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('You can upload a maximum of 4 images.')),
+      );
+      return;
+    }
+
     final picker = ImagePicker();
     final pickedFiles = await picker.pickMultiImage(
       imageQuality: 70,
       maxWidth: 800,
     );
+
     if (pickedFiles.isNotEmpty) {
       setState(() {
-        _images = pickedFiles
-            .map((pickedFile) => File(pickedFile.path))
-            .toList();
+        _images.addAll(
+          pickedFiles
+              .map((pickedFile) => File(pickedFile.path))
+              .where((file) => _images.length < 4),
+        );
+        if (_images.length > 4) {
+          _images = _images.sublist(0, 4);
+        }
       });
     }
   }
@@ -52,7 +66,28 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
         context,
         listen: false,
       );
+      final formData = _formKey.currentState!.value;
+      final communityName = formData['name'];
       final userId = firebaseService.currentUser?.uid;
+
+      final bool nameExists = await firebaseService.checkIfCommunityNameExists(
+        communityName,
+      );
+
+      if (nameExists) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('A community with this name already exists.'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+        setState(() {
+          _isLoading = false;
+        });
+        return;
+      }
 
       if (userId == null) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -66,11 +101,9 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
         return;
       }
 
-      final formData = _formKey.currentState!.value;
-
       try {
         await firebaseService.createCommunity(
-          name: formData['name'],
+          name: communityName,
           description: formData['bio'],
           creatorId: userId,
           images: _images,
@@ -80,6 +113,10 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
           isInviteOnly: formData['isInviteOnly'] ?? false,
         );
         if (mounted) {
+          Provider.of<CommunityViewModel>(
+            context,
+            listen: false,
+          ).fetchAllCommunities(isInitial: true);
           Navigator.of(context).pop();
         }
       } catch (e) {

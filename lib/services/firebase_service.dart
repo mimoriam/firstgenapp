@@ -686,6 +686,51 @@ class FirebaseService {
   //   });
   // }
 
+  //! VERY IMPORTANT
+  // Stream<List<Conversation>> getConversations() {
+  //   final currentUser = _auth.currentUser;
+  //   if (currentUser == null) return Stream.value([]);
+  //
+  //   final userConversationsRef = _database.ref(
+  //     'users/${currentUser.uid}/conversations',
+  //   );
+  //
+  //   return userConversationsRef.onValue.switchMap((event) {
+  //     if (event.snapshot.value == null) {
+  //       return Stream.value([]);
+  //     }
+  //
+  //     final conversationIdsMap = event.snapshot.value as Map;
+  //     final conversationIds = conversationIdsMap.keys.toList();
+  //
+  //     if (conversationIds.isEmpty) {
+  //       return Stream.value([]);
+  //     }
+  //
+  //     final conversationStreams = conversationIds.map((id) {
+  //       return _database.ref('conversations/$id').onValue.map((event) {
+  //         if (event.snapshot.exists && event.snapshot.value != null) {
+  //           final encodedData = jsonEncode(event.snapshot.value);
+  //           final data = jsonDecode(encodedData) as Map<String, dynamic>;
+  //           return Conversation.fromJson(data, id.toString(), currentUser.uid);
+  //         }
+  //         return null;
+  //       });
+  //     }).toList();
+  //
+  //     return CombineLatestStream.list(conversationStreams).map((conversations) {
+  //       final validConversations = conversations
+  //           .where((c) => c != null)
+  //           .cast<Conversation>()
+  //           .toList();
+  //       validConversations.sort(
+  //         (a, b) => b.lastMessageTimestamp.compareTo(a.lastMessageTimestamp),
+  //       );
+  //       return validConversations;
+  //     });
+  //   });
+  // }
+
   Stream<List<Conversation>> getConversations() {
     final currentUser = _auth.currentUser;
     if (currentUser == null) return Stream.value([]);
@@ -707,10 +752,42 @@ class FirebaseService {
       }
 
       final conversationStreams = conversationIds.map((id) {
-        return _database.ref('conversations/$id').onValue.map((event) {
+        return _database.ref('conversations/$id').onValue.asyncMap((
+          event,
+        ) async {
           if (event.snapshot.exists && event.snapshot.value != null) {
             final encodedData = jsonEncode(event.snapshot.value);
             final data = jsonDecode(encodedData) as Map<String, dynamic>;
+
+            final participants = Map<String, dynamic>.from(
+              data['participants'] as Map? ?? {},
+            );
+            final otherUserId = participants.keys.firstWhere(
+              (key) => key != currentUser.uid,
+              orElse: () => '',
+            );
+
+            if (otherUserId.isNotEmpty) {
+              try {
+                final userDoc = await _firestore
+                    .collection(userCollection)
+                    .doc(otherUserId)
+                    .get();
+                if (userDoc.exists) {
+                  final userData = userDoc.data()!;
+                  // Replace the stale user data in the conversation with fresh data
+                  data['users'][otherUserId] = {
+                    'uid': otherUserId,
+                    'name': userData['fullName'] ?? 'No Name',
+                    'avatarUrl':
+                        userData['profileImageUrl'] ??
+                        'https://picsum.photos/seed/error/200/200',
+                  };
+                }
+              } catch (e) {
+                log("Error fetching user profile for chat: $e");
+              }
+            }
             return Conversation.fromJson(data, id.toString(), currentUser.uid);
           }
           return null;
@@ -1369,6 +1446,15 @@ class FirebaseService {
     }
   }
 
+  Future<bool> checkIfCommunityNameExists(String name) async {
+    final querySnapshot = await _firestore
+        .collection(communityCollection)
+        .where('name_lowercase', isEqualTo: name.toLowerCase())
+        .limit(1)
+        .get();
+    return querySnapshot.docs.isNotEmpty;
+  }
+
   Future<void> createCommunity({
     required String name,
     required String description,
@@ -1397,22 +1483,21 @@ class FirebaseService {
         imageUrls.add(imageUrl);
       }
 
-      Community newCommunity = Community(
-        id: communityRef.id,
-        name: name,
-        description: description,
-        imageUrls: imageUrls,
-        creatorId: creatorId,
-        members: [creatorId],
-        isInviteOnly: isInviteOnly,
-        createdAt: Timestamp.now(),
-        whoFor: whoFor,
-        whatToGain: whatToGain,
-        rules: rules,
-        originalDoc: (await communityRef.get()),
-      );
+      final communityData = {
+        'name': name,
+        'description': description,
+        'imageUrls': imageUrls,
+        'creatorId': creatorId,
+        'members': [creatorId],
+        'isInviteOnly': isInviteOnly,
+        'createdAt': Timestamp.now(),
+        'whoFor': whoFor,
+        'whatToGain': whatToGain,
+        'rules': rules,
+        'name_lowercase': name.toLowerCase(),
+      };
 
-      await communityRef.set(newCommunity.toFirestore());
+      await communityRef.set(communityData);
     } catch (e) {
       log('Error creating community: $e');
       throw Exception('Failed to create community.');

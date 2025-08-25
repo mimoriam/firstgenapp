@@ -5,6 +5,7 @@ import 'package:firstgenapp/models/community_models.dart';
 import 'package:firstgenapp/services/firebase_service.dart';
 import 'package:firstgenapp/utils/time_ago.dart';
 import 'package:firstgenapp/viewmodels/community_viewmodel.dart';
+import 'package:firstgenapp/viewmodels/profile_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:firstgenapp/constants/appColors.dart';
 import 'package:firstgenapp/screens/dashboard/navbar_content/communities/all_communities/all_communities_screen.dart';
@@ -18,6 +19,7 @@ import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 import 'package:provider/provider.dart';
+import 'package:custom_refresh_indicator/custom_refresh_indicator.dart';
 
 class CommunityScreen extends StatefulWidget {
   final int? initialIndex;
@@ -47,65 +49,97 @@ class _CommunityScreenState extends State<CommunityScreen>
     super.dispose();
   }
 
+  Future<void> _handleRefresh() async {
+    final viewModel = Provider.of<CommunityViewModel>(context, listen: false);
+    // Re-fetch all data for the screen
+    await Future.wait([
+      viewModel.fetchAllCommunities(isInitial: true),
+      viewModel.fetchMyFeed(isInitial: true),
+      viewModel.fetchMyCommunities(),
+    ]);
+  }
+
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    final firebaseService = Provider.of<FirebaseService>(
-      context,
-      listen: false,
-    );
-    final userId = firebaseService.currentUser?.uid;
-
-    if (userId == null) {
-      return const Scaffold(
-        body: Center(child: Text("Please log in to see communities.")),
-      );
-    }
-
-    return ChangeNotifierProvider(
-      create: (_) => CommunityViewModel(firebaseService, userId),
-      child: KeyboardDismissOnTap(
-        dismissOnCapturedTaps: true,
-        child: Scaffold(
+    return KeyboardDismissOnTap(
+      dismissOnCapturedTaps: true,
+      child: Scaffold(
+        backgroundColor: AppColors.primaryBackground,
+        appBar: AppBar(
           backgroundColor: AppColors.primaryBackground,
-          appBar: AppBar(
-            backgroundColor: AppColors.primaryBackground,
-            elevation: 0,
-            scrolledUnderElevation: 0,
-            title: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Explore Communities', style: textTheme.headlineSmall),
-                const SizedBox(height: 4),
-                Text(
-                  'Culture starts with connection',
-                  style: textTheme.bodySmall,
-                ),
-              ],
-            ),
-            actions: [
-              GestureDetector(
-                onTap: () {
-                  if (context.mounted) {
-                    PersistentNavBarNavigator.pushNewScreen(
-                      context,
-                      screen: const CreateCommunityScreen(),
-                      withNavBar: false,
-                    );
-                  }
-                },
-                child: Container(
-                  margin: const EdgeInsets.only(right: 16),
-                  child: const Icon(
-                    Iconsax.add_square_copy,
-                    color: AppColors.primaryRed,
-                    size: 24,
-                  ),
-                ),
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          title: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Explore Communities', style: textTheme.headlineSmall),
+              const SizedBox(height: 4),
+              Text(
+                'Culture starts with connection',
+                style: textTheme.bodySmall,
               ),
             ],
           ),
-          body: NestedScrollView(
+          actions: [
+            GestureDetector(
+              onTap: () {
+                if (context.mounted) {
+                  PersistentNavBarNavigator.pushNewScreen(
+                    context,
+                    screen: const CreateCommunityScreen(),
+                    withNavBar: false,
+                  );
+                }
+              },
+              child: Container(
+                margin: const EdgeInsets.only(right: 16),
+                child: const Icon(
+                  Iconsax.add_square_copy,
+                  color: AppColors.primaryRed,
+                  size: 24,
+                ),
+              ),
+            ),
+          ],
+        ),
+        body: CustomRefreshIndicator(
+          onRefresh: _handleRefresh,
+          builder:
+              (
+                BuildContext context,
+                Widget child,
+                IndicatorController controller,
+              ) {
+                return AnimatedBuilder(
+                  animation: controller,
+                  builder: (BuildContext context, _) {
+                    return Stack(
+                      alignment: Alignment.topCenter,
+                      children: <Widget>[
+                        if (!controller.isIdle)
+                          Positioned(
+                            top: 35.0 * controller.value,
+                            child: SizedBox(
+                              height: 30,
+                              width: 30,
+                              child: CircularProgressIndicator(
+                                value: !controller.isLoading
+                                    ? controller.value.clamp(0.0, 1.0)
+                                    : null,
+                              ),
+                            ),
+                          ),
+                        Transform.translate(
+                          offset: Offset(0, 100.0 * controller.value),
+                          child: child,
+                        ),
+                      ],
+                    );
+                  },
+                );
+              },
+          child: NestedScrollView(
             headerSliverBuilder: (context, innerBoxIsScrolled) {
               return [
                 SliverToBoxAdapter(child: _AllCommunitiesSection()),
@@ -280,7 +314,7 @@ class _MyFeedTab extends StatelessWidget {
                 PersistentNavBarNavigator.pushNewScreen(
                   context,
                   screen: CommentsScreen(postId: post.id),
-                  withNavBar: false, // Here is the change
+                  withNavBar: false,
                 );
               },
               onShare: () => viewModel.sharePost(post.id),
@@ -318,6 +352,10 @@ class __CreatePostSectionState extends State<_CreatePostSection> {
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final viewModel = Provider.of<CommunityViewModel>(context, listen: false);
+    final userProfileViewModel = Provider.of<UserProfileViewModel>(context);
+    final userData = userProfileViewModel.userProfileData;
+    final imageUrl = userData?['profileImageUrl'];
+    final hasPhoto = imageUrl != null && imageUrl.isNotEmpty;
 
     return FormBuilder(
       key: _formKey,
@@ -337,11 +375,16 @@ class __CreatePostSectionState extends State<_CreatePostSection> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const CircleAvatar(
+              CircleAvatar(
                 radius: 20,
-                backgroundImage: NetworkImage(
-                  'https://randomuser.me/api/portraits/men/75.jpg',
-                ),
+                backgroundImage: hasPhoto ? NetworkImage(imageUrl) : null,
+                child: !hasPhoto
+                    ? const Icon(
+                        IconlyLight.profile,
+                        size: 20,
+                        color: AppColors.textSecondary,
+                      )
+                    : null,
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -433,21 +476,21 @@ class __CreatePostSectionState extends State<_CreatePostSection> {
           ),
           if (_image != null)
             Padding(
-              padding: const EdgeInsets.only(top: 8.0),
+              padding: const EdgeInsets.only(top: 8.0, left: 52.0),
               child: Stack(
                 children: [
                   ClipRRect(
                     borderRadius: BorderRadius.circular(12),
                     child: Image.file(
                       _image!,
-                      height: 150,
-                      width: double.infinity,
+                      height: 100,
+                      width: 100,
                       fit: BoxFit.cover,
                     ),
                   ),
                   Positioned(
-                    top: 8,
-                    right: 8,
+                    top: 4,
+                    right: 4,
                     child: GestureDetector(
                       onTap: () {
                         setState(() {
@@ -455,7 +498,7 @@ class __CreatePostSectionState extends State<_CreatePostSection> {
                         });
                       },
                       child: Container(
-                        padding: const EdgeInsets.all(4),
+                        padding: const EdgeInsets.all(2),
                         decoration: const BoxDecoration(
                           color: Colors.black54,
                           shape: BoxShape.circle,
@@ -463,7 +506,7 @@ class __CreatePostSectionState extends State<_CreatePostSection> {
                         child: const Icon(
                           Icons.close,
                           color: Colors.white,
-                          size: 18,
+                          size: 16,
                         ),
                       ),
                     ),
@@ -539,6 +582,7 @@ class __CreatePostSectionState extends State<_CreatePostSection> {
                       ? Container(
                           width: 20,
                           height: 20,
+                          padding: const EdgeInsets.all(2.0),
                           child: const CircularProgressIndicator(
                             strokeWidth: 2,
                             valueColor: AlwaysStoppedAnimation<Color>(
@@ -965,11 +1009,49 @@ class _PostCard extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (post.imageUrl != null)
+        if (post.imageUrl != null && post.imageUrl!.isNotEmpty)
           ClipRRect(
             borderRadius: BorderRadius.circular(12),
-            child: Image.network(post.imageUrl!),
-          ),
+            child: Image.network(
+              post.imageUrl!,
+              fit: BoxFit.cover,
+              loadingBuilder:
+                  (
+                    BuildContext context,
+                    Widget child,
+                    ImageChunkEvent? loadingProgress,
+                  ) {
+                    if (loadingProgress == null) return child;
+                    return Container(
+                      height: 200,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[200],
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Center(
+                        child: CircularProgressIndicator(
+                          value: loadingProgress.expectedTotalBytes != null
+                              ? loadingProgress.cumulativeBytesLoaded /
+                                    loadingProgress.expectedTotalBytes!
+                              : null,
+                        ),
+                      ),
+                    );
+                  },
+              errorBuilder: (context, error, stackTrace) => Container(
+                height: 200,
+                decoration: BoxDecoration(
+                  color: Colors.grey[200],
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Center(
+                  child: Icon(Icons.error_outline, color: Colors.red),
+                ),
+              ),
+            ),
+          )
+        else
+          Container(),
         if (post.content.isNotEmpty)
           Padding(
             padding: const EdgeInsets.only(top: 12.0),
