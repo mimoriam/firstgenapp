@@ -228,7 +228,7 @@ class _AllCommunitiesSection extends StatelessWidget {
           ),
           const SizedBox(height: 2),
           SizedBox(
-            height: 82,
+            height: 90,
             child: Consumer<CommunityViewModel>(
               builder: (context, viewModel, child) {
                 if (viewModel.allCommunities.isEmpty &&
@@ -431,6 +431,7 @@ class __CreatePostSectionState extends State<_CreatePostSection> {
                               focusedBorder: InputBorder.none,
                               errorBorder: InputBorder.none,
                               focusedErrorBorder: InputBorder.none,
+                              errorText: "",
                               // FIX: Remove the default error message display
                               errorStyle: const TextStyle(height: 0),
                             ),
