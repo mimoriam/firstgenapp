@@ -60,7 +60,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
             }
           },
           backgroundColor:
-              Colors.transparent, // Important: Keep this transparent
+          Colors.transparent, // Important: Keep this transparent
           child: ClipOval(
             child: BackdropFilter(
               // The blur effect
@@ -252,9 +252,9 @@ class _FeedTab extends StatelessWidget {
       'time': '17 July at 08:02 AM',
       'community': 'Reiki Healing',
       'image':
-          'https://images.unsplash.com/photo-1593113598332-cd288d649433?w=500&q=80',
+      'https://images.unsplash.com/photo-1593113598332-cd288d649433?w=500&q=80',
       'caption':
-          'My daughter just got diagnosed with ANOREXIA. Feeling overwhelmed. Any advice?',
+      'My daughter just got diagnosed with ANOREXIA. Feeling overwhelmed. Any advice?',
       'likes': 45,
       'comments': 12,
       'shares': 2,
@@ -266,7 +266,7 @@ class _FeedTab extends StatelessWidget {
       'community': 'Reiki Healing',
       'title': 'This is what I learned in my recent course',
       'quote':
-          '"The whole secret of existence lies in the pursuit of meaning, purpose, and connection. It is a delicate dance between self-discovery, compassion for others, and embracing the ever-unfolding mysteries of life. Finding harmony in the ebb and flow of experiences, we unlock the profound beauty that resides within our shared journey."',
+      '"The whole secret of existence lies in the pursuit of meaning, purpose, and connection. It is a delicate dance between self-discovery, compassion for others, and embracing the ever-unfolding mysteries of life. Finding harmony in the ebb and flow of experiences, we unlock the profound beauty that resides within our shared journey."',
       'likes': 45,
       'comments': 12,
       'shares': 2,
@@ -508,11 +508,11 @@ class _PostCard extends StatelessWidget {
   }
 
   Widget _buildFooterIcon(
-    IconData icon,
-    String count,
-    Color iconColor,
-    Color color,
-  ) {
+      IconData icon,
+      String count,
+      Color iconColor,
+      Color color,
+      ) {
     return Row(
       children: [
         Icon(icon, color: iconColor, size: 20),
@@ -570,13 +570,13 @@ class _AboutTab extends StatelessWidget {
           _buildExpansionTile(
             title: 'What is this community for?',
             content:
-                'The expression or application of human creative skill and imagination, typically in a visual form such as painting or sculpture, producing works to be appreciated primarily for their beauty or emotional power.',
+            'The expression or application of human creative skill and imagination, typically in a visual form such as painting or sculpture, producing works to be appreciated primarily for their beauty or emotional power.',
           ),
           const SizedBox(height: 8),
           _buildExpansionTile(
             title: 'What will you gain from this community?',
             content:
-                'The expression or application of human creative skill and imagination, typically in a visual form such as painting or sculpture, producing works to be appreciated primarily for their beauty or emotional power.',
+            'The expression or application of human creative skill and imagination, typically in a visual form such as painting or sculpture, producing works to be appreciated primarily for their beauty or emotional power.',
           ),
           const SizedBox(height: 8),
           _buildExpansionTile(
@@ -652,7 +652,7 @@ class _UpcomingEventsTab extends StatelessWidget {
       "date": "8 December, 2025",
       "location": "Spice Garden Kitchen",
       "description":
-          "Soothing audio and gentle vibrations to ease discomfort. Soothing audio and gentle vibrations to.",
+      "Soothing audio and gentle vibrations to ease discomfort. Soothing audio and gentle vibrations to.",
       "attendees": 31,
       "isInterested": true,
     },
@@ -662,7 +662,7 @@ class _UpcomingEventsTab extends StatelessWidget {
       "date": "15 December, 2025",
       "location": "The Grand Hall",
       "description":
-          "Experience the rich musical traditions from around the world. A night of melody and harmony.",
+      "Experience the rich musical traditions from around the world. A night of melody and harmony.",
       "attendees": 85,
       "isInterested": false,
     },
@@ -694,10 +694,10 @@ class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
 
   @override
   Widget build(
-    BuildContext context,
-    double shrinkOffset,
-    bool overlapsContent,
-  ) {
+      BuildContext context,
+      double shrinkOffset,
+      bool overlapsContent,
+      ) {
     return Container(color: AppColors.primaryBackground, child: _tabBar);
   }
 
@@ -814,31 +814,31 @@ class _EventCardState extends State<EventCard> {
                 Expanded(
                   child: _isInterested
                       ? GradientButton(
-                          text: "I'm Interested",
-                          onPressed: () {
-                            setState(() {
-                              _isInterested = false;
-                            });
-                          },
-                          fontSize: 13,
-                          insets: 13,
-                        )
+                    text: "I'm Interested",
+                    onPressed: () {
+                      setState(() {
+                        _isInterested = false;
+                      });
+                    },
+                    fontSize: 13,
+                    insets: 13,
+                  )
                       : OutlinedButton(
-                          onPressed: () {
-                            setState(() {
-                              _isInterested = true;
-                            });
-                          },
-                          style: buttonStyle.copyWith(
-                            side: WidgetStateProperty.all(
-                              const BorderSide(color: AppColors.primaryRed),
-                            ),
-                            foregroundColor: WidgetStateProperty.all(
-                              AppColors.primaryRed,
-                            ),
-                          ),
-                          child: const Text("I'm Interested"),
-                        ),
+                    onPressed: () {
+                      setState(() {
+                        _isInterested = true;
+                      });
+                    },
+                    style: buttonStyle.copyWith(
+                      side: WidgetStateProperty.all(
+                        const BorderSide(color: AppColors.primaryRed),
+                      ),
+                      foregroundColor: WidgetStateProperty.all(
+                        AppColors.primaryRed,
+                      ),
+                    ),
+                    child: const Text("I'm Interested"),
+                  ),
                 ),
                 const SizedBox(width: 12),
               ],

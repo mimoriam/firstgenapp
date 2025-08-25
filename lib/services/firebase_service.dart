@@ -1459,7 +1459,7 @@ class FirebaseService {
     required String name,
     required String description,
     required String creatorId,
-    required List<File> images,
+    required File image,
     required bool isInviteOnly,
     required String whoFor,
     required String whatToGain,
@@ -1470,23 +1470,19 @@ class FirebaseService {
           .collection(communityCollection)
           .doc();
 
-      List<String> imageUrls = [];
-      for (var image in images) {
-        final imageUrl = await _storage
-            .ref()
-            .child('community_images')
-            .child(
-              '${communityRef.id}/${DateTime.now().millisecondsSinceEpoch}.jpg',
-            )
-            .putFile(image)
-            .then((task) => task.ref.getDownloadURL());
-        imageUrls.add(imageUrl);
-      }
+      final imageUrl = await _storage
+          .ref()
+          .child('community_images')
+          .child(
+            '${communityRef.id}/${DateTime.now().millisecondsSinceEpoch}.jpg',
+          )
+          .putFile(image)
+          .then((task) => task.ref.getDownloadURL());
 
       final communityData = {
         'name': name,
         'description': description,
-        'imageUrls': imageUrls,
+        'imageUrl': imageUrl,
         'creatorId': creatorId,
         'members': [creatorId],
         'isInviteOnly': isInviteOnly,

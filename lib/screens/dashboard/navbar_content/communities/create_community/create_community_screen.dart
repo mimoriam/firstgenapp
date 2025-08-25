@@ -19,42 +19,29 @@ class CreateCommunityScreen extends StatefulWidget {
 
 class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
   final _formKey = GlobalKey<FormBuilderState>();
-  List<File> _images = [];
+  File? _image;
   bool _isLoading = false;
 
   Future<void> _pickImage() async {
-    if (_images.length >= 4) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('You can upload a maximum of 4 images.')),
-      );
-      return;
-    }
-
     final picker = ImagePicker();
-    final pickedFiles = await picker.pickMultiImage(
+    final pickedFile = await picker.pickImage(
       imageQuality: 70,
       maxWidth: 800,
+      source: ImageSource.gallery,
     );
 
-    if (pickedFiles.isNotEmpty) {
+    if (pickedFile != null) {
       setState(() {
-        _images.addAll(
-          pickedFiles
-              .map((pickedFile) => File(pickedFile.path))
-              .where((file) => _images.length < 4),
-        );
-        if (_images.length > 4) {
-          _images = _images.sublist(0, 4);
-        }
+        _image = File(pickedFile.path);
       });
     }
   }
 
   void _createCommunity() async {
     if (_formKey.currentState?.saveAndValidate() ?? false) {
-      if (_images.isEmpty) {
+      if (_image == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please upload at least one image.')),
+          const SnackBar(content: Text('Please upload an image.')),
         );
         return;
       }
@@ -107,7 +94,7 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
           name: communityName,
           description: formData['bio'],
           creatorId: userId,
-          images: _images,
+          image: _image!,
           whoFor: formData['whoFor'],
           whatToGain: formData['whatToGain'],
           rules: formData['rules'],
@@ -278,7 +265,7 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Upload Images',
+          'Upload Image',
           style: Theme.of(
             context,
           ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
@@ -292,8 +279,14 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
             decoration: BoxDecoration(
               color: const Color(0xFFEEEEEE),
               borderRadius: BorderRadius.circular(12),
+              image: _image != null
+                  ? DecorationImage(
+                      image: FileImage(_image!),
+                      fit: BoxFit.cover,
+                    )
+                  : null,
             ),
-            child: _images.isEmpty
+            child: _image == null
                 ? Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -308,54 +301,7 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
                       ),
                     ],
                   )
-                : GridView.builder(
-                    padding: const EdgeInsets.all(4),
-                    itemCount: _images.length,
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 3,
-                          crossAxisSpacing: 4,
-                          mainAxisSpacing: 4,
-                        ),
-                    itemBuilder: (context, index) {
-                      return Stack(
-                        children: [
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: Image.file(
-                              _images[index],
-                              fit: BoxFit.cover,
-                              width: double.infinity,
-                              height: double.infinity,
-                            ),
-                          ),
-                          Positioned(
-                            top: 4,
-                            right: 4,
-                            child: GestureDetector(
-                              onTap: () {
-                                setState(() {
-                                  _images.removeAt(index);
-                                });
-                              },
-                              child: Container(
-                                padding: const EdgeInsets.all(2),
-                                decoration: const BoxDecoration(
-                                  color: Colors.black54,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Icon(
-                                  Icons.close,
-                                  color: Colors.white,
-                                  size: 16,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      );
-                    },
-                  ),
+                : null,
           ),
         ),
       ],

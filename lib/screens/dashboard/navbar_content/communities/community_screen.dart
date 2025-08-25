@@ -263,7 +263,7 @@ class _AllCommunitiesSection extends StatelessWidget {
                               CircleAvatar(
                                 radius: 24,
                                 backgroundImage: NetworkImage(
-                                  community.imageUrls.first,
+                                  community.imageUrl,
                                 ),
                               ),
                               const SizedBox(height: 6),
@@ -346,14 +346,14 @@ class __CreatePostSectionState extends State<_CreatePostSection> {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    final viewModel = Provider.of<CommunityViewModel>(context);
+    final viewModel = Provider.of<CommunityViewModel>(context, listen: false);
     final userProfileViewModel = Provider.of<UserProfileViewModel>(context);
     final userData = userProfileViewModel.userProfileData;
     final imageUrl = userData?['profileImageUrl'];
     final hasPhoto = imageUrl != null && imageUrl.isNotEmpty;
 
     final postContentField = _formKey.currentState?.fields['post_content'];
-    final hasError = postContentField != null && postContentField.hasError;
+    final hasError = postContentField?.hasError ?? false;
 
     return FormBuilder(
       key: _formKey,
@@ -479,7 +479,7 @@ class __CreatePostSectionState extends State<_CreatePostSection> {
                       Padding(
                         padding: const EdgeInsets.only(left: 12.0, top: 8.0),
                         child: Text(
-                          postContentField.errorText!,
+                          postContentField!.errorText!,
                           style: TextStyle(
                             color: Theme.of(context).colorScheme.error,
                             fontSize: 12,
@@ -714,7 +714,7 @@ class _CommunityListCard extends StatelessWidget {
           fit: StackFit.expand,
           children: [
             Image.network(
-              community.imageUrls.first,
+              community.imageUrl,
               fit: BoxFit.cover,
               errorBuilder: (context, error, stackTrace) =>
                   Container(color: Colors.grey),

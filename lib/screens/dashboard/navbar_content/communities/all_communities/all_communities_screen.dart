@@ -174,7 +174,7 @@ class _CommunityCard extends StatelessWidget {
           fit: StackFit.expand,
           children: [
             Image.network(
-              community.imageUrls.first,
+              community.imageUrl,
               fit: BoxFit.cover,
               errorBuilder: (context, error, stackTrace) =>
                   Container(color: Colors.grey.shade300),

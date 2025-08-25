@@ -4,7 +4,7 @@ class Community {
   final String id;
   final String name;
   final String description;
-  final List<String> imageUrls;
+  final String imageUrl;
   final String creatorId;
   final List<String> members;
   final bool isInviteOnly;
@@ -18,7 +18,7 @@ class Community {
     required this.id,
     required this.name,
     required this.description,
-    required this.imageUrls,
+    required this.imageUrl,
     required this.creatorId,
     required this.members,
     required this.isInviteOnly,
@@ -35,7 +35,7 @@ class Community {
       id: doc.id,
       name: data['name'] ?? '',
       description: data['description'] ?? '',
-      imageUrls: List<String>.from(data['imageUrls'] ?? []),
+      imageUrl: data['imageUrl'] ?? '',
       creatorId: data['creatorId'] ?? '',
       members: List<String>.from(data['members'] ?? []),
       isInviteOnly: data['isInviteOnly'] ?? false,
@@ -51,7 +51,7 @@ class Community {
     return {
       'name': name,
       'description': description,
-      'imageUrls': imageUrls,
+      'imageUrl': imageUrl,
       'creatorId': creatorId,
       'members': members,
       'isInviteOnly': isInviteOnly,
