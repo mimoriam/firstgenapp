@@ -15,6 +15,10 @@
 		97C146FC1CF9000F007C117D /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FA1CF9000F007C117D /* Main.storyboard */; };
 		97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FD1CF9000F007C117D /* Assets.xcassets */; };
 		97C147011CF9000F007C117D /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FF1CF9000F007C117D /* LaunchScreen.storyboard */; };
+		B532B6142E5DBCF000203E00 /* Main 2.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = B532B6112E5DBCF000203E00 /* Main 2.storyboard */; };
+		B532B6152E5DBCF000203E00 /* LaunchScreen 2.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = B532B6102E5DBCF000203E00 /* LaunchScreen 2.storyboard */; };
+		B532B6162E5DBCF000203E00 /* Main 2.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = B532B6112E5DBCF000203E00 /* Main 2.storyboard */; };
+		B532B6172E5DBCF000203E00 /* LaunchScreen 2.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = B532B6102E5DBCF000203E00 /* LaunchScreen 2.storyboard */; };
 		B8FF11CFC9ADBACEA4A549C0 /* Pods_RunnerTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0E980FFFE7FDCA5E75981439 /* Pods_RunnerTests.framework */; };
 		F5276AA2B43A6FEE3996EA61 /* Pods_Runner.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4010BA23E8163002439B3118 /* Pods_Runner.framework */; };
 /* End PBXBuildFile section */
@@ -63,6 +67,8 @@
 		97C146FD1CF9000F007C117D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		97C147001CF9000F007C117D /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		97C147021CF9000F007C117D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		B532B6122E5DBCF000203E00 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = "Base.lproj/LaunchScreen 2.storyboard"; sourceTree = "<group>"; };
+		B532B6132E5DBCF000203E00 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = "Base.lproj/Main 2.storyboard"; sourceTree = "<group>"; };
 		C1D8DBE2ACD91B79A4BBAC67 /* GoogleService-Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; name = "GoogleService-Info.plist"; path = "Runner/GoogleService-Info.plist"; sourceTree = "<group>"; };
 		CFECE0032ECF484BA6036278 /* Pods-RunnerTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.release.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.release.xcconfig"; sourceTree = "<group>"; };
 		D797ADA9D27B0571938B6833 /* Pods-Runner.profile.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.profile.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.profile.xcconfig"; sourceTree = "<group>"; };
@@ -150,6 +156,8 @@
 				1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */,
 				74858FAE1ED2DC5600515810 /* AppDelegate.swift */,
 				74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */,
+				B532B6102E5DBCF000203E00 /* LaunchScreen 2.storyboard */,
+				B532B6112E5DBCF000203E00 /* Main 2.storyboard */,
 			);
 			path = Runner;
 			sourceTree = "<group>";
@@ -164,7 +172,6 @@
 				CFECE0032ECF484BA6036278 /* Pods-RunnerTests.release.xcconfig */,
 				F85C86E2944AE6466041B20F /* Pods-RunnerTests.profile.xcconfig */,
 			);
-			name = Pods;
 			path = Pods;
 			sourceTree = "<group>";
 		};
@@ -257,6 +264,8 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B532B6142E5DBCF000203E00 /* Main 2.storyboard in Resources */,
+				B532B6152E5DBCF000203E00 /* LaunchScreen 2.storyboard in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -264,6 +273,8 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B532B6162E5DBCF000203E00 /* Main 2.storyboard in Resources */,
+				B532B6172E5DBCF000203E00 /* LaunchScreen 2.storyboard in Resources */,
 				97C147011CF9000F007C117D /* LaunchScreen.storyboard in Resources */,
 				3B3967161E833CAA004F5970 /* AppFrameworkInfo.plist in Resources */,
 				97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */,
@@ -283,9 +294,13 @@
 			inputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-Runner/Pods-Runner-frameworks-${CONFIGURATION}-input-files.xcfilelist",
 			);
+			inputPaths = (
+			);
 			name = "[CP] Embed Pods Frameworks";
 			outputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-Runner/Pods-Runner-frameworks-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
@@ -316,9 +331,13 @@
 			inputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-Runner/Pods-Runner-resources-${CONFIGURATION}-input-files.xcfilelist",
 			);
+			inputPaths = (
+			);
 			name = "[CP] Copy Pods Resources";
 			outputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-Runner/Pods-Runner-resources-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
@@ -431,6 +450,22 @@
 			name = LaunchScreen.storyboard;
 			sourceTree = "<group>";
 		};
+		B532B6102E5DBCF000203E00 /* LaunchScreen 2.storyboard */ = {
+			isa = PBXVariantGroup;
+			children = (
+				B532B6122E5DBCF000203E00 /* Base */,
+			);
+			name = "LaunchScreen 2.storyboard";
+			sourceTree = "<group>";
+		};
+		B532B6112E5DBCF000203E00 /* Main 2.storyboard */ = {
+			isa = PBXVariantGroup;
+			children = (
+				B532B6132E5DBCF000203E00 /* Base */,
+			);
+			name = "Main 2.storyboard";
+			sourceTree = "<group>";
+		};
 /* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
@@ -496,6 +531,7 @@
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LAUNCH_SCREEN_STORYBOARD = "LaunchScreen 2.storyboard";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -679,6 +715,7 @@
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LAUNCH_SCREEN_STORYBOARD = "LaunchScreen 2.storyboard";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -702,6 +739,7 @@
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Runner/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LAUNCH_SCREEN_STORYBOARD = "LaunchScreen 2.storyboard";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
