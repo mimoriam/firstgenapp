@@ -145,6 +145,12 @@ class _CommunityScreenState extends State<CommunityScreen>
             headerSliverBuilder: (context, innerBoxIsScrolled) {
               return [
                 SliverToBoxAdapter(child: _AllCommunitiesSection()),
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: _CreatePostSection(),
+                  ),
+                ),
                 SliverPersistentHeader(
                   delegate: _SliverAppBarDelegate(
                     TabBar(
@@ -313,14 +319,14 @@ class _MyFeedTab extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<CommunityViewModel>(
       builder: (context, viewModel, child) {
+        if (viewModel.feedPosts.isEmpty) {
+          return const Center(child: Text("Your feed is empty."));
+        }
         return ListView.separated(
           padding: const EdgeInsets.all(16.0),
-          itemCount: viewModel.feedPosts.length + 1,
+          itemCount: viewModel.feedPosts.length,
           itemBuilder: (context, index) {
-            if (index == 0) {
-              return _CreatePostSection();
-            }
-            final post = viewModel.feedPosts[index - 1];
+            final post = viewModel.feedPosts[index];
             return _PostCard(
               post: post,
               onComment: () {
@@ -375,7 +381,7 @@ class __CreatePostSectionState extends State<_CreatePostSection> {
 
     return FormBuilder(
       key: _formKey,
-      autovalidateMode: AutovalidateMode.onUserInteraction,
+      autovalidateMode: AutovalidateMode.disabled,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -446,7 +452,6 @@ class __CreatePostSectionState extends State<_CreatePostSection> {
                               focusedBorder: InputBorder.none,
                               errorBorder: InputBorder.none,
                               focusedErrorBorder: InputBorder.none,
-                              errorText: postContentField?.errorText,
                             ),
                           ),
                           Padding(

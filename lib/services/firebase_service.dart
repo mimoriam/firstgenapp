@@ -32,6 +32,8 @@ class FirebaseService {
   final postCollection = "posts";
   final commentCollection = "comments";
 
+  final Map<String, Map<String, dynamic>> _userCache = {};
+
   // Email/Password Login
   Future<UserCredential> loginWithEmail({
     required String email,
@@ -1284,12 +1286,16 @@ class FirebaseService {
   }
 
   Future<Map<String, dynamic>?> getUserData(String userId) async {
+    if (_userCache.containsKey(userId)) {
+      return _userCache[userId];
+    }
     try {
       final docSnapshot = await _firestore
           .collection(userCollection)
           .doc(userId)
           .get();
       if (docSnapshot.exists) {
+        _userCache[userId] = docSnapshot.data()!;
         return docSnapshot.data();
       } else {
         return null;
@@ -1381,6 +1387,8 @@ class FirebaseService {
     final commentRef = _firestore.collection('comments').doc();
     final postRef = _firestore.collection(postCollection).doc(postId);
 
+    final commentDoc = await commentRef.get();
+
     final comment = Comment(
       id: commentRef.id,
       postId: postId,
@@ -1389,7 +1397,7 @@ class FirebaseService {
       text: text,
       timestamp: Timestamp.now(),
       likes: {},
-      originalDoc: (await commentRef.get()),
+      originalDoc: commentDoc,
     );
 
     await _firestore.runTransaction((transaction) async {

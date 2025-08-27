@@ -80,8 +80,10 @@ class _CommunityScreenState extends State<CommunityScreen>
             GestureDetector(
               onTap: () {
                 if (context.mounted) {
-                  final viewModel =
-                  Provider.of<CommunityViewModel>(context, listen: false);
+                  final viewModel = Provider.of<CommunityViewModel>(
+                    context,
+                    listen: false,
+                  );
                   PersistentNavBarNavigator.pushNewScreen(
                     context,
                     screen: ChangeNotifierProvider.value(
@@ -105,39 +107,40 @@ class _CommunityScreenState extends State<CommunityScreen>
         ),
         body: CustomRefreshIndicator(
           onRefresh: _handleRefresh,
-          builder: (
-              BuildContext context,
-              Widget child,
-              IndicatorController controller,
+          builder:
+              (
+                BuildContext context,
+                Widget child,
+                IndicatorController controller,
               ) {
-            return AnimatedBuilder(
-              animation: controller,
-              builder: (BuildContext context, _) {
-                return Stack(
-                  alignment: Alignment.topCenter,
-                  children: <Widget>[
-                    if (!controller.isIdle)
-                      Positioned(
-                        top: 35.0 * controller.value,
-                        child: SizedBox(
-                          height: 30,
-                          width: 30,
-                          child: CircularProgressIndicator(
-                            value: !controller.isLoading
-                                ? controller.value.clamp(0.0, 1.0)
-                                : null,
+                return AnimatedBuilder(
+                  animation: controller,
+                  builder: (BuildContext context, _) {
+                    return Stack(
+                      alignment: Alignment.topCenter,
+                      children: <Widget>[
+                        if (!controller.isIdle)
+                          Positioned(
+                            top: 35.0 * controller.value,
+                            child: SizedBox(
+                              height: 30,
+                              width: 30,
+                              child: CircularProgressIndicator(
+                                value: !controller.isLoading
+                                    ? controller.value.clamp(0.0, 1.0)
+                                    : null,
+                              ),
+                            ),
                           ),
+                        Transform.translate(
+                          offset: Offset(0, 100.0 * controller.value),
+                          child: child,
                         ),
-                      ),
-                    Transform.translate(
-                      offset: Offset(0, 100.0 * controller.value),
-                      child: child,
-                    ),
-                  ],
+                      ],
+                    );
+                  },
                 );
               },
-            );
-          },
           child: NestedScrollView(
             headerSliverBuilder: (context, innerBoxIsScrolled) {
               return [
@@ -241,7 +244,7 @@ class _AllCommunitiesSectionState extends State<_AllCommunitiesSection> {
           ),
           const SizedBox(height: 2),
           SizedBox(
-            height: 82,
+            height: 90,
             child: Consumer<CommunityViewModel>(
               builder: (context, viewModel, child) {
                 if (viewModel.allCommunities.isEmpty &&
@@ -264,23 +267,24 @@ class _AllCommunitiesSectionState extends State<_AllCommunitiesSection> {
                           if (context.mounted) {
                             PersistentNavBarNavigator.pushNewScreen(
                               context,
-                              screen: const CommunityDetailScreen(),
+                              screen: CommunityDetailScreen(
+                                community: community,
+                              ),
                               withNavBar: false,
                             );
                           }
                         },
                         child: SizedBox(
-                          width: 60, // Constrain width
+                          width: 60,
                           child: Column(
                             children: [
                               CircleAvatar(
                                 radius: 24,
                                 backgroundImage: NetworkImage(
-                                  community.imageUrls.first,
+                                  community.imageUrl,
                                 ),
                               ),
                               const SizedBox(height: 6),
-                              // FIX: Allow text to wrap to 2 lines and add ellipsis
                               Text(
                                 community.name,
                                 style: textTheme.bodySmall,
@@ -366,12 +370,12 @@ class __CreatePostSectionState extends State<_CreatePostSection> {
     final imageUrl = userData?['profileImageUrl'];
     final hasPhoto = imageUrl != null && imageUrl.isNotEmpty;
 
-    // Determine if the field has an error to adjust the border color
     final postContentField = _formKey.currentState?.fields['post_content'];
-    final hasError = postContentField != null && postContentField.hasError;
+    final hasError = postContentField?.hasError ?? false;
 
     return FormBuilder(
       key: _formKey,
+      autovalidateMode: AutovalidateMode.onUserInteraction,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -401,7 +405,6 @@ class __CreatePostSectionState extends State<_CreatePostSection> {
               ),
               const SizedBox(width: 12),
               Expanded(
-                // FIX: Refactor the text field and icons to handle validation errors gracefully.
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -443,6 +446,7 @@ class __CreatePostSectionState extends State<_CreatePostSection> {
                               focusedBorder: InputBorder.none,
                               errorBorder: InputBorder.none,
                               focusedErrorBorder: InputBorder.none,
+                              errorText: postContentField?.errorText,
                             ),
                           ),
                           Padding(
@@ -462,9 +466,7 @@ class __CreatePostSectionState extends State<_CreatePostSection> {
                                   ),
                                 ),
                                 IconButton(
-                                  onPressed: () {
-                                    // TODO: Implement attachment logic
-                                  },
+                                  onPressed: () {},
                                   icon: const Icon(
                                     Icons.attach_file_outlined,
                                     color: AppColors.textSecondary,
@@ -473,9 +475,7 @@ class __CreatePostSectionState extends State<_CreatePostSection> {
                                 ),
                                 const SizedBox(width: 12),
                                 IconButton(
-                                  onPressed: () {
-                                    // TODO: Implement emoji logic
-                                  },
+                                  onPressed: () {},
                                   icon: const Icon(
                                     Icons.emoji_emotions_outlined,
                                     color: AppColors.textSecondary,
@@ -488,17 +488,6 @@ class __CreatePostSectionState extends State<_CreatePostSection> {
                         ],
                       ),
                     ),
-                    if (hasError)
-                      Padding(
-                        padding: const EdgeInsets.only(left: 12.0, top: 8.0),
-                        child: Text(
-                          postContentField.errorText!,
-                          style: TextStyle(
-                            color: Theme.of(context).colorScheme.error,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ),
                   ],
                 ),
               ),
@@ -564,9 +553,8 @@ class __CreatePostSectionState extends State<_CreatePostSection> {
                     ...viewModel.joinedCommunities.map((community) {
                       return DropdownMenuItem(
                         value: community.id,
-                        // FIX: Handle text overflow in dropdown
                         child: SizedBox(
-                          width: 100, // Adjust width as needed
+                          width: 100,
                           child: Text(
                             community.name,
                             overflow: TextOverflow.ellipsis,
@@ -618,6 +606,9 @@ class __CreatePostSectionState extends State<_CreatePostSection> {
                                     _image = null;
                                     _isPosting = false;
                                   });
+                                  if (context.mounted) {
+                                    FocusScope.of(context).unfocus();
+                                  }
                                 });
                           }
                         },
@@ -728,7 +719,7 @@ class _CommunityListCard extends StatelessWidget {
           fit: StackFit.expand,
           children: [
             Image.network(
-              community.imageUrls.first,
+              community.imageUrl,
               fit: BoxFit.cover,
               errorBuilder: (context, error, stackTrace) =>
                   Container(color: Colors.grey),
@@ -780,7 +771,7 @@ class _CommunityListCard extends StatelessWidget {
                       if (context.mounted) {
                         PersistentNavBarNavigator.pushNewScreen(
                           context,
-                          screen: const CommunityDetailScreen(),
+                          screen: CommunityDetailScreen(community: community),
                           withNavBar: false,
                         );
                       }
@@ -905,8 +896,8 @@ class _PostCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (post.communityId != null)
-              FutureBuilder<String?>(
-                future: firebaseService.getCommunityNameById(post.communityId!),
+              FutureBuilder<Community?>(
+                future: firebaseService.getCommunityById(post.communityId!),
                 builder: (context, communitySnapshot) {
                   return Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -917,7 +908,7 @@ class _PostCard extends StatelessWidget {
                           children: [
                             const TextSpan(text: 'Posted in '),
                             TextSpan(
-                              text: communitySnapshot.data ?? "...",
+                              text: communitySnapshot.data?.name ?? "...",
                               style: const TextStyle(
                                 color: AppColors.primaryRed,
                                 fontWeight: FontWeight.bold,
@@ -928,10 +919,13 @@ class _PostCard extends StatelessWidget {
                       ),
                       TextButton(
                         onPressed: () {
-                          if (context.mounted) {
+                          if (context.mounted &&
+                              communitySnapshot.data != null) {
                             PersistentNavBarNavigator.pushNewScreen(
                               context,
-                              screen: const CommunityDetailScreen(),
+                              screen: CommunityDetailScreen(
+                                community: communitySnapshot.data!,
+                              ),
                               withNavBar: false,
                             );
                           }

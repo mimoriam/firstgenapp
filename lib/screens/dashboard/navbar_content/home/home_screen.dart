@@ -1,7 +1,5 @@
 import 'package:country_picker/country_picker.dart';
 import 'package:firstgenapp/common/gradient_btn.dart';
-import 'package:firstgenapp/models/community_models.dart';
-import 'package:firstgenapp/screens/dashboard/navbar_content/communities/community_detail/community_detail_screen.dart';
 import 'package:firstgenapp/screens/dashboard/navbar_content/home/match_detail/match_detail_screen.dart';
 import 'package:firstgenapp/screens/dashboard/navbar_content/home/recent_activities/recent_activities_screen.dart';
 import 'package:firstgenapp/screens/dashboard/navbar_content/home/your_matches/your_matches_screen.dart';
