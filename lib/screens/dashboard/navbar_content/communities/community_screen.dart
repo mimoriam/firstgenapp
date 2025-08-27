@@ -267,7 +267,9 @@ class _AllCommunitiesSectionState extends State<_AllCommunitiesSection> {
                           if (context.mounted) {
                             PersistentNavBarNavigator.pushNewScreen(
                               context,
-                              screen: const CommunityDetailScreen(),
+                              screen: CommunityDetailScreen(
+                                community: community,
+                              ),
                               withNavBar: false,
                             );
                           }
@@ -423,11 +425,10 @@ class __CreatePostSectionState extends State<_CreatePostSection> {
                             name: 'post_content',
                             maxLines: 5,
                             minLines: 1,
-                            // FIX: Remove setState from onChanged to prevent keyboard flicker
-                            onChanged: (_) {},
                             validator: (value) {
-                              if ((value == null || value.isEmpty)) {
-                                return 'Please write something to post.';
+                              if ((value == null || value.isEmpty) &&
+                                  _image == null) {
+                                return 'Please write something or add an image.';
                               }
                               return null;
                             },
@@ -600,14 +601,11 @@ class __CreatePostSectionState extends State<_CreatePostSection> {
                                   image: _image,
                                 )
                                 .then((_) {
-                                  // FIX: Clear the form and reset state
                                   _formKey.currentState?.reset();
                                   setState(() {
                                     _image = null;
                                     _isPosting = false;
                                   });
-
-                                  // FIX: Unfocus the text field to hide the keyboard
                                   if (context.mounted) {
                                     FocusScope.of(context).unfocus();
                                   }
@@ -773,7 +771,7 @@ class _CommunityListCard extends StatelessWidget {
                       if (context.mounted) {
                         PersistentNavBarNavigator.pushNewScreen(
                           context,
-                          screen: const CommunityDetailScreen(),
+                          screen: CommunityDetailScreen(community: community),
                           withNavBar: false,
                         );
                       }
@@ -886,6 +884,7 @@ class _PostCard extends StatelessWidget {
       context,
       listen: false,
     );
+
     return FutureBuilder<Map<String, dynamic>?>(
       future: firebaseService.getUserData(post.authorId),
       builder: (context, snapshot) {
@@ -897,8 +896,8 @@ class _PostCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (post.communityId != null)
-              FutureBuilder<String?>(
-                future: firebaseService.getCommunityNameById(post.communityId!),
+              FutureBuilder<Community?>(
+                future: firebaseService.getCommunityById(post.communityId!),
                 builder: (context, communitySnapshot) {
                   return Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -909,7 +908,7 @@ class _PostCard extends StatelessWidget {
                           children: [
                             const TextSpan(text: 'Posted in '),
                             TextSpan(
-                              text: communitySnapshot.data ?? "...",
+                              text: communitySnapshot.data?.name ?? "...",
                               style: const TextStyle(
                                 color: AppColors.primaryRed,
                                 fontWeight: FontWeight.bold,
@@ -920,10 +919,13 @@ class _PostCard extends StatelessWidget {
                       ),
                       TextButton(
                         onPressed: () {
-                          if (context.mounted) {
+                          if (context.mounted &&
+                              communitySnapshot.data != null) {
                             PersistentNavBarNavigator.pushNewScreen(
                               context,
-                              screen: const CommunityDetailScreen(),
+                              screen: CommunityDetailScreen(
+                                community: communitySnapshot.data!,
+                              ),
                               withNavBar: false,
                             );
                           }

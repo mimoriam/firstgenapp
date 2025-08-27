@@ -1,5 +1,6 @@
 import 'package:country_picker/country_picker.dart';
 import 'package:firstgenapp/common/gradient_btn.dart';
+import 'package:firstgenapp/models/community_models.dart';
 import 'package:firstgenapp/screens/dashboard/navbar_content/communities/community_detail/community_detail_screen.dart';
 import 'package:firstgenapp/screens/dashboard/navbar_content/home/match_detail/match_detail_screen.dart';
 import 'package:firstgenapp/screens/dashboard/navbar_content/home/recent_activities/recent_activities_screen.dart';
@@ -263,87 +264,6 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final List<Map<String, dynamic>> _matches = [
-    {
-      "name": "James",
-      "age": 20,
-      "distance": 2.2,
-      "interests": "MUSIC, COFFEE",
-      "country": "Indian",
-      "isOnline": true,
-      "image":
-          "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=500&q=80",
-    },
-    {
-      "name": "Jessica",
-      "age": 22,
-      "distance": 2.2,
-      "interests": "ART, MOVIES",
-      "country": "German",
-      "isOnline": false,
-      "image":
-          "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=500&q=80",
-    },
-    {
-      "name": "Carlos",
-      "age": 25,
-      "distance": 2.2,
-      "interests": "DANCE, FOOD",
-      "country": "Spanish",
-      "isOnline": true,
-      "image":
-          "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=500&q=80",
-    },
-    {
-      "name": "Priya",
-      "age": 21,
-      "distance": 5.0,
-      "interests": "TRAVEL, BOOKS",
-      "country": "Indian",
-      "isOnline": false,
-      "image":
-          "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=500&q=80",
-    },
-  ];
-
-  final List<Map<String, dynamic>> _events = [
-    {
-      "image": "https://picsum.photos/seed/e1/400/200",
-      "title": "Diwali Cooking Workshop",
-      "date": "8 December, 2025",
-      "location": "Spice Garden Kitchen",
-      "description":
-          "Soothing audio and gentle vibrations to ease discomfort. Soothing audio and gentle vibrations to.",
-      "attendees": 31,
-      "isInterested": true,
-    },
-    {
-      "image": "https://picsum.photos/seed/e2/400/200",
-      "title": "Cultural Music Night",
-      "date": "15 December, 2025",
-      "location": "The Grand Hall",
-      "description":
-          "Experience the rich musical traditions from around the world. A night of melody and harmony.",
-      "attendees": 85,
-      "isInterested": false,
-    },
-  ];
-
-  final List<Map<String, dynamic>> _activities = [
-    {
-      "avatar":
-          "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&q=80",
-      "text": "Maria Santos liked your profile",
-      "time": "2 hours ago",
-    },
-    {
-      "avatar":
-          "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=100&q=80",
-      "text": "You matched with Leila Okafor",
-      "time": "2 hours ago",
-    },
-  ];
-
   // MODIFICATION: Added refresh logic.
   Future<void> _handleRefresh() async {
     // Simulate a network call for fetching new data
@@ -581,23 +501,17 @@ class _HomeScreenState extends State<HomeScreen> {
               if (title == "New Matches") {
                 PersistentNavBarNavigator.pushNewScreen(
                   context,
-                  screen: YourMatchesScreen(),
+                  screen: const YourMatchesScreen(),
                   withNavBar: false,
                 );
               } else if (title == "Upcoming Events") {
-                // PersistentNavBarNavigator.pushNewScreen(
-                //   context,
-                //   screen: RecentActivitiesScreen(),
-                //   withNavBar: false,
-                // );
-
                 if (context.mounted) {
                   widget.onSwitchTab(3, communitySubTabIndex: 2);
                 }
               } else {
                 PersistentNavBarNavigator.pushNewScreen(
                   context,
-                  screen: RecentActivitiesScreen(),
+                  screen: const RecentActivitiesScreen(),
                   withNavBar: false,
                 );
               }
@@ -616,209 +530,63 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildNewMatchesList() {
-    return SizedBox(
-      // UPDATED: Reduced height for compactness
-      height: 180,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        itemCount: _matches.length,
-        itemBuilder: (context, index) {
-          return _buildMatchCard(_matches[index]);
-        },
-      ),
-    );
-  }
-
-  Widget _buildMatchCard(Map<String, dynamic> match) {
-    final String? imageUrl = match['avatar'];
-    final bool hasImage = imageUrl != null && imageUrl.isNotEmpty;
-    // Mock distance since it's not in the database.
-    final double distance = match['distance'] ?? 2.2;
-    final bool isOnline = match['isOnline'] ?? false;
-
-    return GestureDetector(
-      onTap: () {
-        if (context.mounted) {
-          // PersistentNavBarNavigator.pushNewScreen(
-          //   context,
-          //   screen: const MatchDetailScreen(),
-          //   withNavBar: false,
-          // );
-        }
-      },
-      child: Container(
-        width: 110,
-        margin: const EdgeInsets.only(right: 6),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(20),
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              if (hasImage)
-                Image.network(
-                  imageUrl,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      color: Colors.grey[300],
-                      child: const Center(
-                        child: Icon(Icons.broken_image, color: Colors.grey),
-                      ),
-                    );
-                  },
-                )
-              else
-                Container(
-                  color: Colors.grey[300],
-                  child: const Center(
-                    child: Icon(Icons.person, color: Colors.grey, size: 40),
-                  ),
-                ),
-              Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.transparent,
-                      Colors.black.withOpacity(0.2),
-                      Colors.black.withOpacity(0.8),
-                    ],
-                    stops: const [0.0, 0.5, 1.0],
-                  ),
-                ),
-              ),
-              if (match['countryCode'] != null)
-                Positioned(
-                  top: 10,
-                  left: 0,
-                  right: 0,
-                  child: Center(
-                    child: _buildCountryPill(match['countryCode']!),
-                  ),
-                ),
-              Positioned(
-                bottom: 10,
-                left: 10,
-                right: 10,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildDistancePill(distance),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Flexible(
-                          child: Text(
-                            "${match['name']}${match['age'] != null ? ', ${match['age']}' : ''}",
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            softWrap: false,
-                          ),
-                        ),
-                        if (isOnline)
-                          Padding(
-                            padding: const EdgeInsets.only(left: 4.0),
-                            child: Container(
-                              width: 8,
-                              height: 8,
-                              decoration: const BoxDecoration(
-                                color: Colors.green,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 2),
-                    if (match['interests'] != null)
-                      Text(
-                        (match['interests'] as String).toUpperCase(),
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.9),
-                          fontSize: 9,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDistancePill(double distance) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.7),
-        borderRadius: BorderRadius.circular(13.0),
-        border: Border.all(color: AppColors.primaryRed, width: 1.5),
-      ),
-      child: Text(
-        "$distance km away",
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
-        ),
-        maxLines: 1,
-      ),
-    );
-  }
-
-  Widget _buildCountryPill(String countryCode) {
-    final country = Country.tryParse(countryCode);
-    if (country == null) return const SizedBox.shrink();
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.7),
-        borderRadius: BorderRadius.circular(13.0),
-        border: Border.all(color: AppColors.primaryRed, width: 1.5),
-      ),
-      child: Text(
-        '${country.flagEmoji} ${country.countryCode}',
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-    );
-  }
-
   Widget _buildRecentEventsList() {
+    final List<Map<String, dynamic>> events = [
+      {
+        "image": "https://picsum.photos/seed/e1/400/200",
+        "title": "Diwali Cooking Workshop",
+        "date": "8 December, 2025",
+        "location": "Spice Garden Kitchen",
+        "description":
+            "Soothing audio and gentle vibrations to ease discomfort. Soothing audio and gentle vibrations to.",
+        "attendees": 31,
+        "isInterested": true,
+      },
+      {
+        "image": "https://picsum.photos/seed/e2/400/200",
+        "title": "Cultural Music Night",
+        "date": "15 December, 2025",
+        "location": "The Grand Hall",
+        "description":
+            "Experience the rich musical traditions from around the world. A night of melody and harmony.",
+        "attendees": 85,
+        "isInterested": false,
+      },
+    ];
+
     return ListView.separated(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      itemCount: _events.length,
+      itemCount: events.length,
       separatorBuilder: (context, index) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
-        return EventCard(event: _events[index]);
+        return EventCard(event: events[index], onSwitchTab: widget.onSwitchTab);
       },
     );
   }
 
   Widget _buildRecentActivityList() {
+    final List<Map<String, dynamic>> activities = [
+      {
+        "avatar":
+            "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&q=80",
+        "text": "Maria Santos liked your profile",
+        "time": "2 hours ago",
+      },
+      {
+        "avatar":
+            "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=100&q=80",
+        "text": "You matched with Leila Okafor",
+        "time": "2 hours ago",
+      },
+    ];
     return ListView.separated(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      itemCount: _activities.length,
+      itemCount: activities.length,
       separatorBuilder: (context, index) => const SizedBox(height: 6),
       itemBuilder: (context, index) {
-        return _buildActivityItem(_activities[index]);
+        return _buildActivityItem(activities[index]);
       },
     );
   }
@@ -868,8 +636,14 @@ class _HomeScreenState extends State<HomeScreen> {
 class EventCard extends StatefulWidget {
   final Map<String, dynamic> event;
   final bool? copied;
+  final Function(int, {int? communitySubTabIndex})? onSwitchTab;
 
-  const EventCard({super.key, required this.event, this.copied});
+  const EventCard({
+    super.key,
+    required this.event,
+    this.copied,
+    this.onSwitchTab,
+  });
 
   @override
   _EventCardState createState() => _EventCardState();
@@ -952,19 +726,19 @@ class _EventCardState extends State<EventCard> {
                   Iconsax.calendar,
                   widget.event['date'],
                   // Colors.green.shade700,
-                  Color(0xFF009E60),
+                  const Color(0xFF009E60),
                 ),
                 _buildInfoItem(
                   Iconsax.location,
                   widget.event['location'],
                   // Colors.yellow.shade700,
-                  Color(0xFFF7C108),
+                  const Color(0xFFF7C108),
                 ),
                 _buildInfoItem(
                   Iconsax.profile_2user,
                   "${widget.event['attendees']} Attending",
                   // Colors.blue.shade700,
-                  Color(0xFF0A75BA),
+                  const Color(0xFF0A75BA),
                 ),
               ],
             ),
@@ -1015,11 +789,9 @@ class _EventCardState extends State<EventCard> {
                 Expanded(
                   child: TextButton(
                     onPressed: () {
-                      PersistentNavBarNavigator.pushNewScreen(
-                        context,
-                        screen: CommunityDetailScreen(),
-                        withNavBar: false,
-                      );
+                      if (widget.onSwitchTab != null) {
+                        widget.onSwitchTab!(3);
+                      }
                     },
                     // UPDATED: Matched style
                     style: buttonStyle.copyWith(

@@ -609,128 +609,6 @@ class FirebaseService {
         .set(true);
   }
 
-  // OLD: Rewrote this method to fetch fresh user data from Firestore.
-  // Stream<List<Conversation>> getConversations() {
-  //   final currentUser = _auth.currentUser;
-  //   if (currentUser == null) return Stream.value([]);
-  //
-  //   final userConversationsRef = _database.ref(
-  //     'users/${currentUser.uid}/conversations',
-  //   );
-  //
-  //   return userConversationsRef.onValue.switchMap((event) {
-  //     if (event.snapshot.value == null) {
-  //       return Stream.value([]);
-  //     }
-  //
-  //     final conversationIdsMap = event.snapshot.value as Map;
-  //     final conversationIds = conversationIdsMap.keys.toList();
-  //
-  //     if (conversationIds.isEmpty) {
-  //       return Stream.value([]);
-  //     }
-  //
-  //     final conversationStreams = conversationIds.map((id) {
-  //       return _database.ref('conversations/$id').onValue.asyncMap((
-  //         event,
-  //       ) async {
-  //         if (event.snapshot.exists && event.snapshot.value != null) {
-  //           final encodedData = jsonEncode(event.snapshot.value);
-  //           final data = jsonDecode(encodedData) as Map<String, dynamic>;
-  //
-  //           final participants = Map<String, dynamic>.from(
-  //             data['participants'] as Map? ?? {},
-  //           );
-  //           final otherUserId = participants.keys.firstWhere(
-  //             (key) => key != currentUser.uid,
-  //             orElse: () => '',
-  //           );
-  //
-  //           if (otherUserId.isNotEmpty) {
-  //             try {
-  //               final userDoc = await _firestore
-  //                   .collection(userCollection)
-  //                   .doc(otherUserId)
-  //                   .get();
-  //               if (userDoc.exists) {
-  //                 final userData = userDoc.data()!;
-  //                 // Replace the stale user data in the conversation with fresh data
-  //                 data['users'][otherUserId] = {
-  //                   'uid': otherUserId,
-  //                   'name': userData['fullName'] ?? 'No Name',
-  //                   'avatarUrl':
-  //                       userData['profileImageUrl'] ??
-  //                       'https://picsum.photos/seed/error/200/200',
-  //                 };
-  //               }
-  //             } catch (e) {
-  //               log("Error fetching user profile for chat: $e");
-  //             }
-  //           }
-  //           return Conversation.fromJson(data, id.toString(), currentUser.uid);
-  //         }
-  //         return null;
-  //       });
-  //     }).toList();
-  //
-  //     return CombineLatestStream.list(conversationStreams).map((conversations) {
-  //       final validConversations = conversations
-  //           .where((c) => c != null)
-  //           .cast<Conversation>()
-  //           .toList();
-  //       validConversations.sort(
-  //         (a, b) => b.lastMessageTimestamp.compareTo(a.lastMessageTimestamp),
-  //       );
-  //       return validConversations;
-  //     });
-  //   });
-  // }
-
-  //! VERY IMPORTANT
-  // Stream<List<Conversation>> getConversations() {
-  //   final currentUser = _auth.currentUser;
-  //   if (currentUser == null) return Stream.value([]);
-  //
-  //   final userConversationsRef = _database.ref(
-  //     'users/${currentUser.uid}/conversations',
-  //   );
-  //
-  //   return userConversationsRef.onValue.switchMap((event) {
-  //     if (event.snapshot.value == null) {
-  //       return Stream.value([]);
-  //     }
-  //
-  //     final conversationIdsMap = event.snapshot.value as Map;
-  //     final conversationIds = conversationIdsMap.keys.toList();
-  //
-  //     if (conversationIds.isEmpty) {
-  //       return Stream.value([]);
-  //     }
-  //
-  //     final conversationStreams = conversationIds.map((id) {
-  //       return _database.ref('conversations/$id').onValue.map((event) {
-  //         if (event.snapshot.exists && event.snapshot.value != null) {
-  //           final encodedData = jsonEncode(event.snapshot.value);
-  //           final data = jsonDecode(encodedData) as Map<String, dynamic>;
-  //           return Conversation.fromJson(data, id.toString(), currentUser.uid);
-  //         }
-  //         return null;
-  //       });
-  //     }).toList();
-  //
-  //     return CombineLatestStream.list(conversationStreams).map((conversations) {
-  //       final validConversations = conversations
-  //           .where((c) => c != null)
-  //           .cast<Conversation>()
-  //           .toList();
-  //       validConversations.sort(
-  //         (a, b) => b.lastMessageTimestamp.compareTo(a.lastMessageTimestamp),
-  //       );
-  //       return validConversations;
-  //     });
-  //   });
-  // }
-
   Stream<List<Conversation>> getConversations() {
     final currentUser = _auth.currentUser;
     if (currentUser == null) return Stream.value([]);
@@ -849,51 +727,6 @@ class FirebaseService {
     }
     await addRecentMatch(userId);
   }
-
-  // FIX: Modified to return user UID for chat functionality.
-  // Stream<List<Map<String, dynamic>>> getRecentUsers() {
-  //   final user = _auth.currentUser;
-  //   if (user == null) return Stream.value([]);
-  //
-  //   final recentMatchesRef = _database.ref('users/${user.uid}/recent_matches');
-  //   return recentMatchesRef.onValue.switchMap((event) {
-  //     if (!event.snapshot.exists || event.snapshot.value == null) {
-  //       return Stream.value([]);
-  //     }
-  //
-  //     final recentMatchIds = List<String>.from(
-  //       (event.snapshot.value as List).map((e) => e.toString()),
-  //     );
-  //
-  //     if (recentMatchIds.isEmpty) {
-  //       return Stream.value([]);
-  //     }
-  //
-  //     return _firestore
-  //         .collection(userCollection)
-  //         .where('uid', whereIn: recentMatchIds)
-  //         .snapshots()
-  //         .map((snapshot) {
-  //           final orderedDocs = <Map<String, dynamic>>[];
-  //           for (final userId in recentMatchIds.reversed) {
-  //             try {
-  //               final doc = snapshot.docs.firstWhere((d) => d.id == userId);
-  //               orderedDocs.add({
-  //                 'uid': doc.id,
-  //                 'name': doc.data()['fullName'] as String? ?? 'No Name',
-  //                 'avatar':
-  //                     doc.data()['profileImageUrl'] as String? ??
-  //                     'https://picsum.photos/seed/${doc.data()['uid']}/200/200',
-  //               });
-  //             } catch (e) {
-  //               // Handle case where user profile might not be found
-  //               log("User profile not found for UID: $userId");
-  //             }
-  //           }
-  //           return orderedDocs;
-  //         });
-  //   });
-  // }
 
   Stream<List<Map<String, dynamic>>> getRecentUsers() {
     final user = _auth.currentUser;
@@ -1039,30 +872,11 @@ class FirebaseService {
       if (recipientDoc.exists) {
         final recipientToken = recipientDoc.data()?['fcmToken'];
         if (recipientToken != null) {
-          // IMPORTANT: In a production app, this logic should be in a Cloud Function
-          // for security reasons. Sending notifications directly from the client
-          // requires exposing your server key, which is not secure.
           log('--- SIMULATING NOTIFICATION ---');
           log('Recipient Token: $recipientToken');
           log('Sender: ${currentUser.name}');
           log('Message: $message');
           log('-----------------------------');
-
-          // Example of how you would call a Cloud Function
-          // final url = Uri.parse('YOUR_CLOUD_FUNCTION_URL');
-          // await http.post(
-          //   url,
-          //   headers: {'Content-Type': 'application/json'},
-          //   body: jsonEncode({
-          //     'token': recipientToken,
-          //     'title': 'New message from ${currentUser.name}',
-          //     'body': message,
-          //     'data': {
-          //       'conversationId': getConversationId(currentUser.uid, recipientId),
-          //       'otherUser': jsonEncode(currentUser.toJson()),
-          //     }
-          //   }),
-          // );
         }
       }
     } catch (e) {
@@ -1096,7 +910,6 @@ class FirebaseService {
     return uid1.hashCode <= uid2.hashCode ? '$uid1-$uid2' : '$uid2-$uid1';
   }
 
-  // FIX: New method to get or create a conversation
   Future<Conversation> getOrCreateConversation(String otherUserId) async {
     final currentUser = _auth.currentUser;
     if (currentUser == null) throw Exception("User not logged in");
@@ -1134,8 +947,6 @@ class FirebaseService {
     return Conversation.fromJson(data, conversationId, currentUser.uid);
   }
 
-  // OPTIMIZATION: New method to get or create a conversation using a ChatUser object.
-  // This is more efficient as it uses the already-fetched user data.
   Future<Conversation> getOrCreateConversationWithUser(
     ChatUser otherUser,
   ) async {
@@ -1159,36 +970,6 @@ class FirebaseService {
 
     return Conversation.fromJson(data, conversationId, currentUser.uid);
   }
-
-  // Future<void> likeUser(String likedUserId) async {
-  //   final currentUser = _auth.currentUser;
-  //   if (currentUser == null) return;
-  //
-  //   final currentUserRef = _firestore
-  //       .collection(userCollection)
-  //       .doc(currentUser.uid);
-  //   final likedUserRef = _firestore.collection(userCollection).doc(likedUserId);
-  //
-  //   return _firestore.runTransaction((transaction) async {
-  //     // Get the documents
-  //     DocumentSnapshot currentUserSnapshot = await transaction.get(
-  //       currentUserRef,
-  //     );
-  //     DocumentSnapshot likedUserSnapshot = await transaction.get(likedUserRef);
-  //
-  //     if (!currentUserSnapshot.exists || !likedUserSnapshot.exists) {
-  //       throw Exception("User document not found!");
-  //     }
-  //
-  //     // For the current user, add the liked user to their 'likedUsers' map.
-  //     transaction.update(currentUserRef, {'likedUsers.$likedUserId': true});
-  //
-  //     // For the liked user, increment their 'likesReceivedCount'.
-  //     transaction.update(likedUserRef, {
-  //       'likesReceivedCount': FieldValue.increment(1),
-  //     });
-  //   });
-  // }
 
   Future<void> likeUser(String likedUserId) async {
     final currentUser = _auth.currentUser;
@@ -1407,6 +1188,8 @@ class FirebaseService {
         imageUrl = await uploadPostImage(postRef.id, image);
       }
 
+      final postDoc = await postRef.get();
+
       Post newPost = Post(
         id: postRef.id,
         authorId: authorId,
@@ -1416,7 +1199,7 @@ class FirebaseService {
         timestamp: Timestamp.now(),
         likes: {},
         commentCount: 0,
-        originalDoc: (await postRef.get()),
+        originalDoc: postDoc,
       );
 
       await postRef.set(newPost.toFirestore());
@@ -1517,20 +1300,32 @@ class FirebaseService {
     }
   }
 
-  Future<String?> getCommunityNameById(String communityId) async {
+  Future<Community?> getCommunityById(String communityId) async {
     try {
       final docSnapshot = await _firestore
           .collection(communityCollection)
           .doc(communityId)
           .get();
       if (docSnapshot.exists) {
-        return docSnapshot.data()?['name'];
+        return Community.fromFirestore(docSnapshot);
       }
       return null;
     } catch (e) {
       log('Error getting community name: $e');
       return null;
     }
+  }
+
+  Stream<List<Post>> getPostsForCommunityStream(String communityId) {
+    return _firestore
+        .collection(postCollection)
+        .where('communityId', isEqualTo: communityId)
+        .orderBy('timestamp', descending: true)
+        .snapshots()
+        .map(
+          (snapshot) =>
+              snapshot.docs.map((doc) => Post.fromFirestore(doc)).toList(),
+        );
   }
 
   Future<void> togglePostLike(String postId, String userId) async {
@@ -1550,22 +1345,83 @@ class FirebaseService {
     });
   }
 
-  Future<void> addComment(String postId, String authorId, String text) async {
+  Stream<List<Comment>> getCommentsForPost(String postId) {
+    return _firestore
+        .collection('comments')
+        .where('postId', isEqualTo: postId)
+        .where('parentId', isNull: true)
+        .orderBy('timestamp', descending: true)
+        .snapshots()
+        .map(
+          (snapshot) =>
+              snapshot.docs.map((doc) => Comment.fromFirestore(doc)).toList(),
+        );
+  }
+
+  // Get replies for a comment
+  Stream<List<Comment>> getRepliesForComment(String commentId) {
+    return _firestore
+        .collection('comments')
+        .where('parentId', isEqualTo: commentId)
+        .orderBy('timestamp', descending: false) // Show oldest replies first
+        .snapshots()
+        .map(
+          (snapshot) =>
+              snapshot.docs.map((doc) => Comment.fromFirestore(doc)).toList(),
+        );
+  }
+
+  // Add a comment or a reply
+  Future<void> addCommentOrReply({
+    required String postId,
+    String? parentId,
+    required String authorId,
+    required String text,
+  }) async {
+    final commentRef = _firestore.collection('comments').doc();
     final postRef = _firestore.collection(postCollection).doc(postId);
-    final commentRef = _firestore.collection(commentCollection).doc();
 
     final comment = Comment(
       id: commentRef.id,
       postId: postId,
+      parentId: parentId,
       authorId: authorId,
       text: text,
       timestamp: Timestamp.now(),
       likes: {},
+      originalDoc: (await commentRef.get()),
     );
 
     await _firestore.runTransaction((transaction) async {
       transaction.set(commentRef, comment.toFirestore());
       transaction.update(postRef, {'commentCount': FieldValue.increment(1)});
+      if (parentId != null) {
+        final parentCommentRef = _firestore
+            .collection('comments')
+            .doc(parentId);
+        transaction.update(parentCommentRef, {
+          'replyCount': FieldValue.increment(1),
+        });
+      }
+    });
+  }
+
+  // Toggle like on a comment or reply
+  Future<void> toggleCommentLike(String commentId, String userId) async {
+    final commentRef = _firestore.collection('comments').doc(commentId);
+    // Same logic as post like
+    return _firestore.runTransaction((transaction) async {
+      final commentDoc = await transaction.get(commentRef);
+      if (commentDoc.exists) {
+        final isLiked = (commentDoc.data()?['likes'] as Map?)?[userId] == true;
+        if (isLiked) {
+          transaction.update(commentRef, {
+            'likes.$userId': FieldValue.delete(),
+          });
+        } else {
+          transaction.update(commentRef, {'likes.$userId': true});
+        }
+      }
     });
   }
 }

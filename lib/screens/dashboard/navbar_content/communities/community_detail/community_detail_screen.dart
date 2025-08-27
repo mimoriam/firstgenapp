@@ -2,14 +2,20 @@ import 'dart:ui';
 
 import 'package:firstgenapp/common/gradient_btn.dart';
 import 'package:firstgenapp/constants/appColors.dart';
+import 'package:firstgenapp/models/community_models.dart';
 import 'package:firstgenapp/screens/dashboard/navbar_content/communities/comments/comments_screen.dart';
 import 'package:firstgenapp/screens/dashboard/navbar_content/communities/community_detail/create_event_screen/create_event_screen.dart';
+import 'package:firstgenapp/services/firebase_service.dart';
+import 'package:firstgenapp/utils/time_ago.dart';
 import 'package:flutter/material.dart';
 import 'package:iconly/iconly.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
+import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
+import 'package:provider/provider.dart';
 
 class CommunityDetailScreen extends StatefulWidget {
-  const CommunityDetailScreen({super.key});
+  final Community community;
+  const CommunityDetailScreen({super.key, required this.community});
 
   @override
   State<CommunityDetailScreen> createState() => _CommunityDetailScreenState();
@@ -60,7 +66,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
             }
           },
           backgroundColor:
-          Colors.transparent, // Important: Keep this transparent
+              Colors.transparent, // Important: Keep this transparent
           child: ClipOval(
             child: BackdropFilter(
               // The blur effect
@@ -103,14 +109,11 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
                 ),
                 onPressed: () => Navigator.of(context).pop(),
               ),
-              title: Text(
-                'Reiki Healing Community',
-                style: textTheme.titleLarge,
-              ),
+              title: const Text(''),
               pinned: true,
               floating: true,
               bottom: PreferredSize(
-                preferredSize: const Size.fromHeight(222),
+                preferredSize: const Size.fromHeight(200),
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(12, 0, 12, 0),
                   child: _buildHeaderCard(),
@@ -146,7 +149,11 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
         },
         body: TabBarView(
           controller: _tabController,
-          children: [_AboutTab(), _FeedTab(), _UpcomingEventsTab()],
+          children: [
+            _AboutTab(community: widget.community),
+            _FeedTab(community: widget.community),
+            _UpcomingEventsTab(),
+          ],
         ),
       ),
     );
@@ -154,14 +161,20 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
 
   Widget _buildHeaderCard() {
     final textTheme = Theme.of(context).textTheme;
+    final firebaseService = Provider.of<FirebaseService>(
+      context,
+      listen: false,
+    );
+    final userId = firebaseService.currentUser?.uid;
+    final isMember = widget.community.members.contains(userId);
+    final isCreator = widget.community.creatorId == userId;
+
     return Container(
       height: 200,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
-        image: const DecorationImage(
-          image: NetworkImage(
-            'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=500&q=80',
-          ),
+        image: DecorationImage(
+          image: NetworkImage(widget.community.imageUrl),
           fit: BoxFit.cover,
         ),
       ),
@@ -187,7 +200,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
             children: [
               const Spacer(),
               Text(
-                'Reiki Healing',
+                widget.community.name,
                 style: textTheme.headlineSmall?.copyWith(color: Colors.white),
               ),
               const SizedBox(height: 8),
@@ -196,41 +209,46 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
                   const Icon(Icons.star, color: Colors.amber, size: 18),
                   const SizedBox(width: 6),
                   Text(
-                    '4.3 (10K+ members)',
+                    '${widget.community.members.length} members',
                     style: textTheme.bodyMedium?.copyWith(color: Colors.white),
                   ),
                 ],
               ),
               const SizedBox(height: 8),
               Text(
-                '"Reiki healing channels universal energy, restoring balance and promoting holistic well-being."',
+                widget.community.description,
                 style: textTheme.bodySmall?.copyWith(
                   color: Colors.white.withAlpha(230),
                 ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
               const Spacer(),
-              ElevatedButton(
-                onPressed: () {},
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.tertiaryBackground,
-                  foregroundColor: AppColors.primaryOrange,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
+              Visibility(
+                visible: !isMember && !isCreator,
+                child: ElevatedButton(
+                  onPressed: () {},
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.tertiaryBackground,
+                    foregroundColor: AppColors.primaryOrange,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    side: const BorderSide(
+                      color: AppColors.primaryRed, // Set the border color
+                      width: 1.2,
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 12,
+                    ),
                   ),
-                  side: BorderSide(
-                    color: AppColors.primaryRed, // Set the border color
-                    width: 1.2,
-                  ),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 12,
-                  ),
-                ),
-                child: Text(
-                  'Join Community',
-                  style: textTheme.labelLarge?.copyWith(
-                    color: AppColors.primaryRed,
-                    fontWeight: FontWeight.bold,
+                  child: Text(
+                    'Join Community',
+                    style: textTheme.labelLarge?.copyWith(
+                      color: AppColors.primaryRed,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ),
@@ -245,49 +263,48 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
 //** =============================== FEED TAB =============================== **//
 
 class _FeedTab extends StatelessWidget {
-  final List<Map<String, dynamic>> _posts = [
-    {
-      'name': 'Ariana',
-      'avatar': 'https://randomuser.me/api/portraits/women/1.jpg',
-      'time': '17 July at 08:02 AM',
-      'community': 'Reiki Healing',
-      'image':
-      'https://images.unsplash.com/photo-1593113598332-cd288d649433?w=500&q=80',
-      'caption':
-      'My daughter just got diagnosed with ANOREXIA. Feeling overwhelmed. Any advice?',
-      'likes': 45,
-      'comments': 12,
-      'shares': 2,
-    },
-    {
-      'name': 'Ariana',
-      'avatar': 'https://randomuser.me/api/portraits/women/1.jpg',
-      'time': '17 July at 08:00 AM',
-      'community': 'Reiki Healing',
-      'title': 'This is what I learned in my recent course',
-      'quote':
-      '"The whole secret of existence lies in the pursuit of meaning, purpose, and connection. It is a delicate dance between self-discovery, compassion for others, and embracing the ever-unfolding mysteries of life. Finding harmony in the ebb and flow of experiences, we unlock the profound beauty that resides within our shared journey."',
-      'likes': 45,
-      'comments': 12,
-      'shares': 2,
-    },
-  ];
+  final Community community;
+  const _FeedTab({required this.community});
 
   @override
   Widget build(BuildContext context) {
-    return ListView.separated(
-      padding: const EdgeInsets.only(top: 16, left: 12, right: 12, bottom: 16),
-      itemCount: _posts.length,
-      itemBuilder: (context, index) {
-        return _PostCard(post: _posts[index]);
+    final firebaseService = Provider.of<FirebaseService>(
+      context,
+      listen: false,
+    );
+    return StreamBuilder<List<Post>>(
+      stream: firebaseService.getPostsForCommunityStream(community.id),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return Center(child: Text('Error: ${snapshot.error}'));
+        }
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return const Center(child: Text('No posts in this community yet.'));
+        }
+        final posts = snapshot.data!;
+        return ListView.separated(
+          padding: const EdgeInsets.only(
+            top: 16,
+            left: 12,
+            right: 12,
+            bottom: 16,
+          ),
+          itemCount: posts.length,
+          itemBuilder: (context, index) {
+            return _PostCard(post: posts[index]);
+          },
+          separatorBuilder: (context, index) => const SizedBox(height: 16),
+        );
       },
-      separatorBuilder: (context, index) => const SizedBox(height: 16),
     );
   }
 }
 
 class _PostCard extends StatelessWidget {
-  final Map<String, dynamic> post;
+  final Post post;
   const _PostCard({required this.post});
 
   @override
@@ -319,85 +336,110 @@ class _PostCard extends StatelessWidget {
 
   Widget _buildPostHeader(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
+    final firebaseService = Provider.of<FirebaseService>(
+      context,
+      listen: false,
+    );
+    return FutureBuilder<Map<String, dynamic>?>(
+      future: firebaseService.getUserData(post.authorId),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const SizedBox.shrink();
+        }
+        final authorData = snapshot.data;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            CircleAvatar(backgroundImage: NetworkImage(post['avatar'])),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    post['name'],
-                    style: textTheme.labelLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimary,
-                    ),
+            Row(
+              children: [
+                CircleAvatar(
+                  backgroundImage: NetworkImage(
+                    authorData?['profileImageUrl'] ?? "",
                   ),
-                  Text(post['time'], style: textTheme.bodySmall),
-                ],
-              ),
-            ),
-            // UPDATED: Added PopupMenuButton
-            PopupMenuButton<String>(
-              onSelected: (value) {
-                if (value == 'share') {
-                  debugPrint('Share post tapped');
-                } else if (value == 'hide') {
-                  debugPrint('Hide post tapped');
-                }
-              },
-              icon: const Icon(Icons.more_vert, color: AppColors.textSecondary),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-                PopupMenuItem<String>(
-                  value: 'share',
-                  child: Row(
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(
-                        Icons.share_outlined,
-                        color: AppColors.textSecondary,
-                      ),
-                      const SizedBox(width: 8),
                       Text(
-                        'Share Post',
+                        authorData?['fullName'] ?? "Anonymous",
                         style: textTheme.labelLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
                           color: AppColors.textPrimary,
-                          fontWeight: FontWeight.w600,
                         ),
+                      ),
+                      Text(
+                        TimeAgo.format(
+                          post.timestamp.toDate().toIso8601String(),
+                        ),
+                        style: textTheme.bodySmall,
                       ),
                     ],
                   ),
                 ),
-                PopupMenuItem<String>(
-                  value: 'hide',
-                  child: Row(
-                    children: [
-                      const Icon(
-                        IconlyLight.hide,
-                        color: AppColors.textSecondary,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Hide Post',
-                        style: textTheme.labelLarge?.copyWith(
-                          color: AppColors.textPrimary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
+                PopupMenuButton<String>(
+                  onSelected: (value) {
+                    if (value == 'share') {
+                      debugPrint('Share post tapped');
+                    } else if (value == 'hide') {
+                      debugPrint('Hide post tapped');
+                    }
+                  },
+                  icon: const Icon(
+                    Icons.more_vert,
+                    color: AppColors.textSecondary,
                   ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  itemBuilder: (BuildContext context) =>
+                      <PopupMenuEntry<String>>[
+                        PopupMenuItem<String>(
+                          value: 'share',
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.share_outlined,
+                                color: AppColors.textSecondary,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Share Post',
+                                style: textTheme.labelLarge?.copyWith(
+                                  color: AppColors.textPrimary,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        PopupMenuItem<String>(
+                          value: 'hide',
+                          child: Row(
+                            children: [
+                              const Icon(
+                                IconlyLight.hide,
+                                color: AppColors.textSecondary,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Hide Post',
+                                style: textTheme.labelLarge?.copyWith(
+                                  color: AppColors.textPrimary,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                 ),
               ],
             ),
           ],
-        ),
-      ],
+        );
+      },
     );
   }
 
@@ -406,43 +448,19 @@ class _PostCard extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (post['title'] != null)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8.0),
-            child: Text(
-              post['title'],
-              style: textTheme.labelLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary,
-              ),
-            ),
-          ),
-        if (post['image'] != null)
+        if (post.imageUrl != null)
           ClipRRect(
             borderRadius: BorderRadius.circular(12),
-            child: Image.network(post['image']),
+            child: Image.network(post.imageUrl!),
           ),
-        if (post['caption'] != null)
+        if (post.content.isNotEmpty)
           Padding(
             padding: const EdgeInsets.only(top: 12.0),
             child: Text(
-              post['caption'],
+              post.content,
               style: textTheme.bodyMedium?.copyWith(
                 color: AppColors.textPrimary,
                 fontSize: 14,
-              ),
-            ),
-          ),
-        if (post['quote'] != null)
-          Container(
-            margin: const EdgeInsets.only(top: 8.0),
-            padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-            child: Text(
-              post['quote'],
-              style: textTheme.bodyMedium?.copyWith(
-                fontStyle: FontStyle.italic,
-                color: AppColors.textPrimary.withAlpha(204),
-                fontWeight: FontWeight.normal,
               ),
             ),
           ),
@@ -451,42 +469,112 @@ class _PostCard extends StatelessWidget {
   }
 
   Widget _buildPostFooter(BuildContext context) {
+    return _PostActions(
+      post: post,
+      onComment: () {
+        PersistentNavBarNavigator.pushNewScreen(
+          context,
+          screen: CommentsScreen(postId: post.id),
+          withNavBar: false,
+        );
+      },
+      onShare: () {},
+    );
+  }
+}
+
+class _PostActions extends StatefulWidget {
+  final Post post;
+  final VoidCallback onComment;
+  final VoidCallback onShare;
+
+  const _PostActions({
+    required this.post,
+    required this.onComment,
+    required this.onShare,
+  });
+
+  @override
+  __PostActionsState createState() => __PostActionsState();
+}
+
+class __PostActionsState extends State<_PostActions> {
+  late Map<String, bool> _likes;
+  late int _commentCount;
+
+  @override
+  void initState() {
+    super.initState();
+    _likes = widget.post.likes;
+    _commentCount = widget.post.commentCount;
+  }
+
+  void _toggleLike() {
+    final firebaseService = Provider.of<FirebaseService>(
+      context,
+      listen: false,
+    );
+    final userId = firebaseService.currentUser!.uid;
+
+    setState(() {
+      if (_likes.containsKey(userId)) {
+        _likes.remove(userId);
+      } else {
+        _likes[userId] = true;
+      }
+    });
+
+    firebaseService.togglePostLike(widget.post.id, userId);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final firebaseService = Provider.of<FirebaseService>(
+      context,
+      listen: false,
+    );
+    final currentUserId = firebaseService.currentUser?.uid;
+    final isLiked = _likes[currentUserId] == true;
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Row(
           children: [
-            _buildFooterIcon(
-              Icons.favorite,
-              post['likes'].toString(),
-              AppColors.primaryRed,
-              AppColors.textSecondary,
+            GestureDetector(
+              onTap: _toggleLike,
+              child: _buildFooterIcon(
+                isLiked ? Icons.favorite : Icons.favorite_border,
+                _likes.length.toString(),
+                AppColors.primaryRed,
+                AppColors.textSecondary,
+              ),
             ),
             const SizedBox(width: 24),
-            _buildFooterIcon(
-              Iconsax.messages_2_copy,
-              post['comments'].toString(),
-              const Color(0xFF0A75BA),
-              AppColors.textSecondary,
+            GestureDetector(
+              onTap: widget.onComment,
+              child: _buildFooterIcon(
+                Iconsax.messages_2_copy,
+                _commentCount.toString(),
+                const Color(0xFF0A75BA),
+                AppColors.textSecondary,
+              ),
             ),
             const SizedBox(width: 24),
-            _buildFooterIcon(
-              Icons.share_outlined,
-              post['shares'].toString(),
-              const Color(0xFF009E60),
-              AppColors.textSecondary,
+            GestureDetector(
+              onTap: widget.onShare,
+              child: _buildFooterIcon(
+                Icons.share_outlined,
+                "0", // Share count not in model yet
+                const Color(0xFF009E60),
+                AppColors.textSecondary,
+              ),
             ),
           ],
         ),
         TextButton.icon(
-          onPressed: () {
-            if (context.mounted) {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (context) => const CommentsScreen(postId: "1",)),
-              );
-            }
-          },
+          onPressed: widget.onComment,
           icon: const Icon(
             IconlyLight.send,
             color: AppColors.textSecondary,
@@ -508,11 +596,11 @@ class _PostCard extends StatelessWidget {
   }
 
   Widget _buildFooterIcon(
-      IconData icon,
-      String count,
-      Color iconColor,
-      Color color,
-      ) {
+    IconData icon,
+    String count,
+    Color iconColor,
+    Color color,
+  ) {
     return Row(
       children: [
         Icon(icon, color: iconColor, size: 20),
@@ -533,12 +621,8 @@ class _PostCard extends StatelessWidget {
 //** =============================== ABOUT TAB =============================== **//
 
 class _AboutTab extends StatelessWidget {
-  final List<String> _imageUrls = [
-    'https://images.unsplash.com/photo-1552083375-1447ce886485?w=500&q=80',
-    'https://images.unsplash.com/photo-1552083375-1447ce886485?w=500&q=80',
-    'https://images.unsplash.com/photo-1552083375-1447ce886485?w=500&q=80',
-    'https://images.unsplash.com/photo-1552083375-1447ce886485?w=500&q=80',
-  ];
+  final Community community;
+  const _AboutTab({required this.community});
 
   @override
   Widget build(BuildContext context) {
@@ -552,7 +636,7 @@ class _AboutTab extends StatelessWidget {
             TextSpan(
               children: [
                 TextSpan(
-                  text: 'Welcome to Reiki Healing Community ',
+                  text: 'Welcome to ${community.name} ',
                   style: textTheme.titleLarge,
                 ),
                 const TextSpan(text: '👋', style: TextStyle(fontSize: 18)),
@@ -561,56 +645,27 @@ class _AboutTab extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'A supportive space where practitioners and enthusiasts come together to explore the transformative power of Reiki, fostering growth, connection, and self-healing. Join us on this journey of wellness and inner harmony.',
+            community.description,
             style: textTheme.bodySmall?.copyWith(height: 1.5),
           ),
-          const SizedBox(height: 16),
-          _buildImageGrid(),
           const SizedBox(height: 24),
           _buildExpansionTile(
             title: 'What is this community for?',
-            content:
-            'The expression or application of human creative skill and imagination, typically in a visual form such as painting or sculpture, producing works to be appreciated primarily for their beauty or emotional power.',
+            content: community.whoFor,
           ),
           const SizedBox(height: 8),
           _buildExpansionTile(
             title: 'What will you gain from this community?',
-            content:
-            'The expression or application of human creative skill and imagination, typically in a visual form such as painting or sculpture, producing works to be appreciated primarily for their beauty or emotional power.',
+            content: community.whatToGain,
           ),
           const SizedBox(height: 8),
           _buildExpansionTile(
             title: 'Community Rules',
-            content: '1. Be respectful. 2. No spam. 3. Share with kindness.',
+            content: community.rules,
             isInitiallyExpanded: false,
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildImageGrid() {
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-        childAspectRatio: 1.5,
-      ),
-      itemCount: _imageUrls.length,
-      itemBuilder: (context, index) {
-        return ClipRRect(
-          borderRadius: BorderRadius.circular(12),
-          child: Image.network(
-            _imageUrls[index],
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) =>
-                Container(color: Colors.grey.shade200),
-          ),
-        );
-      },
     );
   }
 
@@ -632,9 +687,16 @@ class _AboutTab extends StatelessWidget {
         ),
         tilePadding: EdgeInsets.zero,
         children: [
-          Text(
-            content,
-            style: const TextStyle(color: AppColors.textSecondary, height: 1.5),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              content,
+              textAlign: TextAlign.left,
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                height: 1.5,
+              ),
+            ),
           ),
         ],
       ),
@@ -652,7 +714,7 @@ class _UpcomingEventsTab extends StatelessWidget {
       "date": "8 December, 2025",
       "location": "Spice Garden Kitchen",
       "description":
-      "Soothing audio and gentle vibrations to ease discomfort. Soothing audio and gentle vibrations to.",
+          "Soothing audio and gentle vibrations to ease discomfort. Soothing audio and gentle vibrations to.",
       "attendees": 31,
       "isInterested": true,
     },
@@ -662,7 +724,7 @@ class _UpcomingEventsTab extends StatelessWidget {
       "date": "15 December, 2025",
       "location": "The Grand Hall",
       "description":
-      "Experience the rich musical traditions from around the world. A night of melody and harmony.",
+          "Experience the rich musical traditions from around the world. A night of melody and harmony.",
       "attendees": 85,
       "isInterested": false,
     },
@@ -694,10 +756,10 @@ class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
 
   @override
   Widget build(
-      BuildContext context,
-      double shrinkOffset,
-      bool overlapsContent,
-      ) {
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
     return Container(color: AppColors.primaryBackground, child: _tabBar);
   }
 
@@ -814,31 +876,31 @@ class _EventCardState extends State<EventCard> {
                 Expanded(
                   child: _isInterested
                       ? GradientButton(
-                    text: "I'm Interested",
-                    onPressed: () {
-                      setState(() {
-                        _isInterested = false;
-                      });
-                    },
-                    fontSize: 13,
-                    insets: 13,
-                  )
+                          text: "I'm Interested",
+                          onPressed: () {
+                            setState(() {
+                              _isInterested = false;
+                            });
+                          },
+                          fontSize: 13,
+                          insets: 13,
+                        )
                       : OutlinedButton(
-                    onPressed: () {
-                      setState(() {
-                        _isInterested = true;
-                      });
-                    },
-                    style: buttonStyle.copyWith(
-                      side: WidgetStateProperty.all(
-                        const BorderSide(color: AppColors.primaryRed),
-                      ),
-                      foregroundColor: WidgetStateProperty.all(
-                        AppColors.primaryRed,
-                      ),
-                    ),
-                    child: const Text("I'm Interested"),
-                  ),
+                          onPressed: () {
+                            setState(() {
+                              _isInterested = true;
+                            });
+                          },
+                          style: buttonStyle.copyWith(
+                            side: MaterialStateProperty.all(
+                              const BorderSide(color: AppColors.primaryRed),
+                            ),
+                            foregroundColor: MaterialStateProperty.all(
+                              AppColors.primaryRed,
+                            ),
+                          ),
+                          child: const Text("I'm Interested"),
+                        ),
                 ),
                 const SizedBox(width: 12),
               ],
