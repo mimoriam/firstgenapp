@@ -137,7 +137,7 @@ class CommunityViewModel extends ChangeNotifier {
         communityId: communityId,
         image: image,
       );
-      fetchMyFeed(isInitial: true); // Refresh feed
+      await fetchMyFeed(isInitial: true); // Refresh feed after posting
     } catch (e) {
       // Handle error
     }

@@ -1,27 +1,12 @@
+import 'package:firstgenapp/models/community_models.dart';
+import 'package:firstgenapp/services/firebase_service.dart';
+import 'package:firstgenapp/utils/time_ago.dart';
 import 'package:flutter/material.dart';
 import 'package:firstgenapp/constants/appColors.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_keyboard_visibility/flutter_keyboard_visibility.dart';
 import 'package:iconly/iconly.dart';
-
-// Data model for a single comment
-class Comment {
-  final String avatarUrl;
-  final String name;
-  final String time;
-  final String text;
-  final int likes;
-  final List<Comment> replies;
-
-  Comment({
-    required this.avatarUrl,
-    required this.name,
-    required this.time,
-    required this.text,
-    this.likes = 0,
-    this.replies = const [],
-  });
-}
+import 'package:provider/provider.dart';
 
 class CommentsScreen extends StatefulWidget {
   final String postId;
@@ -33,93 +18,65 @@ class CommentsScreen extends StatefulWidget {
 
 class _CommentsScreenState extends State<CommentsScreen> {
   final _formKey = GlobalKey<FormBuilderState>();
+  final _commentController = TextEditingController();
+  final _focusNode = FocusNode();
+  String? _replyingToCommentId;
+  String? _replyingToUsername;
 
-  // UPDATED: Added more mock comments
-  final List<Comment> _comments = [
-    Comment(
-      avatarUrl: 'https://randomuser.me/api/portraits/women/65.jpg',
-      name: 'Rana Utban',
-      time: '22h',
-      text:
-          'Lorem ipsum dolor sit amet consectetur. Mattis felis porttitor in tortor facilisis est platea quam euismod. Nulla aliquam dictumst sagittis quam.',
-      likes: 12,
-      replies: [
-        Comment(
-          avatarUrl: 'https://randomuser.me/api/portraits/men/65.jpg',
-          name: 'John Doe',
-          time: '21h',
-          text: 'This is a reply.',
-          likes: 2,
-        ),
-        Comment(
-          avatarUrl: 'https://randomuser.me/api/portraits/women/66.jpg',
-          name: 'Jane Smith',
-          time: '20h',
-          text: 'This is another reply.',
-          likes: 5,
-        ),
-      ],
-    ),
-    Comment(
-      avatarUrl: 'https://randomuser.me/api/portraits/women/67.jpg',
-      name: 'Rana Utban',
-      time: '22h',
-      text:
-          'Lorem ipsum dolor sit amet consectetur. Mattis felis porttitor in tortor facilisis est platea.',
-      likes: 12,
-    ),
-    Comment(
-      avatarUrl: 'https://randomuser.me/api/portraits/men/68.jpg',
-      name: 'Alex Ray',
-      time: '23h',
-      text: 'Great point! I totally agree with what you are saying.',
-      likes: 8,
-      replies: [
-        Comment(
-          avatarUrl: 'https://randomuser.me/api/portraits/women/68.jpg',
-          name: 'Sarah Lee',
-          time: '22h',
-          text: 'Thanks Alex!',
-          likes: 1,
-        ),
-      ],
-    ),
-    Comment(
-      avatarUrl: 'https://randomuser.me/api/portraits/women/69.jpg',
-      name: 'Mia Wong',
-      time: '1d',
-      text: 'Has anyone else experienced this? Looking for some advice.',
-      likes: 25,
-    ),
-    Comment(
-      avatarUrl: 'https://randomuser.me/api/portraits/men/70.jpg',
-      name: 'Leo Chen',
-      time: '1d',
-      text: 'This is a fantastic discussion.',
-      likes: 3,
-    ),
-    Comment(
-      avatarUrl: 'https://randomuser.me/api/portraits/women/71.jpg',
-      name: 'Isabella Rossi',
-      time: '2d',
-      text: 'Can someone explain this in simpler terms?',
-      likes: 15,
-    ),
-    Comment(
-      avatarUrl: 'https://randomuser.me/api/portraits/men/72.jpg',
-      name: 'Omar Ahmed',
-      time: '2d',
-      text:
-          'I found a great article related to this topic, I will share it soon.',
-      likes: 18,
-    ),
-  ];
+  void _postComment() {
+    if (_formKey.currentState?.saveAndValidate() ?? false) {
+      final firebaseService = Provider.of<FirebaseService>(
+        context,
+        listen: false,
+      );
+      final userId = firebaseService.currentUser?.uid;
+      if (userId == null) return;
+
+      final text = _commentController.text;
+
+      firebaseService.addCommentOrReply(
+        postId: widget.postId,
+        parentId: _replyingToCommentId,
+        authorId: userId,
+        text: text,
+      );
+
+      _commentController.clear();
+      _focusNode.unfocus();
+      setState(() {
+        _replyingToCommentId = null;
+        _replyingToUsername = null;
+      });
+    }
+  }
+
+  void _startReplying(String commentId, String username) {
+    setState(() {
+      _replyingToCommentId = commentId;
+      _replyingToUsername = username;
+    });
+    _focusNode.requestFocus();
+  }
+
+  Future<void> _handleRefresh() async {
+    setState(() {});
+  }
+
+  @override
+  void dispose() {
+    _commentController.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final firebaseService = Provider.of<FirebaseService>(
+      context,
+      listen: false,
+    );
 
-    // UPDATED: Wrapped Scaffold in KeyboardDismissOnTap
     return KeyboardDismissOnTap(
       dismissOnCapturedTaps: true,
       child: Scaffold(
@@ -133,7 +90,7 @@ class _CommentsScreenState extends State<CommentsScreen> {
             icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
             onPressed: () => Navigator.of(context).pop(),
           ),
-          title: Text('Reiki Healing Community', style: textTheme.titleLarge),
+          title: Text('Comments', style: textTheme.titleLarge),
         ),
         body: Column(
           children: [
@@ -146,15 +103,38 @@ class _CommentsScreenState extends State<CommentsScreen> {
                     topRight: Radius.circular(30),
                   ),
                 ),
-                child: CustomScrollView(
-                  slivers: [
-                    SliverToBoxAdapter(child: _buildCommentsHeader()),
-                    SliverList(
-                      delegate: SliverChildBuilderDelegate((context, index) {
-                        return CommentTile(comment: _comments[index]);
-                      }, childCount: _comments.length),
-                    ),
-                  ],
+                child: RefreshIndicator(
+                  onRefresh: _handleRefresh,
+                  child: StreamBuilder<List<Comment>>(
+                    stream: firebaseService.getCommentsForPost(widget.postId),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+                      if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                        return const Center(child: Text('No comments yet.'));
+                      }
+                      final comments = snapshot.data!;
+                      return CustomScrollView(
+                        slivers: [
+                          SliverToBoxAdapter(
+                            child: _buildCommentsHeader(comments.length),
+                          ),
+                          SliverList(
+                            delegate: SliverChildBuilderDelegate((
+                              context,
+                              index,
+                            ) {
+                              return CommentTile(
+                                comment: comments[index],
+                                onReply: _startReplying,
+                              );
+                            }, childCount: comments.length),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
                 ),
               ),
             ),
@@ -165,14 +145,14 @@ class _CommentsScreenState extends State<CommentsScreen> {
     );
   }
 
-  Widget _buildCommentsHeader() {
+  Widget _buildCommentsHeader(int count) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 8, 0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
-            '579 Comments',
+            '$count Comments',
             style: Theme.of(
               context,
             ).textTheme.titleMedium?.copyWith(fontSize: 14),
@@ -190,51 +170,73 @@ class _CommentsScreenState extends State<CommentsScreen> {
 
   Widget _buildCommentInputField() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: const BoxDecoration(color: AppColors.secondaryBackground),
-      child: FormBuilder(
-        key: _formKey,
-        child: FormBuilderTextField(
-          name: 'comment',
-          decoration: InputDecoration(
-            hintText: 'Write a comment',
-            hintStyle: const TextStyle(
-              fontSize: 14,
-              color: AppColors.textSecondary,
-            ),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 20,
-              vertical: 14,
-            ),
-            filled: true,
-            fillColor: AppColors.primaryBackground,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: AppColors.inputBorder),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: AppColors.inputBorder),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: AppColors.primaryOrange),
-            ),
-            suffixIcon: const Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.add_circle_outline, color: AppColors.textSecondary),
-                SizedBox(width: 12),
-                Icon(
-                  Icons.emoji_emotions_outlined,
-                  color: AppColors.textSecondary,
+      child: SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (_replyingToCommentId != null)
+              Row(
+                children: [
+                  Text(
+                    'Replying to $_replyingToUsername',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, size: 16),
+                    onPressed: () {
+                      setState(() {
+                        _replyingToCommentId = null;
+                        _replyingToUsername = null;
+                      });
+                    },
+                  ),
+                ],
+              ),
+            FormBuilder(
+              key: _formKey,
+              child: FormBuilderTextField(
+                name: 'comment',
+                controller: _commentController,
+                focusNode: _focusNode,
+                decoration: InputDecoration(
+                  hintText: 'Write a comment',
+                  hintStyle: const TextStyle(
+                    fontSize: 14,
+                    color: AppColors.textSecondary,
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 14,
+                  ),
+                  filled: true,
+                  fillColor: AppColors.primaryBackground,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: AppColors.inputBorder),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: AppColors.inputBorder),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(
+                      color: AppColors.primaryOrange,
+                    ),
+                  ),
+                  suffixIcon: IconButton(
+                    icon: const Icon(
+                      IconlyLight.send,
+                      color: AppColors.textSecondary,
+                    ),
+                    onPressed: _postComment,
+                  ),
                 ),
-                SizedBox(width: 12),
-                Icon(IconlyLight.send, color: AppColors.textSecondary),
-                SizedBox(width: 12),
-              ],
+              ),
             ),
-          ),
+          ],
         ),
       ),
     );
@@ -244,8 +246,14 @@ class _CommentsScreenState extends State<CommentsScreen> {
 class CommentTile extends StatefulWidget {
   final Comment comment;
   final bool isReply;
+  final Function(String, String) onReply;
 
-  const CommentTile({super.key, required this.comment, this.isReply = false});
+  const CommentTile({
+    super.key,
+    required this.comment,
+    this.isReply = false,
+    required this.onReply,
+  });
 
   @override
   State<CommentTile> createState() => _CommentTileState();
@@ -257,6 +265,10 @@ class _CommentTileState extends State<CommentTile> {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final firebaseService = Provider.of<FirebaseService>(
+      context,
+      listen: false,
+    );
 
     return Padding(
       padding: EdgeInsets.only(
@@ -272,26 +284,55 @@ class _CommentTileState extends State<CommentTile> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                CircleAvatar(
-                  backgroundImage: NetworkImage(widget.comment.avatarUrl),
-                  radius: 20,
+                FutureBuilder<Map<String, dynamic>?>(
+                  future: firebaseService.getUserData(widget.comment.authorId),
+                  builder: (context, snapshot) {
+                    if (!snapshot.hasData) {
+                      return const CircleAvatar(radius: 20);
+                    }
+                    final authorData = snapshot.data!;
+                    return CircleAvatar(
+                      backgroundImage: NetworkImage(
+                        authorData['profileImageUrl'],
+                      ),
+                      radius: 20,
+                    );
+                  },
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        children: [
-                          Text(
-                            widget.comment.name,
-                            style: textTheme.labelLarge?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(widget.comment.time, style: textTheme.bodySmall),
-                        ],
+                      FutureBuilder<Map<String, dynamic>?>(
+                        future: firebaseService.getUserData(
+                          widget.comment.authorId,
+                        ),
+                        builder: (context, snapshot) {
+                          if (!snapshot.hasData) {
+                            return const Text("...");
+                          }
+                          final authorData = snapshot.data!;
+                          return Row(
+                            children: [
+                              Text(
+                                authorData['fullName'],
+                                style: textTheme.labelLarge?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                TimeAgo.format(
+                                  widget.comment.timestamp
+                                      .toDate()
+                                      .toIso8601String(),
+                                ),
+                                style: textTheme.bodySmall,
+                              ),
+                            ],
+                          );
+                        },
                       ),
                       const SizedBox(height: 4),
                       Text(
@@ -304,14 +345,24 @@ class _CommentTileState extends State<CommentTile> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            'Reply',
-                            style: textTheme.bodySmall?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 11,
+                          GestureDetector(
+                            onTap: () async {
+                              final authorData = await firebaseService
+                                  .getUserData(widget.comment.authorId);
+                              widget.onReply(
+                                widget.comment.id,
+                                authorData?['fullName'] ?? "user",
+                              );
+                            },
+                            child: Text(
+                              'Reply',
+                              style: textTheme.bodySmall?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 11,
+                              ),
                             ),
                           ),
-                          if (widget.comment.replies.isNotEmpty)
+                          if (widget.comment.replyCount > 0)
                             GestureDetector(
                               onTap: () {
                                 setState(() {
@@ -321,7 +372,7 @@ class _CommentTileState extends State<CommentTile> {
                               child: Row(
                                 children: [
                                   Text(
-                                    'View all reply(${widget.comment.replies.length})',
+                                    'View all reply(${widget.comment.replyCount})',
                                     style: textTheme.bodySmall?.copyWith(
                                       fontWeight: FontWeight.bold,
                                     ),
@@ -341,30 +392,58 @@ class _CommentTileState extends State<CommentTile> {
                   ),
                 ),
                 const SizedBox(width: 12),
-                Row(
-                  children: [
-                    Text(
-                      widget.comment.likes.toString(),
-                      style: textTheme.bodySmall,
-                    ),
-                    const SizedBox(width: 4),
-                    const Icon(
-                      IconlyLight.heart,
-                      color: AppColors.primaryRed,
-                      size: 20,
-                    ),
-                  ],
+                GestureDetector(
+                  onTap: () {
+                    firebaseService.toggleCommentLike(
+                      widget.comment.id,
+                      firebaseService.currentUser!.uid,
+                    );
+                  },
+                  child: Row(
+                    children: [
+                      Text(
+                        widget.comment.likes.length.toString(),
+                        style: textTheme.bodySmall,
+                      ),
+                      const SizedBox(width: 4),
+                      Icon(
+                        widget.comment.likes[firebaseService
+                                    .currentUser!
+                                    .uid] ==
+                                true
+                            ? IconlyBold.heart
+                            : IconlyLight.heart,
+                        color: AppColors.primaryRed,
+                        size: 20,
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
           ),
-          if (_showReplies && widget.comment.replies.isNotEmpty)
+          if (_showReplies && widget.comment.replyCount > 0)
             Padding(
               padding: const EdgeInsets.only(top: 16.0),
-              child: Column(
-                children: widget.comment.replies
-                    .map((reply) => CommentTile(comment: reply, isReply: true))
-                    .toList(),
+              child: StreamBuilder<List<Comment>>(
+                stream: firebaseService.getRepliesForComment(widget.comment.id),
+                builder: (context, snapshot) {
+                  if (!snapshot.hasData) {
+                    return const SizedBox.shrink();
+                  }
+                  final replies = snapshot.data!;
+                  return Column(
+                    children: replies
+                        .map(
+                          (reply) => CommentTile(
+                            comment: reply,
+                            isReply: true,
+                            onReply: widget.onReply,
+                          ),
+                        )
+                        .toList(),
+                  );
+                },
               ),
             ),
           if (!widget.isReply) const SizedBox(height: 16),

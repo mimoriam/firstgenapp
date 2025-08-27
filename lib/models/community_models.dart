@@ -121,18 +121,24 @@ class Post {
 class Comment {
   final String id;
   final String postId;
+  final String? parentId; // ID of the comment this is a reply to
   final String authorId;
   final String text;
   final Timestamp timestamp;
   final Map<String, bool> likes;
+  final int replyCount;
+  final DocumentSnapshot originalDoc;
 
   Comment({
     required this.id,
     required this.postId,
+    this.parentId,
     required this.authorId,
     required this.text,
     required this.timestamp,
     required this.likes,
+    this.replyCount = 0,
+    required this.originalDoc,
   });
 
   factory Comment.fromFirestore(DocumentSnapshot doc) {
@@ -140,20 +146,25 @@ class Comment {
     return Comment(
       id: doc.id,
       postId: data['postId'] ?? '',
+      parentId: data['parentId'],
       authorId: data['authorId'] ?? '',
       text: data['text'] ?? '',
       timestamp: data['timestamp'] ?? Timestamp.now(),
       likes: Map<String, bool>.from(data['likes'] ?? {}),
+      replyCount: data['replyCount'] ?? 0,
+      originalDoc: doc,
     );
   }
 
   Map<String, dynamic> toFirestore() {
     return {
       'postId': postId,
+      'parentId': parentId,
       'authorId': authorId,
       'text': text,
       'timestamp': timestamp,
       'likes': likes,
+      'replyCount': replyCount,
     };
   }
 }
