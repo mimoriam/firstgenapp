@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:iconly/iconly.dart';
+import 'package:image_cropper/image_cropper.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -33,9 +34,27 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
     );
 
     if (pickedFile != null) {
-      setState(() {
-        _image = File(pickedFile.path);
-      });
+      final croppedFile = await ImageCropper().cropImage(
+        sourcePath: pickedFile.path,
+        uiSettings: [
+          AndroidUiSettings(
+            toolbarTitle: 'Crop Event Image',
+            toolbarColor: AppColors.primaryRed,
+            toolbarWidgetColor: Colors.white,
+            initAspectRatio: CropAspectRatioPreset.ratio16x9,
+            lockAspectRatio: true,
+          ),
+          IOSUiSettings(
+            title: 'Crop Event Image',
+            aspectRatioLockEnabled: true,
+          ),
+        ],
+      );
+      if (croppedFile != null) {
+        setState(() {
+          _image = File(croppedFile.path);
+        });
+      }
     }
   }
 
@@ -43,7 +62,9 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
     if (_formKey.currentState?.saveAndValidate() ?? false) {
       if (_image == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please upload an image.')),
+          const SnackBar(
+            content: Text('Please upload an image for the event.'),
+          ),
         );
         return;
       }
@@ -242,7 +263,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
           FormBuilderDateTimePicker(
             name: name,
             inputType: InputType.date,
-            format: DateFormat('MM-dd-yyyy'),
+            format: DateFormat('MMMM d, yyyy'),
             validator: validator,
             decoration: InputDecoration(
               hintText: hint,
@@ -298,9 +319,8 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                       const Icon(
                         IconlyLight.camera,
                         color: AppColors.textSecondary,
-                        size: 30,
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 4),
                       Text(
                         'Upload from gallery',
                         style: Theme.of(context).textTheme.bodySmall,
