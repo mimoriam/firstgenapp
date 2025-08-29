@@ -118,6 +118,61 @@ class Post {
   }
 }
 
+class Event {
+  final String id;
+  final String communityId;
+  final String creatorId;
+  final String title;
+  final String description;
+  final String imageUrl;
+  final Timestamp eventDate;
+  final String location;
+  final List<String> interestedUserIds;
+  final DocumentSnapshot originalDoc;
+
+  Event({
+    required this.id,
+    required this.communityId,
+    required this.creatorId,
+    required this.title,
+    required this.description,
+    required this.imageUrl,
+    required this.eventDate,
+    required this.location,
+    required this.interestedUserIds,
+    required this.originalDoc,
+  });
+
+  factory Event.fromFirestore(DocumentSnapshot doc) {
+    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+    return Event(
+      id: doc.id,
+      communityId: data['communityId'] ?? '',
+      creatorId: data['creatorId'] ?? '',
+      title: data['title'] ?? '',
+      description: data['description'] ?? '',
+      imageUrl: data['imageUrl'] ?? '',
+      eventDate: data['eventDate'] ?? Timestamp.now(),
+      location: data['location'] ?? '',
+      interestedUserIds: List<String>.from(data['interestedUserIds'] ?? []),
+      originalDoc: doc,
+    );
+  }
+
+  Map<String, dynamic> toFirestore() {
+    return {
+      'communityId': communityId,
+      'creatorId': creatorId,
+      'title': title,
+      'description': description,
+      'imageUrl': imageUrl,
+      'eventDate': eventDate,
+      'location': location,
+      'interestedUserIds': interestedUserIds,
+    };
+  }
+}
+
 class Comment {
   final String id;
   final String postId;

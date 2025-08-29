@@ -1,16 +1,19 @@
 import 'package:country_picker/country_picker.dart';
-import 'package:firstgenapp/common/gradient_btn.dart';
+import 'package:firstgenapp/models/community_models.dart';
 import 'package:firstgenapp/screens/dashboard/navbar_content/home/match_detail/match_detail_screen.dart';
 import 'package:firstgenapp/screens/dashboard/navbar_content/home/recent_activities/recent_activities_screen.dart';
 import 'package:firstgenapp/screens/dashboard/navbar_content/home/your_matches/your_matches_screen.dart';
 import 'package:firstgenapp/services/firebase_service.dart';
+import 'package:firstgenapp/viewmodels/community_viewmodel.dart';
 import 'package:flutter/material.dart';
 import 'package:firstgenapp/constants/appColors.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
-import 'package:provider/provider.dart'; // Needed for ImageFilter.blur
+import 'package:provider/provider.dart';
+
+import '../../../../../common/gradient_btn.dart';
 
 class NewMatchesList extends StatefulWidget {
   const NewMatchesList({super.key});
@@ -252,7 +255,6 @@ class _NewMatchesListState extends State<NewMatchesList> {
 }
 
 class HomeScreen extends StatefulWidget {
-  // MODIFICATION: Add a callback function to handle tab switching.
   final Function(int, {int? communitySubTabIndex}) onSwitchTab;
 
   const HomeScreen({super.key, required this.onSwitchTab});
@@ -262,12 +264,8 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  // MODIFICATION: Added refresh logic.
   Future<void> _handleRefresh() async {
-    // Simulate a network call for fetching new data
     await Future.delayed(const Duration(seconds: 1));
-    // In a real app, you would re-fetch your data from Firebase here.
-    // For this example, we'll just rebuild the widget.
     setState(() {});
   }
 
@@ -309,19 +307,17 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildHeader(userData), // Pass user data to the header
+                      _buildHeader(userData),
                       const SizedBox(height: 12),
                       _buildStatsSection(likesCount, matchesCount),
                       const SizedBox(height: 12),
                       _buildSectionHeader("New Matches"),
                       const SizedBox(height: 10),
-                      // _buildNewMatchesList(),
-                      // NEW:
                       const NewMatchesList(),
                       const SizedBox(height: 12),
                       _buildSectionHeader("Upcoming Events"),
                       const SizedBox(height: 10),
-                      _buildRecentEventsList(),
+                      _buildUpcomingEventsList(),
                       const SizedBox(height: 12),
                       _buildSectionHeader("Recent Activity"),
                       const SizedBox(height: 10),
@@ -340,7 +336,6 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildHeader(Map<String, dynamic> userData) {
     final textTheme = Theme.of(context).textTheme;
     final String currentDate = DateFormat('d MMMM').format(DateTime.now());
-    // Use the full name from user data, with a fallback.
     final String name = userData['fullName'] ?? 'There';
 
     return Row(
@@ -350,10 +345,7 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                "Hi, $name 👋", // Use the dynamic name
-                style: textTheme.headlineSmall,
-              ),
+              Text("Hi, $name 👋", style: textTheme.headlineSmall),
               const SizedBox(height: 2),
               Text(
                 "Here's what's happening in your world today.",
@@ -427,18 +419,24 @@ class _HomeScreenState extends State<HomeScreen> {
             );
           },
         ),
-        GestureDetector(
-          onTap: () {
-            if (context.mounted) {
-              widget.onSwitchTab(3, communitySubTabIndex: 2);
-            }
+        StreamBuilder<int>(
+          stream: firebaseService.getEventCount(),
+          builder: (context, snapshot) {
+            final count = snapshot.data ?? 0;
+            return GestureDetector(
+              onTap: () {
+                if (context.mounted) {
+                  widget.onSwitchTab(3, communitySubTabIndex: 2);
+                }
+              },
+              child: _buildStatItem(
+                count.toString(),
+                "Events",
+                const Color(0xFFFFFDE7),
+                const Color(0xFFF9A825),
+              ),
+            );
           },
-          child: _buildStatItem(
-            "6", // Hardcoded as per instructions
-            "Events",
-            const Color(0xFFFFFDE7),
-            const Color(0xFFF9A825),
-          ),
         ),
       ],
     );
@@ -453,7 +451,6 @@ class _HomeScreenState extends State<HomeScreen> {
     return Column(
       children: [
         Container(
-          // UPDATED: Reduced size for compactness
           width: 80,
           height: 60,
           decoration: BoxDecoration(
@@ -464,7 +461,6 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Text(
               count,
               style: TextStyle(
-                // UPDATED: Reduced font size
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
                 color: textColor,
@@ -475,7 +471,6 @@ class _HomeScreenState extends State<HomeScreen> {
         const SizedBox(height: 4),
         Text(
           label,
-          // UPDATED: Inherited from theme
           style: Theme.of(
             context,
           ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w500),
@@ -488,11 +483,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          title,
-          // UPDATED: Inherited from theme
-          style: Theme.of(context).textTheme.titleLarge,
-        ),
+        Text(title, style: Theme.of(context).textTheme.titleLarge),
         TextButton(
           onPressed: () {
             if (context.mounted) {
@@ -517,7 +508,6 @@ class _HomeScreenState extends State<HomeScreen> {
           },
           child: Text(
             "See All",
-            // UPDATED: Inherited from theme
             style: Theme.of(context).textTheme.labelLarge?.copyWith(
               fontWeight: FontWeight.w600,
               color: AppColors.primaryRed,
@@ -528,37 +518,27 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildRecentEventsList() {
-    final List<Map<String, dynamic>> events = [
-      {
-        "image": "https://picsum.photos/seed/e1/400/200",
-        "title": "Diwali Cooking Workshop",
-        "date": "8 December, 2025",
-        "location": "Spice Garden Kitchen",
-        "description":
-            "Soothing audio and gentle vibrations to ease discomfort. Soothing audio and gentle vibrations to.",
-        "attendees": 31,
-        "isInterested": true,
-      },
-      {
-        "image": "https://picsum.photos/seed/e2/400/200",
-        "title": "Cultural Music Night",
-        "date": "15 December, 2025",
-        "location": "The Grand Hall",
-        "description":
-            "Experience the rich musical traditions from around the world. A night of melody and harmony.",
-        "attendees": 85,
-        "isInterested": false,
-      },
-    ];
-
-    return ListView.separated(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: events.length,
-      separatorBuilder: (context, index) => const SizedBox(height: 12),
-      itemBuilder: (context, index) {
-        return EventCard(event: events[index], onSwitchTab: widget.onSwitchTab);
+  Widget _buildUpcomingEventsList() {
+    return Consumer<CommunityViewModel>(
+      builder: (context, viewModel, child) {
+        if (viewModel.isLoadingEvents) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (viewModel.upcomingEvents.isEmpty) {
+          return const Center(child: Text("No upcoming events."));
+        }
+        return ListView.separated(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: viewModel.upcomingEvents.length,
+          separatorBuilder: (context, index) => const SizedBox(height: 12),
+          itemBuilder: (context, index) {
+            return EventCard(
+              event: viewModel.upcomingEvents[index],
+              onSwitchTab: widget.onSwitchTab,
+            );
+          },
+        );
       },
     );
   }
@@ -610,7 +590,6 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 Text(
                   activity['text'],
-                  // UPDATED: Inherited from theme
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: AppColors.textPrimary,
                     fontWeight: FontWeight.w600,
@@ -619,7 +598,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 const SizedBox(height: 4),
                 Text(
                   activity['time'],
-                  // UPDATED: Inherited from theme
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
               ],
@@ -632,7 +610,7 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 class EventCard extends StatefulWidget {
-  final Map<String, dynamic> event;
+  final Event event;
   final bool? copied;
   final Function(int, {int? communitySubTabIndex})? onSwitchTab;
 
@@ -653,7 +631,11 @@ class _EventCardState extends State<EventCard> {
   @override
   void initState() {
     super.initState();
-    _isInterested = widget.event['isInterested'];
+    final userId = Provider.of<FirebaseService>(
+      context,
+      listen: false,
+    ).currentUser?.uid;
+    _isInterested = widget.event.interestedUserIds.contains(userId);
   }
 
   Widget _buildInfoItem(IconData icon, String text, Color color) {
@@ -664,10 +646,8 @@ class _EventCardState extends State<EventCard> {
         const SizedBox(width: 4),
         Text(
           text,
-          // UPDATED: Inherited from theme
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
             fontSize: 11,
-            // color: color,
             fontWeight: FontWeight.w500,
           ),
         ),
@@ -678,7 +658,6 @@ class _EventCardState extends State<EventCard> {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    // UPDATED: Consistent button style for this card
     final buttonStyle = TextButton.styleFrom(
       padding: const EdgeInsets.symmetric(vertical: 10),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -702,50 +681,43 @@ class _EventCardState extends State<EventCard> {
             ClipRRect(
               borderRadius: BorderRadius.circular(12),
               child: Image.network(
-                widget.event['image'],
+                widget.event.imageUrl,
                 height: 150,
                 width: double.infinity,
                 fit: BoxFit.cover,
               ),
             ),
             const SizedBox(height: 12),
-            Text(
-              widget.event['title'],
-              // UPDATED: Inherited from theme
-              style: textTheme.titleLarge,
-            ),
+            Text(widget.event.title, style: textTheme.titleLarge),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8.0,
               runSpacing: 4.0,
               children: [
                 _buildInfoItem(
-                  // Icons.calendar_today,
                   Iconsax.calendar,
-                  widget.event['date'],
-                  // Colors.green.shade700,
+                  DateFormat(
+                    'd MMMM, yyyy',
+                  ).format(widget.event.eventDate.toDate()),
                   const Color(0xFF009E60),
                 ),
                 _buildInfoItem(
                   Iconsax.location,
-                  widget.event['location'],
-                  // Colors.yellow.shade700,
+                  widget.event.location,
                   const Color(0xFFF7C108),
                 ),
                 _buildInfoItem(
                   Iconsax.profile_2user,
-                  "${widget.event['attendees']} Attending",
-                  // Colors.blue.shade700,
+                  "${widget.event.interestedUserIds.length} Attending",
                   const Color(0xFF0A75BA),
                 ),
               ],
             ),
             const SizedBox(height: 6),
             Text(
-              widget.event['description'],
+              widget.event.description,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              // UPDATED: Inherited from theme
               style: textTheme.bodySmall,
             ),
             const SizedBox(height: 12),
@@ -757,21 +729,43 @@ class _EventCardState extends State<EventCard> {
                       ? GradientButton(
                           text: "I'm Interested",
                           onPressed: () {
-                            setState(() {
-                              _isInterested = false;
-                            });
+                            final firebaseService =
+                                Provider.of<FirebaseService>(
+                                  context,
+                                  listen: false,
+                                );
+                            final userId = firebaseService.currentUser?.uid;
+                            if (userId != null) {
+                              firebaseService.toggleEventInterest(
+                                widget.event.id,
+                                userId,
+                              );
+                              setState(() {
+                                _isInterested = false;
+                              });
+                            }
                           },
-                          // UPDATED: Matched font size and padding
                           fontSize: 13,
                           insets: 10,
                         )
                       : OutlinedButton(
                           onPressed: () {
-                            setState(() {
-                              _isInterested = true;
-                            });
+                            final firebaseService =
+                                Provider.of<FirebaseService>(
+                                  context,
+                                  listen: false,
+                                );
+                            final userId = firebaseService.currentUser?.uid;
+                            if (userId != null) {
+                              firebaseService.toggleEventInterest(
+                                widget.event.id,
+                                userId,
+                              );
+                              setState(() {
+                                _isInterested = true;
+                              });
+                            }
                           },
-                          // UPDATED: Matched style
                           style: buttonStyle.copyWith(
                             side: MaterialStateProperty.all(
                               const BorderSide(color: AppColors.primaryRed),
@@ -791,7 +785,6 @@ class _EventCardState extends State<EventCard> {
                         widget.onSwitchTab!(3);
                       }
                     },
-                    // UPDATED: Matched style
                     style: buttonStyle.copyWith(
                       backgroundColor: MaterialStateProperty.all(
                         AppColors.secondaryBackground,

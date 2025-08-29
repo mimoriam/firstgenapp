@@ -7,9 +7,11 @@ import 'package:firstgenapp/screens/dashboard/navbar_content/communities/comment
 import 'package:firstgenapp/screens/dashboard/navbar_content/communities/community_detail/create_event_screen/create_event_screen.dart';
 import 'package:firstgenapp/services/firebase_service.dart';
 import 'package:firstgenapp/utils/time_ago.dart';
+import 'package:firstgenapp/viewmodels/community_viewmodel.dart';
 import 'package:flutter/material.dart';
 import 'package:iconly/iconly.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
+import 'package:intl/intl.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 import 'package:provider/provider.dart';
 
@@ -24,13 +26,12 @@ class CommunityDetailScreen extends StatefulWidget {
 class _CommunityDetailScreenState extends State<CommunityDetailScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  int _currentTabIndex = 0; // To track the current tab index for FAB visibility
+  int _currentTabIndex = 0;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
-    // Add listener to update the FAB visibility
     _tabController.addListener(_handleTabSelection);
   }
 
@@ -54,32 +55,37 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
     return Scaffold(
       backgroundColor: AppColors.primaryBackground,
       floatingActionButton: Visibility(
-        visible: _currentTabIndex == 2, // Show only on "Upcoming Events" tab
+        visible: _currentTabIndex == 2,
         child: FloatingActionButton(
           onPressed: () {
             if (context.mounted) {
+              // FIX: Wrap the CreateEventScreen with a ChangeNotifierProvider.value
+              // to provide the existing CommunityViewModel instance.
+              final viewModel = Provider.of<CommunityViewModel>(
+                context,
+                listen: false,
+              );
               Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (context) => const CreateEventScreen(),
+                  builder: (context) => ChangeNotifierProvider.value(
+                    value: viewModel,
+                    child: CreateEventScreen(communityId: widget.community.id),
+                  ),
                 ),
               );
             }
           },
-          backgroundColor:
-              Colors.transparent, // Important: Keep this transparent
+          backgroundColor: Colors.transparent,
           child: ClipOval(
             child: BackdropFilter(
-              // The blur effect
               filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
               child: Container(
                 padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  // The color overlay on top of the blur
                   color: const Color(0xFF212221).withOpacity(0.1),
                 ),
                 child: Container(
-                  // This is your original gradient icon container
                   decoration: const BoxDecoration(
                     shape: BoxShape.circle,
                     gradient: LinearGradient(
@@ -152,7 +158,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
           children: [
             _AboutTab(community: widget.community),
             _FeedTab(community: widget.community),
-            _UpcomingEventsTab(),
+            _UpcomingEventsTab(community: widget.community),
           ],
         ),
       ),
@@ -235,7 +241,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
                       borderRadius: BorderRadius.circular(16),
                     ),
                     side: const BorderSide(
-                      color: AppColors.primaryRed, // Set the border color
+                      color: AppColors.primaryRed,
                       width: 1.2,
                     ),
                     padding: const EdgeInsets.symmetric(
@@ -259,8 +265,6 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
     );
   }
 }
-
-//** =============================== FEED TAB =============================== **//
 
 class _FeedTab extends StatelessWidget {
   final Community community;
@@ -566,7 +570,7 @@ class __PostActionsState extends State<_PostActions> {
               onTap: widget.onShare,
               child: _buildFooterIcon(
                 Icons.share_outlined,
-                "0", // Share count not in model yet
+                "0",
                 const Color(0xFF009E60),
                 AppColors.textSecondary,
               ),
@@ -617,8 +621,6 @@ class __PostActionsState extends State<_PostActions> {
     );
   }
 }
-
-//** =============================== ABOUT TAB =============================== **//
 
 class _AboutTab extends StatelessWidget {
   final Community community;
@@ -704,45 +706,39 @@ class _AboutTab extends StatelessWidget {
   }
 }
 
-//** =============================== UPCOMING EVENTS TAB =============================== **//
-
 class _UpcomingEventsTab extends StatelessWidget {
-  final List<Map<String, dynamic>> _events = [
-    {
-      "image": "https://picsum.photos/seed/e1/400/200",
-      "title": "Diwali Cooking Workshop",
-      "date": "8 December, 2025",
-      "location": "Spice Garden Kitchen",
-      "description":
-          "Soothing audio and gentle vibrations to ease discomfort. Soothing audio and gentle vibrations to.",
-      "attendees": 31,
-      "isInterested": true,
-    },
-    {
-      "image": "https://picsum.photos/seed/e2/400/200",
-      "title": "Cultural Music Night",
-      "date": "15 December, 2025",
-      "location": "The Grand Hall",
-      "description":
-          "Experience the rich musical traditions from around the world. A night of melody and harmony.",
-      "attendees": 85,
-      "isInterested": false,
-    },
-  ];
+  final Community community;
+  const _UpcomingEventsTab({required this.community});
 
   @override
   Widget build(BuildContext context) {
-    // UPDATED: Removed header and adjusted padding
-    return ListView.separated(
-      padding: const EdgeInsets.all(12.0),
-      itemCount: _events.length,
-      itemBuilder: (context, index) => EventCard(event: _events[index]),
-      separatorBuilder: (context, index) => const SizedBox(height: 12),
+    final firebaseService = Provider.of<FirebaseService>(
+      context,
+      listen: false,
+    );
+    return StreamBuilder<List<Event>>(
+      stream: firebaseService.getEventsForCommunity(community.id),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return Center(child: Text('Error: ${snapshot.error}'));
+        }
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return const Center(child: Text('No upcoming events.'));
+        }
+        final events = snapshot.data!;
+        return ListView.separated(
+          padding: const EdgeInsets.all(12.0),
+          itemCount: events.length,
+          itemBuilder: (context, index) => EventCard(event: events[index]),
+          separatorBuilder: (context, index) => const SizedBox(height: 12),
+        );
+      },
     );
   }
 }
-
-//** =============================== SLIVER APP BAR DELEGATE =============================== **//
 
 class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
   _SliverAppBarDelegate(this._tabBar);
@@ -769,10 +765,8 @@ class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
   }
 }
 
-//** =============================== EVENT CARD WIDGET =============================== **//
-
 class EventCard extends StatefulWidget {
-  final Map<String, dynamic> event;
+  final Event event;
 
   const EventCard({super.key, required this.event});
 
@@ -786,7 +780,11 @@ class _EventCardState extends State<EventCard> {
   @override
   void initState() {
     super.initState();
-    _isInterested = widget.event['isInterested'];
+    final userId = Provider.of<FirebaseService>(
+      context,
+      listen: false,
+    ).currentUser?.uid;
+    _isInterested = widget.event.interestedUserIds.contains(userId);
   }
 
   Widget _buildInfoItem(IconData icon, String text, Color color) {
@@ -809,6 +807,13 @@ class _EventCardState extends State<EventCard> {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final firebaseService = Provider.of<FirebaseService>(
+      context,
+      listen: false,
+    );
+    final currentUserId = firebaseService.currentUser?.uid;
+    final isCreator = widget.event.creatorId == currentUserId;
+
     final buttonStyle = TextButton.styleFrom(
       padding: const EdgeInsets.symmetric(vertical: 10),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -832,14 +837,14 @@ class _EventCardState extends State<EventCard> {
             ClipRRect(
               borderRadius: BorderRadius.circular(12),
               child: Image.network(
-                widget.event['image'],
+                widget.event.imageUrl,
                 height: 150,
                 width: double.infinity,
                 fit: BoxFit.cover,
               ),
             ),
             const SizedBox(height: 12),
-            Text(widget.event['title'], style: textTheme.titleLarge),
+            Text(widget.event.title, style: textTheme.titleLarge),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8.0,
@@ -847,24 +852,26 @@ class _EventCardState extends State<EventCard> {
               children: [
                 _buildInfoItem(
                   Iconsax.calendar,
-                  widget.event['date'],
+                  DateFormat(
+                    'd MMMM, yyyy',
+                  ).format(widget.event.eventDate.toDate()),
                   const Color(0xFF009E60),
                 ),
                 _buildInfoItem(
                   Iconsax.location,
-                  widget.event['location'],
+                  widget.event.location,
                   const Color(0xFFF7C108),
                 ),
                 _buildInfoItem(
                   Iconsax.profile_2user,
-                  "${widget.event['attendees']} Attending",
+                  "${widget.event.interestedUserIds.length} Attending",
                   const Color(0xFF0A75BA),
                 ),
               ],
             ),
             const SizedBox(height: 6),
             Text(
-              widget.event['description'],
+              widget.event.description,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: textTheme.bodySmall,
@@ -877,19 +884,33 @@ class _EventCardState extends State<EventCard> {
                   child: _isInterested
                       ? GradientButton(
                           text: "I'm Interested",
-                          onPressed: () {
-                            setState(() {
-                              _isInterested = false;
-                            });
-                          },
+                          onPressed: isCreator
+                              ? null
+                              : () {
+                                  if (currentUserId != null) {
+                                    firebaseService.toggleEventInterest(
+                                      widget.event.id,
+                                      currentUserId,
+                                    );
+                                    setState(() {
+                                      _isInterested = false;
+                                    });
+                                  }
+                                },
                           fontSize: 13,
                           insets: 13,
                         )
                       : OutlinedButton(
                           onPressed: () {
-                            setState(() {
-                              _isInterested = true;
-                            });
+                            if (currentUserId != null) {
+                              firebaseService.toggleEventInterest(
+                                widget.event.id,
+                                currentUserId,
+                              );
+                              setState(() {
+                                _isInterested = true;
+                              });
+                            }
                           },
                           style: buttonStyle.copyWith(
                             side: MaterialStateProperty.all(
@@ -903,6 +924,31 @@ class _EventCardState extends State<EventCard> {
                         ),
                 ),
                 const SizedBox(width: 12),
+                // Expanded(
+                //   child: TextButton(
+                //     onPressed: () async {
+                //       final community = await firebaseService.getCommunityById(
+                //         widget.event.communityId,
+                //       );
+                //       if (community != null && context.mounted) {
+                //         PersistentNavBarNavigator.pushNewScreen(
+                //           context,
+                //           screen: CommunityDetailScreen(community: community),
+                //           withNavBar: false,
+                //         );
+                //       }
+                //     },
+                //     style: buttonStyle.copyWith(
+                //       backgroundColor: MaterialStateProperty.all(
+                //         AppColors.secondaryBackground,
+                //       ),
+                //       foregroundColor: MaterialStateProperty.all(
+                //         AppColors.primaryRed,
+                //       ),
+                //     ),
+                //     child: const Text("View Community"),
+                //   ),
+                // ),
               ],
             ),
           ],

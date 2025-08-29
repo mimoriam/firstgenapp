@@ -36,10 +36,17 @@ class CommunityViewModel extends ChangeNotifier {
   bool _isLoadingMyCommunities = false;
   bool get isLoadingMyCommunities => _isLoadingMyCommunities;
 
+  // Upcoming Events
+  List<Event> _upcomingEvents = [];
+  List<Event> get upcomingEvents => _upcomingEvents;
+  bool _isLoadingEvents = false;
+  bool get isLoadingEvents => _isLoadingEvents;
+
   void _fetchInitialData() {
     fetchAllCommunities(isInitial: true);
     fetchMyFeed(isInitial: true);
     fetchMyCommunities();
+    fetchUpcomingEvents();
   }
 
   // FIX: Add a comprehensive refresh method
@@ -48,8 +55,25 @@ class CommunityViewModel extends ChangeNotifier {
       fetchAllCommunities(isInitial: true),
       fetchMyFeed(isInitial: true),
       fetchMyCommunities(),
+      fetchUpcomingEvents(), // Add this
     ]);
     notifyListeners();
+  }
+
+  Future<void> fetchUpcomingEvents() async {
+    _isLoadingEvents = true;
+    notifyListeners();
+    try {
+      _firebaseService.getInterestedEventsForUser(_userId).listen((events) {
+        _upcomingEvents = events;
+        _isLoadingEvents = false;
+        notifyListeners();
+      });
+    } catch (e) {
+      // Handle error
+      _isLoadingEvents = false;
+      notifyListeners();
+    }
   }
 
   Future<void> fetchAllCommunities({bool isInitial = false}) async {

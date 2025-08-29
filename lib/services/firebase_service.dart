@@ -32,6 +32,8 @@ class FirebaseService {
   final postCollection = "posts";
   final commentCollection = "comments";
 
+  final eventCollection = "events";
+
   final Map<String, Map<String, dynamic>> _userCache = {};
 
   // Email/Password Login
@@ -1431,6 +1433,106 @@ class FirebaseService {
         }
       }
     });
+  }
+
+  Future<void> createEvent({
+    required String communityId,
+    required String creatorId,
+    required String title,
+    required String description,
+    required File image,
+    required DateTime eventDate,
+    required String location,
+  }) async {
+    final eventRef = _firestore.collection(eventCollection).doc();
+    final imageUrl = await _storage
+        .ref()
+        .child('event_images')
+        .child('${eventRef.id}.jpg')
+        .putFile(image)
+        .then((task) => task.ref.getDownloadURL());
+
+    final eventData = {
+      'communityId': communityId,
+      'creatorId': creatorId,
+      'title': title,
+      'description': description,
+      'imageUrl': imageUrl,
+      'eventDate': Timestamp.fromDate(eventDate),
+      'location': location,
+      'interestedUserIds': [creatorId], // Creator is automatically interested
+    };
+
+    await _firestore.runTransaction((transaction) async {
+      final userRef = _firestore.collection(userCollection).doc(creatorId);
+      transaction.set(eventRef, eventData);
+      transaction.update(userRef, {'eventCount': FieldValue.increment(1)});
+    });
+  }
+
+  Future<void> toggleEventInterest(String eventId, String userId) async {
+    final eventRef = _firestore.collection(eventCollection).doc(eventId);
+    final userRef = _firestore.collection(userCollection).doc(userId);
+
+    await _firestore.runTransaction((transaction) async {
+      final eventDoc = await transaction.get(eventRef);
+      if (!eventDoc.exists) {
+        throw Exception("Event not found!");
+      }
+
+      final interestedUserIds = List<String>.from(
+        eventDoc.data()!['interestedUserIds'] ?? [],
+      );
+      if (interestedUserIds.contains(userId)) {
+        transaction.update(eventRef, {
+          'interestedUserIds': FieldValue.arrayRemove([userId]),
+        });
+        transaction.update(userRef, {'eventCount': FieldValue.increment(-1)});
+      } else {
+        transaction.update(eventRef, {
+          'interestedUserIds': FieldValue.arrayUnion([userId]),
+        });
+        transaction.update(userRef, {'eventCount': FieldValue.increment(1)});
+      }
+    });
+  }
+
+  Stream<List<Event>> getEventsForCommunity(String communityId) {
+    return _firestore
+        .collection(eventCollection)
+        .where('communityId', isEqualTo: communityId)
+        .orderBy('eventDate', descending: false)
+        .snapshots()
+        .map(
+          (snapshot) =>
+              snapshot.docs.map((doc) => Event.fromFirestore(doc)).toList(),
+        );
+  }
+
+  Stream<List<Event>> getInterestedEventsForUser(String userId) {
+    return _firestore
+        .collection(eventCollection)
+        .where('interestedUserIds', arrayContains: userId)
+        .orderBy('eventDate', descending: false)
+        .snapshots()
+        .map(
+          (snapshot) =>
+              snapshot.docs.map((doc) => Event.fromFirestore(doc)).toList(),
+        );
+  }
+
+  Stream<int> getEventCount() {
+    final currentUser = _auth.currentUser;
+    if (currentUser == null) return Stream.value(0);
+
+    return _firestore
+        .collection(userCollection)
+        .doc(currentUser.uid)
+        .snapshots()
+        .map((snapshot) {
+          if (!snapshot.exists) return 0;
+          return snapshot.data()!['eventCount'] ?? 0;
+        });
   }
 }
 

@@ -17,6 +17,7 @@ import 'package:flutter_keyboard_visibility/flutter_keyboard_visibility.dart';
 import 'package:iconly/iconly.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 import 'package:provider/provider.dart';
 import 'package:custom_refresh_indicator/custom_refresh_indicator.dart';
@@ -810,37 +811,24 @@ class _CommunityListCard extends StatelessWidget {
 }
 
 class _UpcomingEventsTab extends StatelessWidget {
-  final List<Map<String, dynamic>> _events = [
-    {
-      "image": "https://picsum.photos/seed/e1/400/200",
-      "title": "Diwali Cooking Workshop",
-      "date": "8 December, 2025",
-      "location": "Spice Garden Kitchen",
-      "description":
-          "Soothing audio and gentle vibrations to ease discomfort. Soothing audio and gentle vibrations to.",
-      "attendees": 31,
-      "isInterested": true,
-      "hasVideo": false,
-    },
-    {
-      "image": "https://picsum.photos/seed/e2/400/200",
-      "title": "Cultural Music Night",
-      "date": "15 December, 2025",
-      "location": "The Grand Hall",
-      "description":
-          "Experience the rich musical traditions from around the world. A night of melody and harmony.",
-      "attendees": 85,
-      "isInterested": false,
-    },
-  ];
-
   @override
   Widget build(BuildContext context) {
-    return ListView.separated(
-      padding: const EdgeInsets.all(16.0),
-      itemCount: _events.length,
-      itemBuilder: (context, index) => EventCard(event: _events[index]),
-      separatorBuilder: (context, index) => const SizedBox(height: 12),
+    return Consumer<CommunityViewModel>(
+      builder: (context, viewModel, child) {
+        if (viewModel.isLoadingEvents) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (viewModel.upcomingEvents.isEmpty) {
+          return const Center(child: Text("You have no upcoming events."));
+        }
+        return ListView.separated(
+          padding: const EdgeInsets.all(16.0),
+          itemCount: viewModel.upcomingEvents.length,
+          itemBuilder: (context, index) =>
+              EventCard(event: viewModel.upcomingEvents[index]),
+          separatorBuilder: (context, index) => const SizedBox(height: 12),
+        );
+      },
     );
   }
 }
@@ -1275,7 +1263,7 @@ class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
 }
 
 class EventCard extends StatefulWidget {
-  final Map<String, dynamic> event;
+  final Event event;
   final bool? copied;
 
   const EventCard({super.key, required this.event, this.copied});
@@ -1290,7 +1278,11 @@ class _EventCardState extends State<EventCard> {
   @override
   void initState() {
     super.initState();
-    _isInterested = widget.event['isInterested'];
+    final userId = Provider.of<FirebaseService>(
+      context,
+      listen: false,
+    ).currentUser?.uid;
+    _isInterested = widget.event.interestedUserIds.contains(userId);
   }
 
   Widget _buildInfoItem(IconData icon, String text, Color color) {
@@ -1313,6 +1305,13 @@ class _EventCardState extends State<EventCard> {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final firebaseService = Provider.of<FirebaseService>(
+      context,
+      listen: false,
+    );
+    final currentUserId = firebaseService.currentUser?.uid;
+    final isCreator = widget.event.creatorId == currentUserId;
+
     final buttonStyle = TextButton.styleFrom(
       padding: const EdgeInsets.symmetric(vertical: 10),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -1336,14 +1335,14 @@ class _EventCardState extends State<EventCard> {
             ClipRRect(
               borderRadius: BorderRadius.circular(12),
               child: Image.network(
-                widget.event['image'],
+                widget.event.imageUrl,
                 height: 150,
                 width: double.infinity,
                 fit: BoxFit.cover,
               ),
             ),
             const SizedBox(height: 12),
-            Text(widget.event['title'], style: textTheme.titleLarge),
+            Text(widget.event.title, style: textTheme.titleLarge),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8.0,
@@ -1351,24 +1350,26 @@ class _EventCardState extends State<EventCard> {
               children: [
                 _buildInfoItem(
                   Iconsax.calendar,
-                  widget.event['date'],
+                  DateFormat(
+                    'd MMMM, yyyy',
+                  ).format(widget.event.eventDate.toDate()),
                   const Color(0xFF009E60),
                 ),
                 _buildInfoItem(
                   Iconsax.location,
-                  widget.event['location'],
+                  widget.event.location,
                   const Color(0xFFF7C108),
                 ),
                 _buildInfoItem(
                   Iconsax.profile_2user,
-                  "${widget.event['attendees']} Attending",
+                  "${widget.event.interestedUserIds.length} Attending",
                   const Color(0xFF0A75BA),
                 ),
               ],
             ),
             const SizedBox(height: 6),
             Text(
-              widget.event['description'],
+              widget.event.description,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: textTheme.bodySmall,
@@ -1381,19 +1382,33 @@ class _EventCardState extends State<EventCard> {
                   child: _isInterested
                       ? GradientButton(
                           text: "I'm Interested",
-                          onPressed: () {
-                            setState(() {
-                              _isInterested = false;
-                            });
-                          },
+                          onPressed: isCreator
+                              ? null
+                              : () {
+                                  if (currentUserId != null) {
+                                    firebaseService.toggleEventInterest(
+                                      widget.event.id,
+                                      currentUserId,
+                                    );
+                                    setState(() {
+                                      _isInterested = false;
+                                    });
+                                  }
+                                },
                           fontSize: 13,
                           insets: 13,
                         )
                       : OutlinedButton(
                           onPressed: () {
-                            setState(() {
-                              _isInterested = true;
-                            });
+                            if (currentUserId != null) {
+                              firebaseService.toggleEventInterest(
+                                widget.event.id,
+                                currentUserId,
+                              );
+                              setState(() {
+                                _isInterested = true;
+                              });
+                            }
                           },
                           style: buttonStyle.copyWith(
                             side: MaterialStateProperty.all(
@@ -1407,6 +1422,31 @@ class _EventCardState extends State<EventCard> {
                         ),
                 ),
                 const SizedBox(width: 12),
+                Expanded(
+                  child: TextButton(
+                    onPressed: () async {
+                      final community = await firebaseService.getCommunityById(
+                        widget.event.communityId,
+                      );
+                      if (community != null && context.mounted) {
+                        PersistentNavBarNavigator.pushNewScreen(
+                          context,
+                          screen: CommunityDetailScreen(community: community),
+                          withNavBar: false,
+                        );
+                      }
+                    },
+                    style: buttonStyle.copyWith(
+                      backgroundColor: MaterialStateProperty.all(
+                        AppColors.secondaryBackground,
+                      ),
+                      foregroundColor: MaterialStateProperty.all(
+                        AppColors.primaryRed,
+                      ),
+                    ),
+                    child: const Text("View Community"),
+                  ),
+                ),
               ],
             ),
           ],
