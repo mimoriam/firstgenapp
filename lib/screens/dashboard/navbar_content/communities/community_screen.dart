@@ -274,8 +274,11 @@ class _AllCommunitiesSectionState extends State<_AllCommunitiesSection> {
                           if (context.mounted) {
                             PersistentNavBarNavigator.pushNewScreen(
                               context,
-                              screen: CommunityDetailScreen(
-                                community: community,
+                              screen: ChangeNotifierProvider.value(
+                                value: viewModel,
+                                child: CommunityDetailScreen(
+                                  community: community,
+                                ),
                               ),
                               withNavBar: false,
                             );

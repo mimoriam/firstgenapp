@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firstgenapp/models/community_models.dart';
 import 'package:firstgenapp/screens/dashboard/navbar_content/communities/community_detail/community_detail_screen.dart';
 import 'package:firstgenapp/services/firebase_service.dart';
+import 'package:firstgenapp/viewmodels/community_viewmodel.dart';
 import 'package:flutter/material.dart';
 import 'package:firstgenapp/constants/appColors.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
@@ -174,7 +175,10 @@ class _CommunityCard extends StatelessWidget {
         onTap: () {
           PersistentNavBarNavigator.pushNewScreen(
             context,
-            screen: CommunityDetailScreen(community: community),
+            screen: ChangeNotifierProvider.value(
+              value: Provider.of<CommunityViewModel>(context, listen: false),
+              child: CommunityDetailScreen(community: community),
+            ),
             withNavBar: false,
           );
         },
