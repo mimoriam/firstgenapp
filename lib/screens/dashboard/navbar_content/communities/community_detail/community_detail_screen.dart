@@ -232,10 +232,8 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
                 visible: !isMember && !isCreator,
                 child: ElevatedButton(
                   onPressed: () {
-                    final viewModel = Provider.of<CommunityViewModel>(
-                      context,
-                      listen: false,
-                    );
+                    final viewModel = Provider.of<CommunityViewModel>(context,
+                        listen: false);
                     firebaseService
                         .joinCommunity(widget.community.id, userId!)
                         .then((_) => viewModel.refreshAllData());
@@ -350,6 +348,8 @@ class _PostCard extends StatelessWidget {
       context,
       listen: false,
     );
+    final viewModel = Provider.of<CommunityViewModel>(context, listen: false);
+
     return FutureBuilder<Map<String, dynamic>?>(
       future: firebaseService.getUserData(post.authorId),
       builder: (context, snapshot) {
@@ -391,7 +391,7 @@ class _PostCard extends StatelessWidget {
                 PopupMenuButton<String>(
                   onSelected: (value) {
                     if (value == 'share') {
-                      debugPrint('Share post tapped');
+                      viewModel.sharePost(post.id);
                     } else if (value == 'hide') {
                       debugPrint('Hide post tapped');
                     }
@@ -404,46 +404,46 @@ class _PostCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   itemBuilder: (BuildContext context) =>
-                      <PopupMenuEntry<String>>[
-                        PopupMenuItem<String>(
-                          value: 'share',
-                          child: Row(
-                            children: [
-                              const Icon(
-                                Icons.share_outlined,
-                                color: AppColors.textSecondary,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Share Post',
-                                style: textTheme.labelLarge?.copyWith(
-                                  color: AppColors.textPrimary,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
+                  <PopupMenuEntry<String>>[
+                    PopupMenuItem<String>(
+                      value: 'share',
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.share_outlined,
+                            color: AppColors.textSecondary,
                           ),
-                        ),
-                        PopupMenuItem<String>(
-                          value: 'hide',
-                          child: Row(
-                            children: [
-                              const Icon(
-                                IconlyLight.hide,
-                                color: AppColors.textSecondary,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Hide Post',
-                                style: textTheme.labelLarge?.copyWith(
-                                  color: AppColors.textPrimary,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
+                          const SizedBox(width: 8),
+                          Text(
+                            'Share Post',
+                            style: textTheme.labelLarge?.copyWith(
+                              color: AppColors.textPrimary,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem<String>(
+                      value: 'hide',
+                      child: Row(
+                        children: [
+                          const Icon(
+                            IconlyLight.hide,
+                            color: AppColors.textSecondary,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Hide Post',
+                            style: textTheme.labelLarge?.copyWith(
+                              color: AppColors.textPrimary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -488,7 +488,10 @@ class _PostCard extends StatelessWidget {
           withNavBar: false,
         );
       },
-      onShare: () {},
+      onShare: () {
+        Provider.of<CommunityViewModel>(context, listen: false)
+            .sharePost(post.id);
+      },
     );
   }
 }
@@ -606,11 +609,11 @@ class __PostActionsState extends State<_PostActions> {
   }
 
   Widget _buildFooterIcon(
-    IconData icon,
-    String count,
-    Color iconColor,
-    Color color,
-  ) {
+      IconData icon,
+      String count,
+      Color iconColor,
+      Color color,
+      ) {
     return Row(
       children: [
         Icon(icon, color: iconColor, size: 20),
@@ -758,10 +761,10 @@ class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
 
   @override
   Widget build(
-    BuildContext context,
-    double shrinkOffset,
-    bool overlapsContent,
-  ) {
+      BuildContext context,
+      double shrinkOffset,
+      bool overlapsContent,
+      ) {
     return Container(color: AppColors.primaryBackground, child: _tabBar);
   }
 
@@ -889,72 +892,77 @@ class _EventCardState extends State<EventCard> {
                 Expanded(
                   child: _isInterested
                       ? GradientButton(
-                          text: "I'm Interested",
-                          onPressed: isCreator
-                              ? null
-                              : () {
-                                  if (currentUserId != null) {
-                                    firebaseService.toggleEventInterest(
-                                      widget.event.id,
-                                      currentUserId,
-                                    );
-                                    setState(() {
-                                      _isInterested = false;
-                                    });
-                                  }
-                                },
-                          fontSize: 13,
-                          insets: 13,
-                        )
+                    text: "I'm Interested",
+                    onPressed: isCreator
+                        ? null
+                        : () {
+                      if (currentUserId != null) {
+                        firebaseService.toggleEventInterest(
+                          widget.event.id,
+                          currentUserId,
+                        );
+                        setState(() {
+                          _isInterested = false;
+                        });
+                      }
+                    },
+                    fontSize: 13,
+                    insets: 13,
+                  )
                       : OutlinedButton(
-                          onPressed: () {
-                            if (currentUserId != null) {
-                              firebaseService.toggleEventInterest(
-                                widget.event.id,
-                                currentUserId,
-                              );
-                              setState(() {
-                                _isInterested = true;
-                              });
-                            }
-                          },
-                          style: buttonStyle.copyWith(
-                            side: MaterialStateProperty.all(
-                              const BorderSide(color: AppColors.primaryRed),
-                            ),
-                            foregroundColor: MaterialStateProperty.all(
-                              AppColors.primaryRed,
-                            ),
-                          ),
-                          child: const Text("I'm Interested"),
-                        ),
+                    onPressed: () {
+                      if (currentUserId != null) {
+                        firebaseService.toggleEventInterest(
+                          widget.event.id,
+                          currentUserId,
+                        );
+                        setState(() {
+                          _isInterested = true;
+                        });
+                      }
+                    },
+                    style: buttonStyle.copyWith(
+                      side: MaterialStateProperty.all(
+                        const BorderSide(color: AppColors.primaryRed),
+                      ),
+                      foregroundColor: MaterialStateProperty.all(
+                        AppColors.primaryRed,
+                      ),
+                    ),
+                    child: const Text("I'm Interested"),
+                  ),
                 ),
                 const SizedBox(width: 12),
-                // Expanded(
-                //   child: TextButton(
-                //     onPressed: () async {
-                //       final community = await firebaseService.getCommunityById(
-                //         widget.event.communityId,
-                //       );
-                //       if (community != null && context.mounted) {
-                //         PersistentNavBarNavigator.pushNewScreen(
-                //           context,
-                //           screen: CommunityDetailScreen(community: community),
-                //           withNavBar: false,
-                //         );
-                //       }
-                //     },
-                //     style: buttonStyle.copyWith(
-                //       backgroundColor: MaterialStateProperty.all(
-                //         AppColors.secondaryBackground,
-                //       ),
-                //       foregroundColor: MaterialStateProperty.all(
-                //         AppColors.primaryRed,
-                //       ),
-                //     ),
-                //     child: const Text("View Community"),
-                //   ),
-                // ),
+                Expanded(
+                  child: TextButton(
+                    onPressed: () async {
+                      final community = await firebaseService.getCommunityById(
+                        widget.event.communityId,
+                      );
+                      if (community != null && context.mounted) {
+                        PersistentNavBarNavigator.pushNewScreen(
+                          context,
+                          screen: ChangeNotifierProvider.value(
+                            value: Provider.of<CommunityViewModel>(context,
+                                listen: false),
+                            child:
+                            CommunityDetailScreen(community: community),
+                          ),
+                          withNavBar: false,
+                        );
+                      }
+                    },
+                    style: buttonStyle.copyWith(
+                      backgroundColor: MaterialStateProperty.all(
+                        AppColors.secondaryBackground,
+                      ),
+                      foregroundColor: MaterialStateProperty.all(
+                        AppColors.primaryRed,
+                      ),
+                    ),
+                    child: const Text("View Community"),
+                  ),
+                ),
               ],
             ),
           ],

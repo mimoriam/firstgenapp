@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firstgenapp/models/community_models.dart';
 import 'package:firstgenapp/services/firebase_service.dart';
 import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
 
 class CommunityViewModel extends ChangeNotifier {
   final FirebaseService _firebaseService;
@@ -176,6 +177,23 @@ class CommunityViewModel extends ChangeNotifier {
 
   Future<void> sharePost(String postId) async {
     // Implement sharing logic, e.g., using the `share_plus` package
-    print("Sharing post $postId");
+    final post = _feedPosts.firstWhere((p) => p.id == postId);
+    if (post.imageUrl != null && post.imageUrl!.isNotEmpty) {
+      SharePlus.instance.share(
+        ShareParams(
+          text: post.imageUrl,
+          title: post.content,
+          subject: 'Check out this post from First Gen!',
+        ),
+      );
+    } else {
+      SharePlus.instance.share(
+        ShareParams(
+          title: 'Check out this post from First Gen!',
+          text: post.content,
+        ),
+      );
+    }
+    // Share.share(post.content, subject: 'Check out this post from First Gen!');
   }
 }

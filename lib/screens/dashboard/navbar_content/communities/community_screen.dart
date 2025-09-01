@@ -886,6 +886,7 @@ class _PostCard extends StatelessWidget {
       context,
       listen: false,
     );
+    final viewModel = Provider.of<CommunityViewModel>(context, listen: false);
 
     return FutureBuilder<Map<String, dynamic>?>(
       future: firebaseService.getUserData(post.authorId),
@@ -925,8 +926,11 @@ class _PostCard extends StatelessWidget {
                               communitySnapshot.data != null) {
                             PersistentNavBarNavigator.pushNewScreen(
                               context,
-                              screen: CommunityDetailScreen(
-                                community: communitySnapshot.data!,
+                              screen: ChangeNotifierProvider.value(
+                                value: viewModel,
+                                child: CommunityDetailScreen(
+                                  community: communitySnapshot.data!,
+                                ),
                               ),
                               withNavBar: false,
                             );
