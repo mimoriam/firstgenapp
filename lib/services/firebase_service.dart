@@ -1184,6 +1184,8 @@ class FirebaseService {
     required String authorId,
     String? communityId,
     File? image,
+    String? link,
+    List<String>? emojis,
   }) async {
     try {
       DocumentReference postRef = _firestore.collection(postCollection).doc();
@@ -1204,6 +1206,8 @@ class FirebaseService {
         likes: {},
         commentCount: 0,
         originalDoc: postDoc,
+        link: link,
+        emojis: emojis,
       );
 
       await postRef.set(newPost.toFirestore());

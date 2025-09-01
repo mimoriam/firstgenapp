@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
 import 'package:firstgenapp/common/gradient_btn.dart';
 import 'package:firstgenapp/models/community_models.dart';
 import 'package:firstgenapp/services/firebase_service.dart';
@@ -366,6 +367,9 @@ class __CreatePostSectionState extends State<_CreatePostSection> {
   File? _image;
   String? _selectedCommunityId;
   bool _isPosting = false;
+  final _postContentController = TextEditingController();
+  bool _emojiShowing = false;
+  String? _link;
 
   Future<void> _pickImage() async {
     final picker = ImagePicker();
@@ -375,6 +379,12 @@ class __CreatePostSectionState extends State<_CreatePostSection> {
         _image = File(pickedFile.path);
       });
     }
+  }
+
+  @override
+  void dispose() {
+    _postContentController.dispose();
+    super.dispose();
   }
 
   @override
@@ -439,6 +449,7 @@ class __CreatePostSectionState extends State<_CreatePostSection> {
                         children: [
                           FormBuilderTextField(
                             name: 'post_content',
+                            controller: _postContentController,
                             maxLines: 5,
                             minLines: 1,
                             validator: (value) {
@@ -481,7 +492,17 @@ class __CreatePostSectionState extends State<_CreatePostSection> {
                                   ),
                                 ),
                                 IconButton(
-                                  onPressed: () {},
+                                  onPressed: () async {
+                                    final link = await showDialog<String>(
+                                      context: context,
+                                      builder: (context) => _LinkDialog(),
+                                    );
+                                    if (link != null && link.isNotEmpty) {
+                                      setState(() {
+                                        _link = link;
+                                      });
+                                    }
+                                  },
                                   icon: const Icon(
                                     Icons.attach_file_outlined,
                                     color: AppColors.textSecondary,
@@ -490,7 +511,11 @@ class __CreatePostSectionState extends State<_CreatePostSection> {
                                 ),
                                 const SizedBox(width: 12),
                                 IconButton(
-                                  onPressed: () {},
+                                  onPressed: () {
+                                    setState(() {
+                                      _emojiShowing = !_emojiShowing;
+                                    });
+                                  },
                                   icon: const Icon(
                                     Icons.emoji_emotions_outlined,
                                     color: AppColors.textSecondary,
@@ -614,12 +639,23 @@ class __CreatePostSectionState extends State<_CreatePostSection> {
                                   content: postContent,
                                   communityId: _selectedCommunityId,
                                   image: _image,
+                                  link: _link,
+                                  emojis: _postContentController.text.characters
+                                      .where(
+                                        (char) => char.contains(
+                                          RegExp(
+                                            r'(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])',
+                                          ),
+                                        ),
+                                      )
+                                      .toList(),
                                 )
                                 .then((_) {
                                   _formKey.currentState?.reset();
                                   setState(() {
                                     _image = null;
                                     _isPosting = false;
+                                    _link = null;
                                   });
                                   if (context.mounted) {
                                     FocusScope.of(context).unfocus();
@@ -658,8 +694,74 @@ class __CreatePostSectionState extends State<_CreatePostSection> {
               ],
             ),
           ),
+          Offstage(
+            offstage: !_emojiShowing,
+            child: SizedBox(
+              height: 250,
+              child: EmojiPicker(
+                textEditingController: _postContentController,
+                onBackspacePressed: () {
+                  // Do something when the user taps the backspace button (optional)
+                },
+                config: const Config(
+                  emojiViewConfig: EmojiViewConfig(
+                    columns: 7,
+                    emojiSizeMax: 32 * 1.0,
+                    verticalSpacing: 0,
+                    horizontalSpacing: 0,
+                    gridPadding: EdgeInsets.zero,
+                  ),
+                  // initCategory: Category.RECENT,
+                  // bgColor: Color(0xFFF2F2F2),
+                  // indicatorColor: AppColors.primaryRed,
+                  // iconColor: Colors.grey,
+                  // iconColorSelected: AppColors.primaryRed,
+                  // backspaceColor: AppColors.primaryRed,
+                  // skinToneDialogBgColor: Colors.white,
+                  // skinToneIndicatorColor: Colors.grey,
+                  // enableSkinTones: true,
+                  // recentTabBehavior: RecentTabBehavior.RECENT,
+                  // recentsLimit: 28,
+                  // noRecents: Text(
+                  //   'No Recents',
+                  //   style: TextStyle(fontSize: 20, color: Colors.black26),
+                  //   textAlign: TextAlign.center,
+                  // ),
+                  // loadingIndicator: SizedBox.shrink(),
+                  // tabIndicatorAnimDuration: kTabScrollDuration,
+                  // categoryIcons: CategoryIcons(),
+                  // buttonMode: ButtonMode.MATERIAL,
+                ),
+              ),
+            ),
+          ),
         ],
       ),
+    );
+  }
+}
+
+class _LinkDialog extends StatelessWidget {
+  final _linkController = TextEditingController();
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Add a link'),
+      content: TextField(
+        controller: _linkController,
+        decoration: const InputDecoration(hintText: 'https://...'),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(_linkController.text),
+          child: const Text('Add'),
+        ),
+      ],
     );
   }
 }
@@ -725,6 +827,7 @@ class _CommunityListCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final viewModel = Provider.of<CommunityViewModel>(context, listen: false);
 
     return SizedBox(
       height: 140,
@@ -786,7 +889,10 @@ class _CommunityListCard extends StatelessWidget {
                       if (context.mounted) {
                         PersistentNavBarNavigator.pushNewScreen(
                           context,
-                          screen: CommunityDetailScreen(community: community),
+                          screen: ChangeNotifierProvider.value(
+                            value: viewModel,
+                            child: CommunityDetailScreen(community: community),
+                          ),
                           withNavBar: false,
                         );
                       }

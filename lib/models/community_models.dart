@@ -74,6 +74,8 @@ class Post {
   final Map<String, bool> likes;
   final int commentCount;
   final DocumentSnapshot originalDoc;
+  final String? link;
+  final List<String>? emojis;
 
   Post({
     required this.id,
@@ -86,6 +88,8 @@ class Post {
     required this.likes,
     required this.commentCount,
     required this.originalDoc,
+    this.link,
+    this.emojis,
   });
 
   factory Post.fromFirestore(DocumentSnapshot doc) {
@@ -101,6 +105,8 @@ class Post {
       likes: Map<String, bool>.from(data['likes'] ?? {}),
       commentCount: data['commentCount'] ?? 0,
       originalDoc: doc,
+      link: data['link'],
+      emojis: List<String>.from(data['emojis'] ?? []),
     );
   }
 
@@ -114,6 +120,8 @@ class Post {
       'timestamp': timestamp,
       'likes': likes,
       'commentCount': commentCount,
+      'link': link,
+      'emojis': emojis,
     };
   }
 }

@@ -154,6 +154,8 @@ class CommunityViewModel extends ChangeNotifier {
     required String content,
     String? communityId,
     File? image,
+    String? link,
+    List<String>? emojis,
   }) async {
     try {
       await _firebaseService.createPost(
@@ -161,6 +163,8 @@ class CommunityViewModel extends ChangeNotifier {
         authorId: _userId,
         communityId: communityId,
         image: image,
+        link: link,
+        emojis: emojis,
       );
       await fetchMyFeed(isInitial: true); // Refresh feed after posting
     } catch (e) {
