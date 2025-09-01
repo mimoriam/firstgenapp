@@ -1018,25 +1018,25 @@ class _PostCard extends StatelessWidget {
                             ],
                           ),
                         ),
-                        PopupMenuItem<String>(
-                          value: 'hide',
-                          child: Row(
-                            children: [
-                              const Icon(
-                                IconlyLight.hide,
-                                color: AppColors.textSecondary,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Hide Post',
-                                style: textTheme.labelLarge?.copyWith(
-                                  color: AppColors.textPrimary,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+                        // PopupMenuItem<String>(
+                        //   value: 'hide',
+                        //   child: Row(
+                        //     children: [
+                        //       const Icon(
+                        //         IconlyLight.hide,
+                        //         color: AppColors.textSecondary,
+                        //       ),
+                        //       const SizedBox(width: 8),
+                        //       Text(
+                        //         'Hide Post',
+                        //         style: textTheme.labelLarge?.copyWith(
+                        //           color: AppColors.textPrimary,
+                        //           fontWeight: FontWeight.w600,
+                        //         ),
+                        //       ),
+                        //     ],
+                        //   ),
+                        // ),
                       ],
                 ),
               ],
