@@ -866,7 +866,7 @@ class FirebaseService {
 
   Future<void> _sendNotification(String recipientId, String message) async {
     final currentUser = await getCurrentChatUser();
-    if (currentUser == null) return;
+    if (currentUser == null || currentUser.uid == recipientId) return;
 
     try {
       final recipientDoc = await _firestore

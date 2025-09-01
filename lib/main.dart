@@ -32,6 +32,9 @@ Future<void> main() async {
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
   await NotificationService().init();
 
+  // New: Set up the foreground listener
+  NotificationService().setupForegroundNotificationListener();
+
   final SharedPreferencesAsync asyncPrefs = SharedPreferencesAsync();
   final bool onboardingDone =
       await asyncPrefs.getBool('onboardingDone') ?? false;
@@ -49,34 +52,24 @@ class MyApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         Provider<FirebaseService>(create: (_) => FirebaseService()),
-
         ChangeNotifierProvider<SignUpViewModel>(
           create: (context) => SignUpViewModel(context.read<FirebaseService>()),
         ),
-
         ChangeNotifierProvider<AuthProvider>(
           create: (context) => AuthProvider(context.read<FirebaseService>()),
         ),
-
-        // This provider will create the UserProfileViewModel and manage its state
-        // based on the AuthProvider's status.
         ChangeNotifierProxyProvider<AuthProvider, UserProfileViewModel>(
           create: (context) =>
               UserProfileViewModel(context.read<FirebaseService>()),
           update: (context, authProvider, userProfileViewModel) {
-            // When the user is authenticated with a complete profile,
-            // fetch their profile data if it's not already loaded.
             if (authProvider.status ==
                 AuthStatus.authenticated_complete_profile) {
               if (userProfileViewModel?.userProfileData == null &&
                   !userProfileViewModel!.isLoading) {
                 userProfileViewModel.fetchUserProfile();
-                // Add/update user token to/from DB
                 context.read<FirebaseService>().saveUserToken();
               }
-            }
-            // When the user logs out, clear their profile data.
-            else if (authProvider.status == AuthStatus.unauthenticated) {
+            } else if (authProvider.status == AuthStatus.unauthenticated) {
               userProfileViewModel?.clearProfile();
             }
             return userProfileViewModel!;
@@ -87,19 +80,8 @@ class MyApp extends StatelessWidget {
         debugShowCheckedModeBanner: false,
         navigatorKey: navigatorKey,
         theme: AppTheme.lightTheme,
-        // If onboarding is done, go to AuthGate. Otherwise, show OnboardingScreen.
         home: onboardingDone ? const AuthGate() : const OnboardingScreen(),
-        // home: const MyHomePage(),
       ),
     );
   }
 }
-
-// class MyHomePage extends StatelessWidget {
-//   const MyHomePage({super.key});
-//
-//   @override
-//   Widget build(BuildContext context) {
-//     return const OnboardingScreen();
-//   }
-// }

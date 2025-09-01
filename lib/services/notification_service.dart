@@ -68,32 +68,107 @@ class NotificationService {
   }
 
   void _configureFirebaseMessagingListeners() {
-    // For handling messages when the app is in the foreground
+    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+
+    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+      log('A new onMessageOpenedApp event was published!');
+      _handleNotificationNavigation(message.data);
+    });
+
+    _fcm.getInitialMessage().then((RemoteMessage? message) {
+      if (message != null) {
+        log('App opened from a terminated state by a notification');
+        _handleNotificationNavigation(message.data);
+      }
+    });
+  }
+
+  void setupForegroundNotificationListener() {
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       log('Got a message whilst in the foreground!');
       log('Message data: ${message.data}');
 
       if (message.notification != null) {
         log('Message also contained a notification: ${message.notification}');
-        _showLocalNotification(message);
+        showInAppNotification(
+          title: message.notification!.title ?? 'New Message',
+          body: message.notification!.body ?? '',
+          onTap: () => _handleNotificationNavigation(message.data),
+        );
       }
     });
+  }
 
-    // For handling messages when the app is in the background or terminated
-    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+  void showInAppNotification({
+    required String title,
+    required String body,
+    required VoidCallback onTap,
+  }) {
+    final context = navigatorKey.currentContext;
+    if (context == null) return;
 
-    // For handling when a user taps a notification and opens the app from the background
-    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-      log('A new onMessageOpenedApp event was published!');
-      _handleNotificationNavigation(message.data);
-    });
+    final overlay = Overlay.of(context);
+    OverlayEntry? overlayEntry;
 
-    // For handling when a user taps a notification and opens the app from a terminated state
-    _fcm.getInitialMessage().then((RemoteMessage? message) {
-      if (message != null) {
-        log('App opened from a terminated state by a notification');
-        _handleNotificationNavigation(message.data);
-      }
+    overlayEntry = OverlayEntry(
+      builder: (context) => Positioned(
+        top: MediaQuery.of(context).viewPadding.top + 10,
+        left: 10,
+        right: 10,
+        child: Material(
+          color: Colors.transparent,
+          child: GestureDetector(
+            onTap: () {
+              overlayEntry?.remove();
+              onTap();
+            },
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.chat_bubble, color: Colors.blue),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          title,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(body, style: const TextStyle(fontSize: 14)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    overlay.insert(overlayEntry);
+
+    // Auto-dismiss the notification after a few seconds
+    Future.delayed(const Duration(seconds: 5), () {
+      overlayEntry?.remove();
     });
   }
 
@@ -124,7 +199,6 @@ class NotificationService {
     final conversationId = data['conversationId'];
     final otherUserJson = data['otherUser'];
 
-    // Check if this is a chat notification
     if (conversationId != null && otherUserJson != null) {
       final otherUser = ChatUser.fromJson(jsonDecode(otherUserJson));
       navigatorKey.currentState?.push(
@@ -133,8 +207,6 @@ class NotificationService {
         ),
       );
     } else {
-      // This is a general, app-wide notification.
-      // No specific navigation is needed, the user just sees the notification.
       log("Handled a general notification. No navigation action taken.");
     }
   }
