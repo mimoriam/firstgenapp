@@ -50,7 +50,7 @@ class _AllCommunitiesScreenState extends State<AllCommunitiesScreen> {
     );
     final newCommunities = await firebaseService.getAllCommunities(
       startAfter: _lastDocument,
-      searchQuery: _searchQuery,
+      searchQuery: _searchQuery.toLowerCase(),
     );
 
     if (newCommunities.isEmpty) {
@@ -246,13 +246,18 @@ class _CommunityCard extends StatelessWidget {
                       ),
                       const Spacer(),
                       ElevatedButton(
-                        onPressed: () {
-                          PersistentNavBarNavigator.pushNewScreen(
-                            context,
-                            screen: CommunityDetailScreen(community: community),
-                            withNavBar: false,
-                          );
-                        },
+                        onPressed: isMember || isCreator
+                            ? null
+                            : () {
+                                final viewModel =
+                                    Provider.of<CommunityViewModel>(
+                                      context,
+                                      listen: false,
+                                    );
+                                firebaseService
+                                    .joinCommunity(community.id, userId!)
+                                    .then((_) => viewModel.refreshAllData());
+                              },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.white,
                           foregroundColor: AppColors.primaryRed,
@@ -269,9 +274,7 @@ class _CommunityCard extends StatelessWidget {
                           ),
                         ),
                         child: Text(
-                          isMember || isCreator
-                              ? 'View Community'
-                              : 'Join Community',
+                          isMember || isCreator ? 'Joined' : 'Join Community',
                         ),
                       ),
                     ],

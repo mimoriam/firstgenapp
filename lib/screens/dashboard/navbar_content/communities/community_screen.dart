@@ -233,7 +233,13 @@ class _AllCommunitiesSectionState extends State<_AllCommunitiesSection> {
                     if (context.mounted) {
                       PersistentNavBarNavigator.pushNewScreen(
                         context,
-                        screen: const AllCommunitiesScreen(),
+                        screen: ChangeNotifierProvider.value(
+                          value: Provider.of<CommunityViewModel>(
+                            context,
+                            listen: false,
+                          ),
+                          child: const AllCommunitiesScreen(),
+                        ),
                         withNavBar: false,
                       );
                     }
@@ -1434,7 +1440,13 @@ class _EventCardState extends State<EventCard> {
                       if (community != null && context.mounted) {
                         PersistentNavBarNavigator.pushNewScreen(
                           context,
-                          screen: CommunityDetailScreen(community: community),
+                          screen: ChangeNotifierProvider.value(
+                            value: Provider.of<CommunityViewModel>(
+                              context,
+                              listen: false,
+                            ),
+                            child: CommunityDetailScreen(community: community),
+                          ),
                           withNavBar: false,
                         );
                       }

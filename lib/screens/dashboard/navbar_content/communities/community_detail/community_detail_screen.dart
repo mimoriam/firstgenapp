@@ -59,8 +59,6 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
         child: FloatingActionButton(
           onPressed: () {
             if (context.mounted) {
-              // FIX: Wrap the CreateEventScreen with a ChangeNotifierProvider.value
-              // to provide the existing CommunityViewModel instance.
               final viewModel = Provider.of<CommunityViewModel>(
                 context,
                 listen: false,
@@ -233,7 +231,15 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
               Visibility(
                 visible: !isMember && !isCreator,
                 child: ElevatedButton(
-                  onPressed: () {},
+                  onPressed: () {
+                    final viewModel = Provider.of<CommunityViewModel>(
+                      context,
+                      listen: false,
+                    );
+                    firebaseService
+                        .joinCommunity(widget.community.id, userId!)
+                        .then((_) => viewModel.refreshAllData());
+                  },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.tertiaryBackground,
                     foregroundColor: AppColors.primaryOrange,

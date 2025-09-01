@@ -1,5 +1,6 @@
 import 'package:country_picker/country_picker.dart';
 import 'package:firstgenapp/models/community_models.dart';
+import 'package:firstgenapp/screens/dashboard/navbar_content/communities/community_detail/community_detail_screen.dart';
 import 'package:firstgenapp/screens/dashboard/navbar_content/home/match_detail/match_detail_screen.dart';
 import 'package:firstgenapp/screens/dashboard/navbar_content/home/recent_activities/recent_activities_screen.dart';
 import 'package:firstgenapp/screens/dashboard/navbar_content/home/your_matches/your_matches_screen.dart';
@@ -658,6 +659,13 @@ class _EventCardState extends State<EventCard> {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final firebaseService = Provider.of<FirebaseService>(
+      context,
+      listen: false,
+    );
+    final currentUserId = firebaseService.currentUser?.uid;
+    final isCreator = widget.event.creatorId == currentUserId;
+
     final buttonStyle = TextButton.styleFrom(
       padding: const EdgeInsets.symmetric(vertical: 10),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -728,38 +736,28 @@ class _EventCardState extends State<EventCard> {
                   child: _isInterested
                       ? GradientButton(
                           text: "I'm Interested",
-                          onPressed: () {
-                            final firebaseService =
-                                Provider.of<FirebaseService>(
-                                  context,
-                                  listen: false,
-                                );
-                            final userId = firebaseService.currentUser?.uid;
-                            if (userId != null) {
-                              firebaseService.toggleEventInterest(
-                                widget.event.id,
-                                userId,
-                              );
-                              setState(() {
-                                _isInterested = false;
-                              });
-                            }
-                          },
+                          onPressed: isCreator
+                              ? null
+                              : () {
+                                  if (currentUserId != null) {
+                                    firebaseService.toggleEventInterest(
+                                      widget.event.id,
+                                      currentUserId,
+                                    );
+                                    setState(() {
+                                      _isInterested = false;
+                                    });
+                                  }
+                                },
                           fontSize: 13,
                           insets: 10,
                         )
                       : OutlinedButton(
                           onPressed: () {
-                            final firebaseService =
-                                Provider.of<FirebaseService>(
-                                  context,
-                                  listen: false,
-                                );
-                            final userId = firebaseService.currentUser?.uid;
-                            if (userId != null) {
+                            if (currentUserId != null) {
                               firebaseService.toggleEventInterest(
                                 widget.event.id,
-                                userId,
+                                currentUserId,
                               );
                               setState(() {
                                 _isInterested = true;
@@ -780,9 +778,25 @@ class _EventCardState extends State<EventCard> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: TextButton(
-                    onPressed: () {
-                      if (widget.onSwitchTab != null) {
-                        widget.onSwitchTab!(3);
+                    onPressed: () async {
+                      final community = await firebaseService.getCommunityById(
+                        widget.event.communityId,
+                      );
+                      if (community != null && context.mounted) {
+                        PersistentNavBarNavigator.pushNewScreen(
+                          context,
+                          screen:
+                              ChangeNotifierProvider<CommunityViewModel>.value(
+                                value: Provider.of<CommunityViewModel>(
+                                  context,
+                                  listen: false,
+                                ),
+                                child: CommunityDetailScreen(
+                                  community: community,
+                                ),
+                              ),
+                          withNavBar: false,
+                        );
                       }
                     },
                     style: buttonStyle.copyWith(

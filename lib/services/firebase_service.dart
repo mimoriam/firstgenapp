@@ -866,7 +866,7 @@ class FirebaseService {
 
   Future<void> _sendNotification(String recipientId, String message) async {
     final currentUser = await getCurrentChatUser();
-    if (currentUser == null || currentUser.uid == recipientId) return;
+    if (currentUser == null) return;
 
     try {
       final recipientDoc = await _firestore
@@ -1081,8 +1081,8 @@ class FirebaseService {
 
     if (searchQuery.isNotEmpty) {
       query = query
-          .where('name', isGreaterThanOrEqualTo: searchQuery)
-          .where('name', isLessThanOrEqualTo: '$searchQuery\uf8ff');
+          .where('name_lowercase', isGreaterThanOrEqualTo: searchQuery)
+          .where('name_lowercase', isLessThanOrEqualTo: '$searchQuery\uf8ff');
     }
 
     query = query.limit(10);
@@ -1308,6 +1308,22 @@ class FirebaseService {
     }
   }
 
+  Future<void> joinCommunity(String communityId, String userId) async {
+    final communityRef = _firestore
+        .collection(communityCollection)
+        .doc(communityId);
+    final userRef = _firestore.collection(userCollection).doc(userId);
+
+    await _firestore.runTransaction((transaction) async {
+      transaction.update(communityRef, {
+        'members': FieldValue.arrayUnion([userId]),
+      });
+      transaction.update(userRef, {
+        'joinedCommunities': FieldValue.arrayUnion([communityId]),
+      });
+    });
+  }
+
   Future<Community?> getCommunityById(String communityId) async {
     try {
       final docSnapshot = await _firestore
@@ -1419,20 +1435,15 @@ class FirebaseService {
   // Toggle like on a comment or reply
   Future<void> toggleCommentLike(String commentId, String userId) async {
     final commentRef = _firestore.collection('comments').doc(commentId);
-    // Same logic as post like
-    return _firestore.runTransaction((transaction) async {
-      final commentDoc = await transaction.get(commentRef);
-      if (commentDoc.exists) {
-        final isLiked = (commentDoc.data()?['likes'] as Map?)?[userId] == true;
-        if (isLiked) {
-          transaction.update(commentRef, {
-            'likes.$userId': FieldValue.delete(),
-          });
-        } else {
-          transaction.update(commentRef, {'likes.$userId': true});
-        }
+    final commentDoc = await commentRef.get();
+    if (commentDoc.exists) {
+      final isLiked = (commentDoc.data()?['likes'] as Map?)?[userId] == true;
+      if (isLiked) {
+        await commentRef.update({'likes.$userId': FieldValue.delete()});
+      } else {
+        await commentRef.update({'likes.$userId': true});
       }
-    });
+    }
   }
 
   Future<void> createEvent({
