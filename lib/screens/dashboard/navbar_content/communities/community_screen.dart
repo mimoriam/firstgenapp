@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
 import 'package:firstgenapp/common/gradient_btn.dart';
 import 'package:firstgenapp/models/community_models.dart';
@@ -21,7 +22,6 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 import 'package:provider/provider.dart';
-import 'package:custom_refresh_indicator/custom_refresh_indicator.dart';
 
 class CommunityScreen extends StatefulWidget {
   final int? initialIndex;
@@ -107,43 +107,10 @@ class _CommunityScreenState extends State<CommunityScreen>
             ),
           ],
         ),
-        body: CustomRefreshIndicator(
+        body: RefreshIndicator(
           onRefresh: _handleRefresh,
-          builder:
-              (
-                BuildContext context,
-                Widget child,
-                IndicatorController controller,
-              ) {
-                return AnimatedBuilder(
-                  animation: controller,
-                  builder: (BuildContext context, _) {
-                    return Stack(
-                      alignment: Alignment.topCenter,
-                      children: <Widget>[
-                        if (!controller.isIdle)
-                          Positioned(
-                            top: 35.0 * controller.value,
-                            child: SizedBox(
-                              height: 30,
-                              width: 30,
-                              child: CircularProgressIndicator(
-                                value: !controller.isLoading
-                                    ? controller.value.clamp(0.0, 1.0)
-                                    : null,
-                              ),
-                            ),
-                          ),
-                        Transform.translate(
-                          offset: Offset(0, 100.0 * controller.value),
-                          child: child,
-                        ),
-                      ],
-                    );
-                  },
-                );
-              },
           child: NestedScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
             headerSliverBuilder: (context, innerBoxIsScrolled) {
               return [
                 SliverToBoxAdapter(child: _AllCommunitiesSection()),
@@ -325,30 +292,50 @@ class _AllCommunitiesSectionState extends State<_AllCommunitiesSection> {
   }
 }
 
-class _MyFeedTab extends StatelessWidget {
+class _MyFeedTab extends StatefulWidget {
+  @override
+  __MyFeedTabState createState() => __MyFeedTabState();
+}
+
+class __MyFeedTabState extends State<_MyFeedTab> {
+  late Stream<List<Post>> _feedStream;
+
+  @override
+  void initState() {
+    super.initState();
+    final firebaseService = Provider.of<FirebaseService>(
+      context,
+      listen: false,
+    );
+    final userId = firebaseService.currentUser?.uid;
+    if (userId != null) {
+      _feedStream = firebaseService.getFeedStreamForUser(userId);
+    } else {
+      _feedStream = Stream.value([]);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Consumer<CommunityViewModel>(
-      builder: (context, viewModel, child) {
-        if (viewModel.feedPosts.isEmpty) {
+    return StreamBuilder<List<Post>>(
+      stream: _feedStream,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return Center(child: Text('Error: ${snapshot.error}'));
+        }
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
           return const Center(child: Text("Your feed is empty."));
         }
+        final posts = snapshot.data!;
         return ListView.separated(
           padding: const EdgeInsets.all(16.0),
-          itemCount: viewModel.feedPosts.length,
+          itemCount: posts.length,
           itemBuilder: (context, index) {
-            final post = viewModel.feedPosts[index];
-            return _PostCard(
-              post: post,
-              onComment: () {
-                PersistentNavBarNavigator.pushNewScreen(
-                  context,
-                  screen: CommentsScreen(postId: post.id),
-                  withNavBar: false,
-                );
-              },
-              onShare: () => viewModel.sharePost(post.id),
-            );
+            final post = posts[index];
+            return _PostCard(key: ValueKey(post.id), post: post);
           },
           separatorBuilder: (context, index) => const SizedBox(height: 16),
         );
@@ -391,10 +378,6 @@ class __CreatePostSectionState extends State<_CreatePostSection> {
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final viewModel = Provider.of<CommunityViewModel>(context, listen: false);
-    final userProfileViewModel = Provider.of<UserProfileViewModel>(context);
-    final userData = userProfileViewModel.userProfileData;
-    final imageUrl = userData?['profileImageUrl'];
-    final hasPhoto = imageUrl != null && imageUrl.isNotEmpty;
 
     final postContentField = _formKey.currentState?.fields['post_content'];
     final hasError = postContentField?.hasError ?? false;
@@ -418,17 +401,7 @@ class __CreatePostSectionState extends State<_CreatePostSection> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              CircleAvatar(
-                radius: 20,
-                backgroundImage: hasPhoto ? NetworkImage(imageUrl) : null,
-                child: !hasPhoto
-                    ? const Icon(
-                        IconlyLight.profile,
-                        size: 20,
-                        color: AppColors.textSecondary,
-                      )
-                    : null,
-              ),
+              _ProfileAvatar(),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -491,25 +464,25 @@ class __CreatePostSectionState extends State<_CreatePostSection> {
                                     size: 22,
                                   ),
                                 ),
-                                IconButton(
-                                  onPressed: () async {
-                                    final link = await showDialog<String>(
-                                      context: context,
-                                      builder: (context) => _LinkDialog(),
-                                    );
-                                    if (link != null && link.isNotEmpty) {
-                                      setState(() {
-                                        _link = link;
-                                      });
-                                    }
-                                  },
-                                  icon: const Icon(
-                                    Icons.attach_file_outlined,
-                                    color: AppColors.textSecondary,
-                                    size: 22,
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
+                                // IconButton(
+                                //   onPressed: () async {
+                                //     final link = await showDialog<String>(
+                                //       context: context,
+                                //       builder: (context) => _LinkDialog(),
+                                //     );
+                                //     if (link != null && link.isNotEmpty) {
+                                //       setState(() {
+                                //         _link = link;
+                                //       });
+                                //     }
+                                //   },
+                                //   icon: const Icon(
+                                //     Icons.attach_file_outlined,
+                                //     color: AppColors.textSecondary,
+                                //     size: 22,
+                                //   ),
+                                // ),
+                                // const SizedBox(width: 12),
                                 IconButton(
                                   onPressed: () {
                                     setState(() {
@@ -519,7 +492,7 @@ class __CreatePostSectionState extends State<_CreatePostSection> {
                                   icon: const Icon(
                                     Icons.emoji_emotions_outlined,
                                     color: AppColors.textSecondary,
-                                    size: 22,
+                                    size: 21,
                                   ),
                                 ),
                               ],
@@ -711,32 +684,37 @@ class __CreatePostSectionState extends State<_CreatePostSection> {
                     horizontalSpacing: 0,
                     gridPadding: EdgeInsets.zero,
                   ),
-                  // initCategory: Category.RECENT,
-                  // bgColor: Color(0xFFF2F2F2),
-                  // indicatorColor: AppColors.primaryRed,
-                  // iconColor: Colors.grey,
-                  // iconColorSelected: AppColors.primaryRed,
-                  // backspaceColor: AppColors.primaryRed,
-                  // skinToneDialogBgColor: Colors.white,
-                  // skinToneIndicatorColor: Colors.grey,
-                  // enableSkinTones: true,
-                  // recentTabBehavior: RecentTabBehavior.RECENT,
-                  // recentsLimit: 28,
-                  // noRecents: Text(
-                  //   'No Recents',
-                  //   style: TextStyle(fontSize: 20, color: Colors.black26),
-                  //   textAlign: TextAlign.center,
-                  // ),
-                  // loadingIndicator: SizedBox.shrink(),
-                  // tabIndicatorAnimDuration: kTabScrollDuration,
-                  // categoryIcons: CategoryIcons(),
-                  // buttonMode: ButtonMode.MATERIAL,
                 ),
               ),
             ),
           ),
         ],
       ),
+    );
+  }
+}
+
+class _ProfileAvatar extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<UserProfileViewModel>(
+      builder: (context, userProfileViewModel, child) {
+        final userData = userProfileViewModel.userProfileData;
+        final imageUrl = userData?['profileImageUrl'];
+        final hasPhoto = imageUrl != null && imageUrl.isNotEmpty;
+
+        return CircleAvatar(
+          radius: 20,
+          backgroundImage: hasPhoto ? NetworkImage(imageUrl) : null,
+          child: !hasPhoto
+              ? const Icon(
+                  IconlyLight.profile,
+                  size: 20,
+                  color: AppColors.textSecondary,
+                )
+              : null,
+        );
+      },
     );
   }
 }
@@ -950,14 +928,8 @@ class _UpcomingEventsTab extends StatelessWidget {
 
 class _PostCard extends StatelessWidget {
   final Post post;
-  final VoidCallback onComment;
-  final VoidCallback onShare;
 
-  const _PostCard({
-    required this.post,
-    required this.onComment,
-    required this.onShare,
-  });
+  const _PostCard({super.key, required this.post});
 
   @override
   Widget build(BuildContext context) {
@@ -994,13 +966,13 @@ class _PostCard extends StatelessWidget {
     );
     final viewModel = Provider.of<CommunityViewModel>(context, listen: false);
 
-    return FutureBuilder<Map<String, dynamic>?>(
-      future: firebaseService.getUserData(post.authorId),
+    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      stream: firebaseService.getUserStream(post.authorId),
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
           return const SizedBox.shrink(); // Or a loading indicator
         }
-        final authorData = snapshot.data;
+        final authorData = snapshot.data?.data();
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -1091,7 +1063,7 @@ class _PostCard extends StatelessWidget {
                 PopupMenuButton<String>(
                   onSelected: (value) {
                     if (value == 'share') {
-                      onShare();
+                      viewModel.sharePost(post.id);
                     } else if (value == 'hide') {
                       debugPrint('Hide post tapped');
                     }
@@ -1124,25 +1096,6 @@ class _PostCard extends StatelessWidget {
                             ],
                           ),
                         ),
-                        // PopupMenuItem<String>(
-                        //   value: 'hide',
-                        //   child: Row(
-                        //     children: [
-                        //       const Icon(
-                        //         IconlyLight.hide,
-                        //         color: AppColors.textSecondary,
-                        //       ),
-                        //       const SizedBox(width: 8),
-                        //       Text(
-                        //         'Hide Post',
-                        //         style: textTheme.labelLarge?.copyWith(
-                        //           color: AppColors.textPrimary,
-                        //           fontWeight: FontWeight.w600,
-                        //         ),
-                        //       ),
-                        //     ],
-                        //   ),
-                        // ),
                       ],
                 ),
               ],
@@ -1217,34 +1170,33 @@ class _PostCard extends StatelessWidget {
   }
 
   Widget _buildPostFooter(BuildContext context) {
-    return _PostActions(post: post, onComment: onComment, onShare: onShare);
+    return _PostActions(post: post);
   }
 }
 
 class _PostActions extends StatefulWidget {
   final Post post;
-  final VoidCallback onComment;
-  final VoidCallback onShare;
 
-  const _PostActions({
-    required this.post,
-    required this.onComment,
-    required this.onShare,
-  });
+  const _PostActions({required this.post});
 
   @override
   __PostActionsState createState() => __PostActionsState();
 }
 
 class __PostActionsState extends State<_PostActions> {
-  late Map<String, bool> _likes;
-  late int _commentCount;
+  void _onComment() {
+    PersistentNavBarNavigator.pushNewScreen(
+      context,
+      screen: CommentsScreen(postId: widget.post.id),
+      withNavBar: false,
+    );
+  }
 
-  @override
-  void initState() {
-    super.initState();
-    _likes = widget.post.likes;
-    _commentCount = widget.post.commentCount;
+  void _onShare() {
+    Provider.of<CommunityViewModel>(
+      context,
+      listen: false,
+    ).sharePost(widget.post.id);
   }
 
   void _toggleLike() {
@@ -1253,15 +1205,6 @@ class __PostActionsState extends State<_PostActions> {
       listen: false,
     );
     final userId = firebaseService.currentUser!.uid;
-
-    setState(() {
-      if (_likes.containsKey(userId)) {
-        _likes.remove(userId);
-      } else {
-        _likes[userId] = true;
-      }
-    });
-
     firebaseService.togglePostLike(widget.post.id, userId);
   }
 
@@ -1273,7 +1216,7 @@ class __PostActionsState extends State<_PostActions> {
       listen: false,
     );
     final currentUserId = firebaseService.currentUser?.uid;
-    final isLiked = _likes[currentUserId] == true;
+    final isLiked = widget.post.likes[currentUserId] == true;
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1284,24 +1227,24 @@ class __PostActionsState extends State<_PostActions> {
               onTap: _toggleLike,
               child: _buildFooterIcon(
                 isLiked ? Icons.favorite : Icons.favorite_border,
-                _likes.length.toString(),
+                widget.post.likes.length.toString(),
                 AppColors.primaryRed,
                 AppColors.textSecondary,
               ),
             ),
             const SizedBox(width: 24),
             GestureDetector(
-              onTap: widget.onComment,
+              onTap: _onComment,
               child: _buildFooterIcon(
                 Iconsax.messages_2_copy,
-                _commentCount.toString(),
+                widget.post.commentCount.toString(),
                 const Color(0xFF0A75BA),
                 AppColors.textSecondary,
               ),
             ),
             const SizedBox(width: 24),
             GestureDetector(
-              onTap: widget.onShare,
+              onTap: _onShare,
               child: _buildFooterIcon(
                 Icons.share_outlined,
                 "0", // Share count not in model yet
@@ -1312,7 +1255,7 @@ class __PostActionsState extends State<_PostActions> {
           ],
         ),
         TextButton.icon(
-          onPressed: widget.onComment,
+          onPressed: _onComment,
           icon: const Icon(
             IconlyLight.send,
             color: AppColors.textSecondary,

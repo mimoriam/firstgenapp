@@ -24,10 +24,18 @@ class _ChatsScreenState extends State<ChatsScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   bool _isSearching = false;
+  late Stream<List<Conversation>> _conversationsStream;
 
   @override
   void initState() {
     super.initState();
+    // Initialize the stream here to prevent re-creation on every build
+    final firebaseService = Provider.of<FirebaseService>(
+      context,
+      listen: false,
+    );
+    _conversationsStream = firebaseService.getConversations();
+
     _searchController.addListener(() {
       if (mounted) {
         setState(() {
@@ -46,6 +54,12 @@ class _ChatsScreenState extends State<ChatsScreen> {
   Future<void> _handleRefresh() async {
     setState(() {
       _recentMatchesKey = UniqueKey();
+      // Re-initialize the stream on refresh
+      final firebaseService = Provider.of<FirebaseService>(
+        context,
+        listen: false,
+      );
+      _conversationsStream = firebaseService.getConversations();
     });
   }
 
@@ -146,14 +160,10 @@ class _ChatsScreenState extends State<ChatsScreen> {
   }
 
   Widget _buildConversationsList() {
-    final firebaseService = Provider.of<FirebaseService>(
-      context,
-      listen: false,
-    );
     final textTheme = Theme.of(context).textTheme;
 
     return StreamBuilder<List<Conversation>>(
-      stream: firebaseService.getConversations(),
+      stream: _conversationsStream,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting &&
             !snapshot.hasData) {
@@ -194,7 +204,6 @@ class _ChatsScreenState extends State<ChatsScreen> {
           itemCount: filteredConversations.length,
           itemBuilder: (context, index) {
             final conversation = filteredConversations[index];
-            // The outer Padding is no longer needed here
             return _buildChatItem(context, conversation, textTheme);
           },
         );
@@ -212,7 +221,7 @@ class _ChatsScreenState extends State<ChatsScreen> {
     TextTheme textTheme,
   ) {
     return GestureDetector(
-      behavior: HitTestBehavior.opaque, // This makes the whole area tappable
+      behavior: HitTestBehavior.opaque,
       onTap: () {
         PersistentNavBarNavigator.pushNewScreen(
           context,
@@ -221,7 +230,6 @@ class _ChatsScreenState extends State<ChatsScreen> {
         );
       },
       child: Padding(
-        // This padding now contributes to the tappable area
         padding: const EdgeInsets.symmetric(vertical: 8.0),
         child: Row(
           children: [
