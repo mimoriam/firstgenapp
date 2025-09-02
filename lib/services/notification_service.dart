@@ -90,91 +90,13 @@ class NotificationService {
 
       if (message.notification != null) {
         log('Message also contained a notification: ${message.notification}');
-        showInAppNotification(
-          title: message.notification!.title ?? 'New Message',
-          body: message.notification!.body ?? '',
-          onTap: () => _handleNotificationNavigation(message.data),
-        );
+        _showLocalNotification(message); // Use local notifications
       }
     });
   }
 
-  void showInAppNotification({
-    required String title,
-    required String body,
-    required VoidCallback onTap,
-  }) {
-    // FIX: Get the OverlayState directly from the navigatorKey's currentState.
-    // This is the most reliable way to access the overlay.
-    final overlay = navigatorKey.currentState?.overlay;
-    if (overlay == null) return;
-
-    OverlayEntry? overlayEntry;
-
-    overlayEntry = OverlayEntry(
-      builder: (context) => Positioned(
-        top: MediaQuery.of(context).viewPadding.top + 10,
-        left: 10,
-        right: 10,
-        child: Material(
-          color: Colors.transparent,
-          child: GestureDetector(
-            onTap: () {
-              overlayEntry?.remove();
-              onTap();
-            },
-            child: Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.chat_bubble, color: Colors.blue),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          title,
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 15,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(body, style: const TextStyle(fontSize: 14)),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-
-    // Insert the entry into the overlay.
-    overlay.insert(overlayEntry);
-
-    // Auto-dismiss the notification after a few seconds.
-    Future.delayed(const Duration(seconds: 5), () {
-      overlayEntry?.remove();
-    });
-  }
-
   void _showLocalNotification(RemoteMessage message) {
+    // Use the channel ID from your AndroidManifest.xml
     const AndroidNotificationDetails androidPlatformChannelSpecifics =
         AndroidNotificationDetails(
           'firstgen_chat_channel',
@@ -182,10 +104,11 @@ class NotificationService {
           channelDescription: 'This channel is used for chat notifications.',
           importance: Importance.max,
           priority: Priority.high,
-          showWhen: false,
+          showWhen: true, // Show the timestamp
         );
     const NotificationDetails platformChannelSpecifics = NotificationDetails(
       android: androidPlatformChannelSpecifics,
+      // You can also configure iOS details here
     );
 
     _flutterLocalNotificationsPlugin.show(
