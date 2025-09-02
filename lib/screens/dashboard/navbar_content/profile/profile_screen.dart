@@ -445,7 +445,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         children: [
           Text('About App', style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 8),
-          _buildInfoRow('Terms of Use', onTap: () {}),
+          // _buildInfoRow('Terms of Use', onTap: () {}),
           _buildInfoRow('Privacy Policy', onTap: () {}),
           _buildInfoRow('Contact Support', onTap: () {}),
           _buildInfoRow(
