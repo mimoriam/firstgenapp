@@ -34,6 +34,17 @@ Future<void> main() async {
 
   // New: Set up the foreground listener
   NotificationService().setupForegroundNotificationListener();
+  FirebaseMessaging.instance.onTokenRefresh
+      .listen((fcmToken) {
+        // Note: This callback fires whenever a new token is generated.
+        final firebaseService = FirebaseService();
+        if (firebaseService.currentUser != null) {
+          firebaseService.saveUserToken();
+        }
+      })
+      .onError((err) {
+        // Error getting token.
+      });
 
   final SharedPreferencesAsync asyncPrefs = SharedPreferencesAsync();
   final bool onboardingDone =

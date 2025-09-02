@@ -104,10 +104,11 @@ class NotificationService {
     required String body,
     required VoidCallback onTap,
   }) {
-    final context = navigatorKey.currentContext;
-    if (context == null) return;
+    // FIX: Get the OverlayState directly from the navigatorKey's currentState.
+    // This is the most reliable way to access the overlay.
+    final overlay = navigatorKey.currentState?.overlay;
+    if (overlay == null) return;
 
-    final overlay = Overlay.of(context);
     OverlayEntry? overlayEntry;
 
     overlayEntry = OverlayEntry(
@@ -164,9 +165,10 @@ class NotificationService {
       ),
     );
 
+    // Insert the entry into the overlay.
     overlay.insert(overlayEntry);
 
-    // Auto-dismiss the notification after a few seconds
+    // Auto-dismiss the notification after a few seconds.
     Future.delayed(const Duration(seconds: 5), () {
       overlayEntry?.remove();
     });
