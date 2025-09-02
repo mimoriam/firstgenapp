@@ -38,10 +38,15 @@ class _AllCommunitiesScreenState extends State<AllCommunitiesScreen> {
     });
   }
 
-  Future<void> _getCommunities() async {
-    if (_isLoading || !_hasMore) return;
+  Future<void> _getCommunities({bool isRefresh = false}) async {
+    if (_isLoading || (!_hasMore && !isRefresh)) return;
     setState(() {
       _isLoading = true;
+      if (isRefresh) {
+        _communities = [];
+        _lastDocument = null;
+        _hasMore = true;
+      }
     });
 
     final firebaseService = Provider.of<FirebaseService>(
@@ -52,6 +57,8 @@ class _AllCommunitiesScreenState extends State<AllCommunitiesScreen> {
       startAfter: _lastDocument,
       searchQuery: _searchQuery.toLowerCase(),
     );
+
+    if (!mounted) return;
 
     if (newCommunities.isEmpty) {
       setState(() {
@@ -71,13 +78,10 @@ class _AllCommunitiesScreenState extends State<AllCommunitiesScreen> {
   void _onSearchChanged(String query) {
     if (_debounce?.isActive ?? false) _debounce!.cancel();
     _debounce = Timer(const Duration(milliseconds: 500), () {
-      setState(() {
-        _searchQuery = query;
-        _communities = [];
-        _lastDocument = null;
-        _hasMore = true;
-      });
-      _getCommunities();
+      _getCommunities(isRefresh: true);
+    });
+    setState(() {
+      _searchQuery = query;
     });
   }
 
@@ -153,10 +157,17 @@ class _AllCommunitiesScreenState extends State<AllCommunitiesScreen> {
   }
 }
 
-class _CommunityCard extends StatelessWidget {
+class _CommunityCard extends StatefulWidget {
   final Community community;
 
   const _CommunityCard({required this.community});
+
+  @override
+  State<_CommunityCard> createState() => _CommunityCardState();
+}
+
+class _CommunityCardState extends State<_CommunityCard> {
+  bool _isJoining = false;
 
   @override
   Widget build(BuildContext context) {
@@ -166,125 +177,161 @@ class _CommunityCard extends StatelessWidget {
       listen: false,
     );
     final userId = firebaseService.currentUser?.uid;
-    final isMember = community.members.contains(userId);
-    final isCreator = community.creatorId == userId;
 
-    return SizedBox(
-      height: 170,
-      child: GestureDetector(
-        onTap: () {
-          PersistentNavBarNavigator.pushNewScreen(
-            context,
-            screen: ChangeNotifierProvider.value(
-              value: Provider.of<CommunityViewModel>(context, listen: false),
-              child: CommunityDetailScreen(community: community),
-            ),
-            withNavBar: false,
-          );
-        },
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(16),
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              Image.network(
-                community.imageUrl,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) =>
-                    Container(color: Colors.grey.shade300),
-              ),
-              Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      Colors.black.withOpacity(0.6),
-                      Colors.black.withOpacity(0.2),
-                      Colors.transparent,
-                    ],
-                    begin: Alignment.centerLeft,
-                    end: Alignment.centerRight,
-                    stops: const [0.0, 0.6, 1.0],
-                  ),
+    // Use Consumer to get the latest state
+    return Consumer<CommunityViewModel>(
+      builder: (context, viewModel, child) {
+        // Recalculate membership status inside the builder
+        final isMember =
+            widget.community.members.contains(userId) ||
+            viewModel.joinedCommunities.any((c) => c.id == widget.community.id);
+        final isCreator = widget.community.creatorId == userId;
+
+        return SizedBox(
+          height: 170,
+          child: GestureDetector(
+            onTap: () {
+              PersistentNavBarNavigator.pushNewScreen(
+                context,
+                screen: ChangeNotifierProvider.value(
+                  value: viewModel,
+                  child: CommunityDetailScreen(community: widget.community),
                 ),
-              ),
-              Positioned.fill(
-                child: Padding(
-                  padding: const EdgeInsets.all(12.0),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        community.name,
-                        style: textTheme.titleLarge?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
+                withNavBar: false,
+              );
+            },
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  Image.network(
+                    widget.community.imageUrl,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) =>
+                        Container(color: Colors.grey.shade300),
+                  ),
+                  Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          Colors.black.withOpacity(0.6),
+                          Colors.black.withOpacity(0.2),
+                          Colors.transparent,
+                        ],
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
+                        stops: const [0.0, 0.6, 1.0],
                       ),
-                      const SizedBox(height: 6),
-                      Row(
+                    ),
+                  ),
+                  Positioned.fill(
+                    child: Padding(
+                      padding: const EdgeInsets.all(12.0),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Icon(Icons.star, color: Colors.amber, size: 16),
-                          const SizedBox(width: 4),
                           Text(
-                            '${community.members.length} members',
+                            widget.community.name,
+                            style: textTheme.titleLarge?.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.star,
+                                color: Colors.amber,
+                                size: 16,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                '${widget.community.members.length} members',
+                                style: textTheme.bodySmall?.copyWith(
+                                  color: Colors.white.withOpacity(0.9),
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            widget.community.description,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                             style: textTheme.bodySmall?.copyWith(
                               color: Colors.white.withOpacity(0.9),
-                              fontSize: 11,
                             ),
+                          ),
+                          const Spacer(),
+                          ElevatedButton(
+                            onPressed: isMember || isCreator || _isJoining
+                                ? null
+                                : () async {
+                                    setState(() {
+                                      _isJoining = true;
+                                    });
+                                    try {
+                                      await firebaseService.joinCommunity(
+                                        widget.community.id,
+                                        userId!,
+                                      );
+                                      await viewModel.refreshAllData();
+                                    } catch (e) {
+                                      // Handle error if needed
+                                    } finally {
+                                      if (mounted) {
+                                        setState(() {
+                                          _isJoining = false;
+                                        });
+                                      }
+                                    }
+                                  },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              foregroundColor: AppColors.primaryRed,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 6,
+                              ),
+                              textStyle: textTheme.labelLarge?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
+                            ),
+                            child: _isJoining
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        AppColors.primaryRed,
+                                      ),
+                                    ),
+                                  )
+                                : Text(
+                                    isMember || isCreator
+                                        ? 'Joined'
+                                        : 'Join Community',
+                                  ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        community.description,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: textTheme.bodySmall?.copyWith(
-                          color: Colors.white.withOpacity(0.9),
-                        ),
-                      ),
-                      const Spacer(),
-                      ElevatedButton(
-                        onPressed: isMember || isCreator
-                            ? null
-                            : () {
-                                final viewModel =
-                                    Provider.of<CommunityViewModel>(
-                                      context,
-                                      listen: false,
-                                    );
-                                firebaseService
-                                    .joinCommunity(community.id, userId!)
-                                    .then((_) => viewModel.refreshAllData());
-                              },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: AppColors.primaryRed,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 6,
-                          ),
-                          textStyle: textTheme.labelLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13,
-                          ),
-                        ),
-                        child: Text(
-                          isMember || isCreator ? 'Joined' : 'Join Community',
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
-                ),
+                ],
               ),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }

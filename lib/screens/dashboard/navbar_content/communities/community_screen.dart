@@ -80,13 +80,14 @@ class _CommunityScreenState extends State<CommunityScreen>
           ),
           actions: [
             GestureDetector(
-              onTap: () {
+              onTap: () async {
                 if (context.mounted) {
                   final viewModel = Provider.of<CommunityViewModel>(
                     context,
                     listen: false,
                   );
-                  PersistentNavBarNavigator.pushNewScreen(
+                  // Await the result of the navigation to refresh data
+                  await PersistentNavBarNavigator.pushNewScreen(
                     context,
                     screen: ChangeNotifierProvider.value(
                       value: viewModel,
@@ -94,6 +95,8 @@ class _CommunityScreenState extends State<CommunityScreen>
                     ),
                     withNavBar: false,
                   );
+                  // Refresh data after returning from CreateCommunityScreen
+                  await viewModel.refreshAllData();
                 }
               },
               child: Container(
@@ -165,129 +168,115 @@ class _CommunityScreenState extends State<CommunityScreen>
   }
 }
 
-class _AllCommunitiesSection extends StatefulWidget {
-  @override
-  State<_AllCommunitiesSection> createState() => _AllCommunitiesSectionState();
-}
-
-class _AllCommunitiesSectionState extends State<_AllCommunitiesSection> {
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<CommunityViewModel>(
-        context,
-        listen: false,
-      ).fetchAllCommunities(isInitial: true);
-    });
-  }
-
+class _AllCommunitiesSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    return Padding(
-      padding: const EdgeInsets.only(top: 16.0, bottom: 8.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('All Communities', style: textTheme.titleLarge),
-                TextButton(
-                  onPressed: () {
-                    if (context.mounted) {
-                      PersistentNavBarNavigator.pushNewScreen(
-                        context,
-                        screen: ChangeNotifierProvider.value(
-                          value: Provider.of<CommunityViewModel>(
+    // Use Consumer here to automatically rebuild when data changes
+    return Consumer<CommunityViewModel>(
+      builder: (context, viewModel, child) {
+        return Padding(
+          padding: const EdgeInsets.only(top: 16.0, bottom: 8.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('All Communities', style: textTheme.titleLarge),
+                    TextButton(
+                      onPressed: () {
+                        if (context.mounted) {
+                          PersistentNavBarNavigator.pushNewScreen(
                             context,
-                            listen: false,
-                          ),
-                          child: const AllCommunitiesScreen(),
-                        ),
-                        withNavBar: false,
-                      );
-                    }
-                  },
-                  child: Text(
-                    'View All',
-                    style: textTheme.labelLarge?.copyWith(
-                      color: AppColors.primaryRed,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 2),
-          SizedBox(
-            height: 90,
-            child: Consumer<CommunityViewModel>(
-              builder: (context, viewModel, child) {
-                if (viewModel.allCommunities.isEmpty &&
-                    viewModel.isLoadingAll) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (viewModel.allCommunities.isEmpty) {
-                  return const Center(child: Text("No communities found."));
-                }
-                return ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  itemCount: viewModel.allCommunities.length,
-                  itemBuilder: (context, index) {
-                    final community = viewModel.allCommunities[index];
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                      child: GestureDetector(
-                        onTap: () {
-                          if (context.mounted) {
-                            PersistentNavBarNavigator.pushNewScreen(
-                              context,
-                              screen: ChangeNotifierProvider.value(
-                                value: viewModel,
-                                child: CommunityDetailScreen(
-                                  community: community,
-                                ),
-                              ),
-                              withNavBar: false,
-                            );
-                          }
-                        },
-                        child: SizedBox(
-                          width: 60,
-                          child: Column(
-                            children: [
-                              CircleAvatar(
-                                radius: 24,
-                                backgroundImage: NetworkImage(
-                                  community.imageUrl,
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                community.name,
-                                style: textTheme.bodySmall,
-                                textAlign: TextAlign.center,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ],
-                          ),
+                            screen: ChangeNotifierProvider.value(
+                              value: viewModel,
+                              child: const AllCommunitiesScreen(),
+                            ),
+                            withNavBar: false,
+                          );
+                        }
+                      },
+                      child: Text(
+                        'View All',
+                        style: textTheme.labelLarge?.copyWith(
+                          color: AppColors.primaryRed,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 2),
+              SizedBox(
+                height: 90,
+                child: Builder(
+                  builder: (context) {
+                    if (viewModel.allCommunities.isEmpty &&
+                        viewModel.isLoadingAll) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    if (viewModel.allCommunities.isEmpty) {
+                      return const Center(child: Text("No communities found."));
+                    }
+                    return ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      itemCount: viewModel.allCommunities.length,
+                      itemBuilder: (context, index) {
+                        final community = viewModel.allCommunities[index];
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                          child: GestureDetector(
+                            onTap: () {
+                              if (context.mounted) {
+                                PersistentNavBarNavigator.pushNewScreen(
+                                  context,
+                                  screen: ChangeNotifierProvider.value(
+                                    value: viewModel,
+                                    child: CommunityDetailScreen(
+                                      community: community,
+                                    ),
+                                  ),
+                                  withNavBar: false,
+                                );
+                              }
+                            },
+                            child: SizedBox(
+                              width: 70,
+                              child: Column(
+                                children: [
+                                  CircleAvatar(
+                                    radius: 24,
+                                    backgroundImage: NetworkImage(
+                                      community.imageUrl,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    community.name,
+                                    style: textTheme.bodySmall,
+                                    textAlign: TextAlign.center,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
                     );
                   },
-                );
-              },
-            ),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
@@ -464,25 +453,6 @@ class __CreatePostSectionState extends State<_CreatePostSection> {
                                     size: 22,
                                   ),
                                 ),
-                                // IconButton(
-                                //   onPressed: () async {
-                                //     final link = await showDialog<String>(
-                                //       context: context,
-                                //       builder: (context) => _LinkDialog(),
-                                //     );
-                                //     if (link != null && link.isNotEmpty) {
-                                //       setState(() {
-                                //         _link = link;
-                                //       });
-                                //     }
-                                //   },
-                                //   icon: const Icon(
-                                //     Icons.attach_file_outlined,
-                                //     color: AppColors.textSecondary,
-                                //     size: 22,
-                                //   ),
-                                // ),
-                                // const SizedBox(width: 12),
                                 IconButton(
                                   onPressed: () {
                                     setState(() {
@@ -715,31 +685,6 @@ class _ProfileAvatar extends StatelessWidget {
               : null,
         );
       },
-    );
-  }
-}
-
-class _LinkDialog extends StatelessWidget {
-  final _linkController = TextEditingController();
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Add a link'),
-      content: TextField(
-        controller: _linkController,
-        decoration: const InputDecoration(hintText: 'https://...'),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
-        ),
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(_linkController.text),
-          child: const Text('Add'),
-        ),
-      ],
     );
   }
 }
@@ -1458,7 +1403,7 @@ class _EventCardState extends State<EventCard> {
                                   }
                                 },
                           fontSize: 13,
-                          insets: 13,
+                          insets: 10,
                         )
                       : OutlinedButton(
                           onPressed: () {
@@ -1493,13 +1438,16 @@ class _EventCardState extends State<EventCard> {
                       if (community != null && context.mounted) {
                         PersistentNavBarNavigator.pushNewScreen(
                           context,
-                          screen: ChangeNotifierProvider.value(
-                            value: Provider.of<CommunityViewModel>(
-                              context,
-                              listen: false,
-                            ),
-                            child: CommunityDetailScreen(community: community),
-                          ),
+                          screen:
+                              ChangeNotifierProvider<CommunityViewModel>.value(
+                                value: Provider.of<CommunityViewModel>(
+                                  context,
+                                  listen: false,
+                                ),
+                                child: CommunityDetailScreen(
+                                  community: community,
+                                ),
+                              ),
                           withNavBar: false,
                         );
                       }

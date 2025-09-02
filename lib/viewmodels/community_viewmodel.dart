@@ -10,8 +10,28 @@ class CommunityViewModel extends ChangeNotifier {
   final FirebaseService _firebaseService;
   final String _userId;
 
+  // Add a subscription variable to manage the stream listener
+  StreamSubscription? _eventsSubscription;
+  // Add a flag to check if the view model has been disposed
+  bool _isDisposed = false;
+
   CommunityViewModel(this._firebaseService, this._userId) {
     _fetchInitialData();
+  }
+
+  // Override dispose to cancel subscriptions and set the flag
+  @override
+  void dispose() {
+    _isDisposed = true;
+    _eventsSubscription?.cancel();
+    super.dispose();
+  }
+
+  // Helper to safely call notifyListeners
+  void _safeNotifyListeners() {
+    if (!_isDisposed) {
+      notifyListeners();
+    }
   }
 
   // All Communities
@@ -50,30 +70,35 @@ class CommunityViewModel extends ChangeNotifier {
     fetchUpcomingEvents();
   }
 
-  // FIX: Add a comprehensive refresh method
   Future<void> refreshAllData() async {
+    // Cancel existing subscription before fetching new data to avoid duplicates.
+    await _eventsSubscription?.cancel();
+
     await Future.wait([
       fetchAllCommunities(isInitial: true),
       fetchMyFeed(isInitial: true),
       fetchMyCommunities(),
-      fetchUpcomingEvents(), // Add this
+      fetchUpcomingEvents(),
     ]);
-    notifyListeners();
+    _safeNotifyListeners();
   }
 
   Future<void> fetchUpcomingEvents() async {
     _isLoadingEvents = true;
-    notifyListeners();
+    _safeNotifyListeners();
     try {
-      _firebaseService.getInterestedEventsForUser(_userId).listen((events) {
-        _upcomingEvents = events;
-        _isLoadingEvents = false;
-        notifyListeners();
-      });
+      // Assign the subscription to the variable so it can be cancelled later.
+      _eventsSubscription = _firebaseService
+          .getInterestedEventsForUser(_userId)
+          .listen((events) {
+            _upcomingEvents = events;
+            _isLoadingEvents = false;
+            _safeNotifyListeners();
+          });
     } catch (e) {
       // Handle error
       _isLoadingEvents = false;
-      notifyListeners();
+      _safeNotifyListeners();
     }
   }
 
@@ -85,7 +110,7 @@ class CommunityViewModel extends ChangeNotifier {
       _lastAllCommunityDoc = null;
       _hasMoreAll = true;
     }
-    notifyListeners();
+    _safeNotifyListeners();
 
     try {
       final newCommunities = await _firebaseService.getAllCommunities(
@@ -101,7 +126,7 @@ class CommunityViewModel extends ChangeNotifier {
       // Handle error
     } finally {
       _isLoadingAll = false;
-      notifyListeners();
+      _safeNotifyListeners();
     }
   }
 
@@ -113,7 +138,7 @@ class CommunityViewModel extends ChangeNotifier {
       _lastFeedPostDoc = null;
       _hasMoreFeed = true;
     }
-    notifyListeners();
+    _safeNotifyListeners();
 
     try {
       final newPosts = await _firebaseService.getFeedForUser(
@@ -130,13 +155,13 @@ class CommunityViewModel extends ChangeNotifier {
       // Handle error
     } finally {
       _isLoadingFeed = false;
-      notifyListeners();
+      _safeNotifyListeners();
     }
   }
 
   Future<void> fetchMyCommunities() async {
     _isLoadingMyCommunities = true;
-    notifyListeners();
+    _safeNotifyListeners();
     try {
       _createdCommunities = await _firebaseService.getCreatedCommunities(
         _userId,
@@ -146,7 +171,7 @@ class CommunityViewModel extends ChangeNotifier {
       // Handle error
     } finally {
       _isLoadingMyCommunities = false;
-      notifyListeners();
+      _safeNotifyListeners();
     }
   }
 
@@ -176,7 +201,7 @@ class CommunityViewModel extends ChangeNotifier {
     await _firebaseService.togglePostLike(postId, _userId);
     // No need to refresh the whole feed, the local state will update
     // fetchMyFeed(isInitial: true);
-    notifyListeners();
+    _safeNotifyListeners();
   }
 
   Future<void> sharePost(String postId) async {

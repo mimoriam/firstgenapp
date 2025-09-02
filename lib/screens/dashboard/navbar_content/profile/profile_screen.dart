@@ -2,6 +2,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firstgenapp/constants/appVersion.dart';
 import 'package:firstgenapp/screens/dashboard/navbar_content/profile/profile_inner/profile_inner_screen.dart';
 import 'package:firstgenapp/services/firebase_service.dart';
+import 'package:firstgenapp/services/notification_service.dart';
+import 'package:firstgenapp/viewmodels/community_viewmodel.dart';
 import 'package:firstgenapp/viewmodels/profile_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:firstgenapp/constants/appColors.dart';
@@ -25,11 +27,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   final List<String> _genderOptions = ['Male', 'Female', 'Other'];
 
-  // State variables for notification and privacy settings (can be local).
-  bool _appNotifications = true;
-  bool _emailUpdates = true;
-  bool _eventReminders = false;
-  bool _showOnlineStatus = true;
   bool _showJoinedCommunities = true;
 
   @override
@@ -78,6 +75,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
           }
 
           final userData = userProfileViewModel.userProfileData!;
+          final bool appNotifications =
+              userData['appNotificationsEnabled'] ?? true;
+          final bool eventReminders =
+              userData['eventRemindersEnabled'] ?? false;
+          _showJoinedCommunities = userData['showJoinedCommunities'] ?? true;
 
           return ListView(
             padding: const EdgeInsets.symmetric(
@@ -89,7 +91,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               const SizedBox(height: 10),
               _buildConnectionPreferences(userData, firebaseService),
               const SizedBox(height: 10),
-              _buildNotificationSettings(),
+              _buildNotificationSettings(appNotifications, eventReminders),
               const SizedBox(height: 10),
               _buildPrivacyControls(),
               const SizedBox(height: 10),
@@ -102,7 +104,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // MODIFICATION: Updated to use profileImageUrl from userData.
   Widget _buildProfileCard(
     Map<String, dynamic> userData,
     User? user,
@@ -183,8 +184,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const SizedBox(height: 4),
           _buildTitledChipGroup(
             'Who can see your profile?',
-            ['Everyone', 'Only Communities I\'m In', 'No Body'],
-            userData['seeProfile'] ?? 'Only Communities I\'m In',
+            ['Everyone', 'Nobody'],
+            userData['seeProfile'] ?? 'Everyone',
             (newValue) {
               if (newValue != null) {
                 Provider.of<UserProfileViewModel>(
@@ -383,7 +384,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildNotificationSettings() {
+  Widget _buildNotificationSettings(
+    bool appNotifications,
+    bool eventReminders,
+  ) {
     return _buildSectionCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -393,21 +397,45 @@ class _ProfileScreenState extends State<ProfileScreen> {
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: 8),
-          _buildSwitchTile(
-            'App Notifications',
-            _appNotifications,
-            (value) => setState(() => _appNotifications = value),
-          ),
-          // _buildSwitchTile(
-          //   'Email Updates',
-          //   _emailUpdates,
-          //   (value) => setState(() => _emailUpdates = value),
-          // ),
-          _buildSwitchTile(
-            'Event Reminders',
-            _eventReminders,
-            (value) => setState(() => _eventReminders = value),
-          ),
+          _buildSwitchTile('App Notifications', appNotifications, (value) {
+            Provider.of<UserProfileViewModel>(
+              context,
+              listen: false,
+            ).updateLocalProfileData({'appNotificationsEnabled': value});
+            final firebaseService = Provider.of<FirebaseService>(
+              context,
+              listen: false,
+            );
+            firebaseService.updateUserProfile({
+              'appNotificationsEnabled': value,
+            });
+          }),
+          _buildSwitchTile('Event Reminders', eventReminders, (value) async {
+            Provider.of<UserProfileViewModel>(
+              context,
+              listen: false,
+            ).updateLocalProfileData({'eventRemindersEnabled': value});
+            final firebaseService = Provider.of<FirebaseService>(
+              context,
+              listen: false,
+            );
+            await firebaseService.updateUserProfile({
+              'eventRemindersEnabled': value,
+            });
+
+            final notificationService = NotificationService();
+            if (value) {
+              // Schedule reminders
+              final events = Provider.of<CommunityViewModel>(
+                context,
+                listen: false,
+              ).upcomingEvents;
+              await notificationService.scheduleEventReminders(events);
+            } else {
+              // Cancel reminders
+              await notificationService.cancelAllEventReminders();
+            }
+          }),
         ],
       ),
     );
@@ -423,15 +451,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: 8),
-          // _buildSwitchTile(
-          //   'Show online status',
-          //   _showOnlineStatus,
-          //   (value) => setState(() => _showOnlineStatus = value),
-          // ),
           _buildSwitchTile(
             'Show joined communities on profile',
             _showJoinedCommunities,
-            (value) => setState(() => _showJoinedCommunities = value),
+            (value) {
+              setState(() => _showJoinedCommunities = value);
+              Provider.of<FirebaseService>(
+                context,
+                listen: false,
+              ).updateUserProfile({'showJoinedCommunities': value});
+            },
           ),
         ],
       ),

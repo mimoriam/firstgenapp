@@ -198,6 +198,15 @@ class FirebaseService {
     }
   }
 
+  Future<void> unsubscribeFromGeneralAnnouncements() async {
+    try {
+      await _fcm.unsubscribeFromTopic('all_users');
+      log('Unsubscribed from all_users topic');
+    } catch (e) {
+      log('Error unsubscribing from topic: $e');
+    }
+  }
+
   Future<void> saveUserToken() async {
     final user = _auth.currentUser;
     if (user == null) return;
@@ -295,6 +304,14 @@ class FirebaseService {
       if (data.containsKey('culturalHeritage')) {
         final countryCode = data['culturalHeritage'];
         data['continent'] = ContinentService.getContinent(countryCode);
+      }
+
+      if (data.containsKey('appNotificationsEnabled')) {
+        if (data['appNotificationsEnabled'] == true) {
+          await subscribeToGeneralAnnouncements();
+        } else {
+          await unsubscribeFromGeneralAnnouncements();
+        }
       }
 
       await _firestore.collection(userCollection).doc(user.uid).update(data);
@@ -472,9 +489,11 @@ class FirebaseService {
         (currentUserData['matches'] as Map?)?.keys.toList() ?? [];
     final usersToExclude = [...likedUserIds, ...matchedUserIds, user.uid];
 
-    Query<Map<String, dynamic>> query = _firestore
-        .collection(userCollection)
-        .where('uid', isNotEqualTo: user.uid);
+    final List<String> currentUserCommunities = List<String>.from(
+      currentUserData['joinedCommunities'] ?? [],
+    );
+
+    Query<Map<String, dynamic>> query = _firestore.collection(userCollection);
 
     if (continent != null && continent != 'Global') {
       query = query.where('continent', isEqualTo: continent);
@@ -488,9 +507,30 @@ class FirebaseService {
 
     try {
       final querySnapshot = await query.get();
+
       List<QueryDocumentSnapshot<Map<String, dynamic>>> results = querySnapshot
           .docs
-          .where((doc) => !usersToExclude.contains(doc.id))
+          .where((doc) {
+            if (usersToExclude.contains(doc.id)) {
+              return false;
+            }
+
+            final userData = doc.data();
+            final seeProfile = userData['seeProfile'] as String? ?? 'Everyone';
+
+            if (seeProfile == 'No Body') {
+              return false;
+            } else if (seeProfile == 'Only Communities I\'m In') {
+              final List<String> otherUserCommunities = List<String>.from(
+                userData['joinedCommunities'] ?? [],
+              );
+              return currentUserCommunities.any(
+                (community) => otherUserCommunities.contains(community),
+              );
+            }
+
+            return true;
+          })
           .toList();
 
       if (minAge != null && maxAge != null) {
@@ -836,7 +876,16 @@ class FirebaseService {
           .doc(recipientId)
           .get();
       if (recipientDoc.exists) {
-        final recipientToken = recipientDoc.data()?['fcmToken'];
+        final recipientData = recipientDoc.data()!;
+        final bool appNotificationsEnabled =
+            recipientData['appNotificationsEnabled'] ?? true;
+
+        if (!appNotificationsEnabled) {
+          log('User $recipientId has disabled app notifications.');
+          return;
+        }
+
+        final recipientToken = recipientData['fcmToken'];
         if (recipientToken != null) {
           log('--- SIMULATING NOTIFICATION ---');
           log('Recipient Token: $recipientToken');
@@ -1252,6 +1301,9 @@ class FirebaseService {
       DocumentReference communityRef = _firestore
           .collection(communityCollection)
           .doc();
+      DocumentReference userRef = _firestore
+          .collection(userCollection)
+          .doc(creatorId);
 
       final imageUrl = await _storage
           .ref()
@@ -1276,7 +1328,12 @@ class FirebaseService {
         'name_lowercase': name.toLowerCase(),
       };
 
-      await communityRef.set(communityData);
+      await _firestore.runTransaction((transaction) async {
+        transaction.set(communityRef, communityData);
+        transaction.update(userRef, {
+          'joinedCommunities': FieldValue.arrayUnion([communityRef.id]),
+        });
+      });
     } catch (e) {
       log('Error creating community: $e');
       throw Exception('Failed to create community.');

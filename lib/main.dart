@@ -12,6 +12,7 @@ import 'package:firstgenapp/utils/appTheme.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:timezone/data/latest.dart' as tz;
 
 import 'firebase_options.dart';
 
@@ -28,6 +29,7 @@ Future<void> main() async {
   FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
 
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  tz.initializeTimeZones();
 
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
   await NotificationService().init();
@@ -77,11 +79,30 @@ class MyApp extends StatelessWidget {
                 AuthStatus.authenticated_complete_profile) {
               if (userProfileViewModel?.userProfileData == null &&
                   !userProfileViewModel!.isLoading) {
-                userProfileViewModel.fetchUserProfile();
+                userProfileViewModel.fetchUserProfile().then((_) {
+                  // After fetching profile, schedule event reminders if enabled
+                  if (userProfileViewModel
+                          .userProfileData?['eventRemindersEnabled'] ??
+                      false) {
+                    final firebaseService = context.read<FirebaseService>();
+                    final userId = firebaseService.currentUser?.uid;
+                    if (userId != null) {
+                      firebaseService
+                          .getInterestedEventsForUser(userId)
+                          .first
+                          .then((events) {
+                            NotificationService().scheduleEventReminders(
+                              events,
+                            );
+                          });
+                    }
+                  }
+                });
                 context.read<FirebaseService>().saveUserToken();
               }
             } else if (authProvider.status == AuthStatus.unauthenticated) {
               userProfileViewModel?.clearProfile();
+              NotificationService().cancelAllEventReminders();
             }
             return userProfileViewModel!;
           },

@@ -211,6 +211,10 @@ class SignUpViewModel extends ChangeNotifier {
         'profession': profession,
         'lookingForGeneration': 'First generation',
         'regionFocus': 'Global',
+        'seeProfile': 'Everyone',
+        'appNotificationsEnabled': true,
+        'eventRemindersEnabled': true,
+        'showJoinedCommunities': true,
       };
 
       userProfileData.removeWhere((key, value) => value == null);

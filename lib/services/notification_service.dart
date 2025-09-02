@@ -3,10 +3,12 @@ import 'dart:developer';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:firstgenapp/main.dart';
 import 'package:firstgenapp/models/chat_models.dart';
+import 'package:firstgenapp/models/community_models.dart';
 import 'package:firstgenapp/screens/dashboard/navbar_content/chats/conversation/conversation_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:timezone/timezone.dart' as tz;
 
 // Top-level function for background message handling
 @pragma('vm:entry-point')
@@ -134,5 +136,48 @@ class NotificationService {
     } else {
       log("Handled a general notification. No navigation action taken.");
     }
+  }
+
+  Future<void> scheduleEventReminder(Event event) async {
+    final eventTime = event.eventDate.toDate();
+    final oneDayBefore = eventTime.subtract(const Duration(days: 1));
+
+    if (oneDayBefore.isAfter(DateTime.now())) {
+      await _flutterLocalNotificationsPlugin.zonedSchedule(
+        event.id.hashCode,
+        'Upcoming Event Reminder',
+        '${event.title} is happening tomorrow!',
+        tz.TZDateTime.from(oneDayBefore, tz.local),
+        const NotificationDetails(
+          android: AndroidNotificationDetails(
+            'event_reminders_channel',
+            'Event Reminders',
+            channelDescription: 'Reminders for upcoming events.',
+            importance: Importance.max,
+            priority: Priority.high,
+          ),
+          iOS: DarwinNotificationDetails(),
+        ),
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        // uiLocalNotificationDateInterpretation:
+        //     UILocalNotificationDateInterpretation.absoluteTime,
+      );
+      log("Scheduled reminder for event ${event.title}");
+    }
+  }
+
+  Future<void> scheduleEventReminders(List<Event> events) async {
+    for (final event in events) {
+      await scheduleEventReminder(event);
+    }
+  }
+
+  Future<void> cancelEventReminder(String eventId) async {
+    await _flutterLocalNotificationsPlugin.cancel(eventId.hashCode);
+  }
+
+  Future<void> cancelAllEventReminders() async {
+    await _flutterLocalNotificationsPlugin.cancelAll();
+    log("Cancelled all event reminders.");
   }
 }

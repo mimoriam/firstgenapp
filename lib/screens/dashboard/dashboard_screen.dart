@@ -69,7 +69,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       PersistentBottomNavBarItem(
         icon: const Icon(IconlyBold.search),
         inactiveIcon: const Icon(IconlyLight.search),
-        title: ("Search"),
+        title: ("Match"),
         activeColorPrimary: AppColors.primaryRed,
         inactiveColorPrimary: AppColors.textSecondary,
         textStyle: textStyle,
