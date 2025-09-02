@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firstgenapp/constants/appVersion.dart';
 import 'package:firstgenapp/screens/dashboard/navbar_content/profile/profile_inner/profile_inner_screen.dart';
 import 'package:firstgenapp/services/firebase_service.dart';
 import 'package:firstgenapp/viewmodels/profile_provider.dart';
@@ -397,11 +398,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
             _appNotifications,
             (value) => setState(() => _appNotifications = value),
           ),
-          _buildSwitchTile(
-            'Email Updates',
-            _emailUpdates,
-            (value) => setState(() => _emailUpdates = value),
-          ),
+          // _buildSwitchTile(
+          //   'Email Updates',
+          //   _emailUpdates,
+          //   (value) => setState(() => _emailUpdates = value),
+          // ),
           _buildSwitchTile(
             'Event Reminders',
             _eventReminders,
@@ -422,11 +423,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: 8),
-          _buildSwitchTile(
-            'Show online status',
-            _showOnlineStatus,
-            (value) => setState(() => _showOnlineStatus = value),
-          ),
+          // _buildSwitchTile(
+          //   'Show online status',
+          //   _showOnlineStatus,
+          //   (value) => setState(() => _showOnlineStatus = value),
+          // ),
           _buildSwitchTile(
             'Show joined communities on profile',
             _showJoinedCommunities,
@@ -456,7 +457,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _buildInfoRow(
             'App Version',
             trailing: Text(
-              'v1.0.0',
+              'v$appVersion',
               style: Theme.of(context).textTheme.labelLarge?.copyWith(
                 color: AppColors.primaryRed,
                 fontWeight: FontWeight.bold,
