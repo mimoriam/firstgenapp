@@ -4,6 +4,7 @@ import 'package:firstgenapp/viewmodels/SignupViewModel.dart';
 import 'package:flutter/material.dart';
 import 'package:firstgenapp/constants/appColors.dart';
 import 'package:country_picker/country_picker.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_keyboard_visibility/flutter_keyboard_visibility.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
@@ -114,7 +115,8 @@ class _Signup2ScreenState extends State<Signup2Screen> {
           scrolledUnderElevation: 0,
           leading: IconButton(
             icon: const Icon(Icons.arrow_back, color: AppColors.textSecondary),
-            onPressed: () => Navigator.of(context).pop(),
+            // onPressed: () => Navigator.of(context).pop(),
+            onPressed: () => SystemNavigator.pop(),
           ),
         ),
         body: SafeArea(

@@ -26,7 +26,7 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(
       imageQuality: 70,
-      maxWidth: 800,
+      maxWidth: 720,
       source: ImageSource.gallery,
     );
 

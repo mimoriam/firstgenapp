@@ -29,7 +29,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(
       imageQuality: 70,
-      maxWidth: 800,
+      maxWidth: 720,
       source: ImageSource.gallery,
     );
 

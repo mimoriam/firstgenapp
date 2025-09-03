@@ -63,8 +63,8 @@ class _ProfileInnerScreenState extends State<ProfileInnerScreen> {
       // **MODIFICATION START: Add cropping step**
       final croppedFile = await ImageCropper().cropImage(
         sourcePath: image.path,
-        maxWidth: 600,
-        maxHeight: 900,
+        maxWidth: 720,
+        maxHeight: 1280,
         // aspectRatio: CropAspectRatio(ratioX: 9.0, ratioY: 16.0),
         uiSettings: [
           AndroidUiSettings(
@@ -74,7 +74,7 @@ class _ProfileInnerScreenState extends State<ProfileInnerScreen> {
             initAspectRatio: CropAspectRatioPreset.original,
             lockAspectRatio: true, // User cannot change the aspect ratio
             aspectRatioPresets: [
-              CropAspectRatioPreset.ratio16x9, // Enforce a square aspect ratio
+              CropAspectRatioPreset.original // Enforce a square aspect ratio
             ],
           ),
           IOSUiSettings(
