@@ -539,6 +539,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.0.7"
+  flutter_tabler_icons:
+    dependency: "direct main"
+    description:
+      name: flutter_tabler_icons
+      sha256: "657c2201e12fa9121a12ddb4edb74d69290f803868eb6526f04102e6d49ec882"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.43.0"
   flutter_test:
     dependency: "direct dev"
     description: flutter
@@ -637,6 +645,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "4.1.2"
+  hugeicons:
+    dependency: "direct main"
+    description:
+      name: hugeicons
+      sha256: cf172bae0c3ff2e2114324d05e79872081f4cd3c009f5979285fec73a693096a
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.0.11"
   iconly:
     dependency: "direct main"
     description:
