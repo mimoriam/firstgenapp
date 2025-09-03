@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
 import 'package:firstgenapp/common/gradient_btn.dart';
 import 'package:firstgenapp/models/community_models.dart';
+import 'package:firstgenapp/screens/dashboard/navbar_content/communities/full_screen_image_viewer.dart';
 import 'package:firstgenapp/services/firebase_service.dart';
 import 'package:firstgenapp/utils/time_ago.dart';
 import 'package:firstgenapp/viewmodels/community_viewmodel.dart';
@@ -918,6 +919,17 @@ class _PostCard extends StatelessWidget {
           return const SizedBox.shrink(); // Or a loading indicator
         }
         final authorData = snapshot.data?.data();
+        final profileImageUrl = authorData?['profileImageUrl'];
+        final postImageUrl = post.imageUrl;
+
+        List<String> imageUrls = [];
+        if (profileImageUrl != null && profileImageUrl.isNotEmpty) {
+          imageUrls.add(profileImageUrl);
+        }
+        if (postImageUrl != null && postImageUrl.isNotEmpty) {
+          imageUrls.add(postImageUrl);
+        }
+
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -978,31 +990,57 @@ class _PostCard extends StatelessWidget {
               ),
             Row(
               children: [
-                CircleAvatar(
-                  backgroundImage: NetworkImage(
-                    authorData?['profileImageUrl'] ??
-                        "https://randomuser.me/api/portraits/women/1.jpg",
-                  ),
-                ),
-                const SizedBox(width: 12),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        authorData?['fullName'] ?? "Author Name",
-                        style: textTheme.labelLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textPrimary,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () {
+                      if (imageUrls.isNotEmpty) {
+                        // Navigator.of(context).push(
+                        //   MaterialPageRoute(
+                        //     builder: (_) =>
+                        //         FullScreenImageViewer(imageUrls: imageUrls),
+                        //   ),
+                        // );
+
+                        PersistentNavBarNavigator.pushNewScreen(
+                          context,
+                          screen: FullScreenImageViewer(imageUrls: imageUrls),
+                          withNavBar: false,
+                        );
+
+                      }
+                    },
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          backgroundImage: NetworkImage(
+                            authorData?['profileImageUrl'] ??
+                                "https://randomuser.me/api/portraits/women/1.jpg",
+                          ),
                         ),
-                      ),
-                      Text(
-                        TimeAgo.format(
-                          post.timestamp.toDate().toIso8601String(),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                authorData?['fullName'] ?? "Author Name",
+                                style: textTheme.labelLarge?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
+                              Text(
+                                TimeAgo.format(
+                                  post.timestamp.toDate().toIso8601String(),
+                                ),
+                                style: textTheme.bodySmall,
+                              ),
+                            ],
+                          ),
                         ),
-                        style: textTheme.bodySmall,
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
                 PopupMenuButton<String>(
