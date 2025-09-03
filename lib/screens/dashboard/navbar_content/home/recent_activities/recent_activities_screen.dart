@@ -1,5 +1,9 @@
+import 'package:firstgenapp/models/activity_model.dart';
+import 'package:firstgenapp/services/firebase_service.dart';
+import 'package:firstgenapp/utils/time_ago.dart';
 import 'package:flutter/material.dart';
 import 'package:firstgenapp/constants/appColors.dart';
+import 'package:provider/provider.dart';
 
 class RecentActivitiesScreen extends StatefulWidget {
   const RecentActivitiesScreen({super.key});
@@ -9,34 +13,17 @@ class RecentActivitiesScreen extends StatefulWidget {
 }
 
 class _RecentActivitiesScreenState extends State<RecentActivitiesScreen> {
-  // Mock data for recent activities
-  final List<Map<String, String>> _activities = [
-    {
-      "avatar": "https://randomuser.me/api/portraits/women/1.jpg",
-      "text": "Maria Santos liked your profile",
-      "time": "2 hours ago",
-    },
-    {
-      "avatar": "https://randomuser.me/api/portraits/women/2.jpg",
-      "text": "You matched with Leila Okafor",
-      "time": "2 hours ago",
-    },
-    {
-      "avatar": "https://randomuser.me/api/portraits/men/1.jpg",
-      "text": "You matched with Leila Okafor",
-      "time": "2 hours ago",
-    },
-    {
-      "avatar": "https://randomuser.me/api/portraits/men/2.jpg",
-      "text": "You matched with Leila Okafor",
-      "time": "2 hours ago",
-    },
-    {
-      "avatar": "https://randomuser.me/api/portraits/women/3.jpg",
-      "text": "You matched with Leila Okafor",
-      "time": "2 hours ago",
-    },
-  ];
+  late Stream<List<Activity>> _activityStream;
+
+  @override
+  void initState() {
+    super.initState();
+    final firebaseService = Provider.of<FirebaseService>(
+      context,
+      listen: false,
+    );
+    _activityStream = firebaseService.getRecentActivities();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -52,29 +39,49 @@ class _RecentActivitiesScreenState extends State<RecentActivitiesScreen> {
           icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        title: Text(
-          'Recent Activities',
-          // UPDATED: Inherited from theme
-          style: textTheme.headlineSmall,
-        ),
+        title: Text('Recent Activities', style: textTheme.headlineSmall),
       ),
-      body: ListView.separated(
-        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-        itemCount: _activities.length,
-        itemBuilder: (context, index) {
-          return _buildActivityItem(_activities[index], textTheme);
+      body: StreamBuilder<List<Activity>>(
+        stream: _activityStream,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          }
+          if (!snapshot.hasData || snapshot.data!.isEmpty) {
+            return const Center(child: Text('No recent activities.'));
+          }
+          final activities = snapshot.data!;
+          return ListView.separated(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16.0,
+              vertical: 8.0,
+            ),
+            itemCount: activities.length,
+            itemBuilder: (context, index) {
+              return _buildActivityItem(activities[index], textTheme);
+            },
+            separatorBuilder: (context, index) => const SizedBox(height: 8),
+          );
         },
-        // UPDATED: Reduced spacing between items
-        separatorBuilder: (context, index) => const SizedBox(height: 8),
       ),
     );
   }
 
-  /// Builds a single activity item card.
-  Widget _buildActivityItem(
-      Map<String, String> activity, TextTheme textTheme) {
+  Widget _buildActivityItem(Activity activity, TextTheme textTheme) {
+    String text = '';
+    switch (activity.type) {
+      case ActivityType.liked:
+        text = '${activity.fromUserName} liked your profile';
+        break;
+      case ActivityType.matched:
+        text = 'You matched with ${activity.fromUserName}';
+        break;
+    }
+
     return Container(
-      // UPDATED: Reduced vertical padding
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -84,19 +91,16 @@ class _RecentActivitiesScreenState extends State<RecentActivitiesScreen> {
       child: Row(
         children: [
           CircleAvatar(
-            // UPDATED: Reduced size
             radius: 22,
-            backgroundImage: NetworkImage(activity['avatar']!),
+            backgroundImage: NetworkImage(activity.fromUserAvatar),
           ),
-          // UPDATED: Reduced spacing
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  activity['text']!,
-                  // UPDATED: Inherited from theme
+                  text,
                   style: textTheme.labelLarge?.copyWith(
                     color: AppColors.textPrimary,
                     fontWeight: FontWeight.w700,
@@ -104,7 +108,7 @@ class _RecentActivitiesScreenState extends State<RecentActivitiesScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  activity['time']!,
+                  TimeAgo.format(activity.timestamp.toDate().toIso8601String()),
                   style: textTheme.bodySmall,
                 ),
               ],

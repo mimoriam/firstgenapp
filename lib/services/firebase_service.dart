@@ -9,6 +9,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart' hide Query;
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:firstgenapp/models/activity_model.dart';
 import 'package:firstgenapp/models/chat_models.dart';
 import 'package:firstgenapp/models/community_models.dart';
 import 'package:firstgenapp/services/continent_service.dart';
@@ -31,8 +32,8 @@ class FirebaseService {
   final communityCollection = "communities";
   final postCollection = "posts";
   final commentCollection = "comments";
-
   final eventCollection = "events";
+  final activityCollection = "recent_activities";
 
   final Map<String, Map<String, dynamic>> _userCache = {};
 
@@ -990,7 +991,7 @@ class FirebaseService {
         .doc(currentUser.uid);
     final likedUserRef = _firestore.collection(userCollection).doc(likedUserId);
 
-    return _firestore.runTransaction((transaction) async {
+    await _firestore.runTransaction((transaction) async {
       DocumentSnapshot currentUserSnapshot = await transaction.get(
         currentUserRef,
       );
@@ -1000,17 +1001,75 @@ class FirebaseService {
         throw Exception("User document not found!");
       }
 
+      final currentUserData =
+          currentUserSnapshot.data() as Map<String, dynamic>;
+      final likedUserData = likedUserSnapshot.data() as Map<String, dynamic>;
+
+      // Add 'like' activity for the liked user
+      await _addActivity(
+        userId: likedUserId,
+        type: ActivityType.liked,
+        fromUser: currentUser,
+        fromUserData: currentUserData,
+      );
+
       transaction.update(currentUserRef, {'likedUsers.$likedUserId': true});
 
-      Map<String, dynamic> likedUserData =
-          likedUserSnapshot.data() as Map<String, dynamic>;
       if (likedUserData['likedUsers'] != null &&
           likedUserData['likedUsers'][currentUser.uid] == true) {
         transaction.update(currentUserRef, {'matches.$likedUserId': true});
         transaction.update(likedUserRef, {'matches.${currentUser.uid}': true});
         await addRecentMatch(likedUserId);
+
+        // Add 'match' activity for both users
+        await _addActivity(
+          userId: likedUserId,
+          type: ActivityType.matched,
+          fromUser: currentUser,
+          fromUserData: currentUserData,
+        );
+        await _addActivity(
+          userId: currentUser.uid,
+          type: ActivityType.matched,
+          fromUser: likedUserSnapshot,
+          fromUserData: likedUserData,
+        );
       }
     });
+  }
+
+  Future<void> _addActivity({
+    required String userId,
+    required ActivityType type,
+    required dynamic fromUser, // Can be User or DocumentSnapshot
+    required Map<String, dynamic> fromUserData,
+  }) async {
+    final activityRef = _firestore.collection(activityCollection).doc();
+    final activity = Activity(
+      id: activityRef.id,
+      userId: userId,
+      type: type,
+      fromUserId: fromUser is User ? fromUser.uid : fromUser.id,
+      fromUserName: fromUserData['fullName'] ?? 'A user',
+      fromUserAvatar: fromUserData['profileImageUrl'] ?? '',
+      timestamp: Timestamp.now(),
+    );
+    await activityRef.set(activity.toFirestore());
+  }
+
+  Stream<List<Activity>> getRecentActivities() {
+    final user = _auth.currentUser;
+    if (user == null) return Stream.value([]);
+
+    return _firestore
+        .collection(activityCollection)
+        .where('userId', isEqualTo: user.uid)
+        .orderBy('timestamp', descending: true)
+        .snapshots()
+        .map(
+          (snapshot) =>
+              snapshot.docs.map((doc) => Activity.fromFirestore(doc)).toList(),
+        );
   }
 
   Future<void> createMatch(String matchedUserId) async {

@@ -20,12 +20,9 @@ class SearchScreen extends StatefulWidget {
 }
 
 class _SearchScreenState extends State<SearchScreen> {
-  // This future will hold the search results. It's nullable because it's
-  // initialized only after the user's preferences are loaded.
   Future<List<QueryDocumentSnapshot<Map<String, dynamic>>>>? _usersFuture;
   final CardSwiperController _swiperController = CardSwiperController();
 
-  // State for managing the card swiper
   List<Map<String, dynamic>> _users = [];
   int _currentIndex = 0;
   bool _isFinished = false;
@@ -35,9 +32,6 @@ class _SearchScreenState extends State<SearchScreen> {
     super.didChangeDependencies();
     final userProfileViewModel = Provider.of<UserProfileViewModel>(context);
 
-    // Initialize the future only if it hasn't been initialized yet AND
-    // the required profile data is available from the provider. This prevents
-    // re-fetching on every rebuild.
     if (_usersFuture == null && userProfileViewModel.userProfileData != null) {
       setState(() {
         _usersFuture = _fetchUsersBasedOnPreferences(
@@ -53,7 +47,6 @@ class _SearchScreenState extends State<SearchScreen> {
     super.dispose();
   }
 
-  /// Fetches users based on the preferences loaded from the centralized view model.
   Future<List<QueryDocumentSnapshot<Map<String, dynamic>>>>
   _fetchUsersBasedOnPreferences(Map<String, dynamic> searchUserData) async {
     final String? continent = searchUserData['regionFocus'];
@@ -86,8 +79,6 @@ class _SearchScreenState extends State<SearchScreen> {
       interests: interests,
     );
   }
-
-  // --- Card Action Handlers ---
 
   void _handleLike(int index) {
     final user = _users[index];
@@ -128,8 +119,6 @@ class _SearchScreenState extends State<SearchScreen> {
       );
     }
   }
-
-  // --- Swiper Callbacks ---
 
   bool _onSwipe(
     int previousIndex,
@@ -179,8 +168,6 @@ class _SearchScreenState extends State<SearchScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // If the future is null, it means we are waiting for the user preferences
-    // to load. Show a loading indicator.
     if (_usersFuture == null) {
       return const Scaffold(
         backgroundColor: AppColors.secondaryBackground,
@@ -188,7 +175,6 @@ class _SearchScreenState extends State<SearchScreen> {
       );
     }
 
-    // Once the future is initialized, use it to build the UI.
     return FutureBuilder<List<QueryDocumentSnapshot<Map<String, dynamic>>>>(
       future: _usersFuture,
       builder: (context, snapshot) {
@@ -228,7 +214,6 @@ class _SearchScreenState extends State<SearchScreen> {
           child: ClipRect(
             child: Stack(
               children: [
-                // _buildBlurredBackground(), // This line seems commented out already
                 if (_isFinished)
                   Center(
                     child: Text(
@@ -238,7 +223,6 @@ class _SearchScreenState extends State<SearchScreen> {
                     ),
                   ),
                 Visibility(
-                  // Wrap CardSwiper with Visibility
                   visible: !_isFinished,
                   child: CardSwiper(
                     isLoop: false,
@@ -249,7 +233,8 @@ class _SearchScreenState extends State<SearchScreen> {
                     numberOfCardsDisplayed: 1,
                     backCardOffset: Offset.zero,
                     padding: EdgeInsets.zero,
-                    allowedSwipeDirection: const AllowedSwipeDirection.none(),
+                    allowedSwipeDirection:
+                        const AllowedSwipeDirection.symmetric(horizontal: true),
                     cardBuilder:
                         (
                           context,
@@ -267,42 +252,6 @@ class _SearchScreenState extends State<SearchScreen> {
           ),
         );
       },
-    );
-  }
-
-  // --- UI Helper Widgets ---
-
-  Widget _buildBlurredBackground() {
-    int backgroundIndex = _currentIndex;
-    if (!_isFinished) {
-      backgroundIndex = _currentIndex + 1;
-      if (backgroundIndex >= _users.length) {
-        backgroundIndex = _currentIndex;
-      }
-    }
-
-    if (_users.isEmpty) {
-      return Container(color: AppColors.secondaryBackground);
-    }
-
-    final backgroundUserProfile = _users[backgroundIndex];
-    final imageUrl = backgroundUserProfile['profileImageUrl'];
-    final bool isNetworkUrl = imageUrl != null && imageUrl.startsWith('http');
-
-    return Container(
-      decoration: BoxDecoration(
-        image: DecorationImage(
-          image: isNetworkUrl
-              ? NetworkImage(imageUrl)
-              : const AssetImage('images/backgrounds/match_bg.png')
-                    as ImageProvider,
-          fit: BoxFit.cover,
-        ),
-      ),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 15.0, sigmaY: 15.0),
-        child: Container(color: Colors.black.withOpacity(0.2)),
-      ),
     );
   }
 
@@ -368,7 +317,6 @@ class _SearchScreenState extends State<SearchScreen> {
               ? NetworkImage(imageUrl)
               : const AssetImage('images/backgrounds/match_bg.png')
                     as ImageProvider,
-          // fit: BoxFit.cover,
           fit: BoxFit.cover,
         ),
       ),

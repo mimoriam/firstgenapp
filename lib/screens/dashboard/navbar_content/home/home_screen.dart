@@ -1,10 +1,12 @@
 import 'package:country_picker/country_picker.dart';
+import 'package:firstgenapp/models/activity_model.dart';
 import 'package:firstgenapp/models/community_models.dart';
 import 'package:firstgenapp/screens/dashboard/navbar_content/communities/community_detail/community_detail_screen.dart';
 import 'package:firstgenapp/screens/dashboard/navbar_content/home/match_detail/match_detail_screen.dart';
 import 'package:firstgenapp/screens/dashboard/navbar_content/home/recent_activities/recent_activities_screen.dart';
 import 'package:firstgenapp/screens/dashboard/navbar_content/home/your_matches/your_matches_screen.dart';
 import 'package:firstgenapp/services/firebase_service.dart';
+import 'package:firstgenapp/utils/time_ago.dart';
 import 'package:firstgenapp/viewmodels/community_viewmodel.dart';
 import 'package:flutter/material.dart';
 import 'package:firstgenapp/constants/appColors.dart';
@@ -266,7 +268,6 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   Future<void> _handleRefresh() async {
-    await Future.delayed(const Duration(seconds: 1));
     setState(() {});
   }
 
@@ -322,7 +323,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       const SizedBox(height: 12),
                       _buildSectionHeader("Recent Activity"),
                       const SizedBox(height: 10),
-                      _buildRecentActivityList(),
+                      const RecentActivityList(),
                     ],
                   ),
                 ),
@@ -543,34 +544,67 @@ class _HomeScreenState extends State<HomeScreen> {
       },
     );
   }
+}
 
-  Widget _buildRecentActivityList() {
-    final List<Map<String, dynamic>> activities = [
-      {
-        "avatar":
-            "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&q=80",
-        "text": "Maria Santos liked your profile",
-        "time": "2 hours ago",
-      },
-      {
-        "avatar":
-            "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=100&q=80",
-        "text": "You matched with Leila Okafor",
-        "time": "2 hours ago",
-      },
-    ];
-    return ListView.separated(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: activities.length,
-      separatorBuilder: (context, index) => const SizedBox(height: 6),
-      itemBuilder: (context, index) {
-        return _buildActivityItem(activities[index]);
+class RecentActivityList extends StatefulWidget {
+  const RecentActivityList({super.key});
+
+  @override
+  State<RecentActivityList> createState() => _RecentActivityListState();
+}
+
+class _RecentActivityListState extends State<RecentActivityList> {
+  late Stream<List<Activity>> _activityStream;
+
+  @override
+  void initState() {
+    super.initState();
+    final firebaseService = Provider.of<FirebaseService>(
+      context,
+      listen: false,
+    );
+    _activityStream = firebaseService.getRecentActivities();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<List<Activity>>(
+      stream: _activityStream,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return Center(child: Text('Error: ${snapshot.error}'));
+        }
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return const Center(child: Text('No recent activities.'));
+        }
+        final activities = snapshot.data!.take(3).toList();
+        return ListView.separated(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: activities.length,
+          separatorBuilder: (context, index) => const SizedBox(height: 6),
+          itemBuilder: (context, index) {
+            return _buildActivityItem(activities[index]);
+          },
+        );
       },
     );
   }
 
-  Widget _buildActivityItem(Map<String, dynamic> activity) {
+  Widget _buildActivityItem(Activity activity) {
+    String text = '';
+    switch (activity.type) {
+      case ActivityType.liked:
+        text = '${activity.fromUserName} liked your profile';
+        break;
+      case ActivityType.matched:
+        text = 'You matched with ${activity.fromUserName}';
+        break;
+    }
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
@@ -582,7 +616,7 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           CircleAvatar(
             radius: 22,
-            backgroundImage: NetworkImage(activity['avatar']),
+            backgroundImage: NetworkImage(activity.fromUserAvatar),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -590,7 +624,7 @@ class _HomeScreenState extends State<HomeScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  activity['text'],
+                  text,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: AppColors.textPrimary,
                     fontWeight: FontWeight.w600,
@@ -598,7 +632,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  activity['time'],
+                  TimeAgo.format(activity.timestamp.toDate().toIso8601String()),
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
               ],
