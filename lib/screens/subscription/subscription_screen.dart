@@ -1,9 +1,10 @@
-import 'package:firstgenapp/common/gradient_btn.dart';
 import 'package:firstgenapp/constants/appColors.dart';
+import 'package:firstgenapp/viewmodels/inapp_subscription_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
 import 'package:hugeicons/hugeicons.dart';
-import 'package:iconsax_flutter/iconsax_flutter.dart';
+import 'package:provider/provider.dart';
+import 'package:purchases_flutter/purchases_flutter.dart';
 
 class SubscriptionScreen extends StatefulWidget {
   const SubscriptionScreen({super.key});
@@ -12,15 +13,22 @@ class SubscriptionScreen extends StatefulWidget {
   State<SubscriptionScreen> createState() => _SubscriptionScreenState();
 }
 
-enum SubscriptionPlan { monthly, weekly }
-
 class _SubscriptionScreenState extends State<SubscriptionScreen> {
-  SubscriptionPlan _selectedPlan = SubscriptionPlan.monthly;
-  bool _isTrialEnabled = true;
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<SubscriptionProvider>(
+        context,
+        listen: false,
+      ).fetchOfferings();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final subscriptionProvider = Provider.of<SubscriptionProvider>(context);
 
     return Scaffold(
       backgroundColor: AppColors.primaryBackground,
@@ -38,14 +46,12 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // const SizedBox(height: 8),
             Text(
               'Time to give yourself the good stuff you deserve.',
               style: textTheme.headlineSmall,
             ),
             const SizedBox(height: 12),
             _buildFeatureItem(
-              // icon: Iconsax.global,
               icon: TablerIcons.world_bolt,
               title: 'Unlimited Connections',
               subtitle: 'Meet more people from around the globe',
@@ -73,34 +79,95 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
             const SizedBox(height: 12),
             _buildRatingsSection(),
             const SizedBox(height: 12),
-            _buildMonthlyPlanCard(textTheme),
-            const SizedBox(height: 12),
-            _buildWeeklyPlanCard(textTheme),
-            const SizedBox(height: 12),
-            const Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.check, color: AppColors.primaryRed, size: 20),
-                SizedBox(width: 8),
-                Text(
-                  'No Payment Due Today',
-                  style: TextStyle(color: AppColors.primaryRed),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            GradientButton(text: 'Subscribe Now', onPressed: () {}),
+            if (subscriptionProvider.isLoading)
+              const Center(child: CircularProgressIndicator())
+            else if (subscriptionProvider.offerings.isNotEmpty)
+              _buildSubscriptionOptions(subscriptionProvider)
+            else
+              const Center(child: Text('No subscription plans available.')),
+            const SizedBox(height: 24),
             Center(
               child: TextButton(
-                onPressed: () {},
+                onPressed: () {
+                  // TODO: Handle Restore Purchases
+                },
                 child: Text(
-                  'Cancel anytime',
+                  'Restore Purchases',
                   style: Theme.of(
                     context,
                   ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w100),
                 ),
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSubscriptionOptions(SubscriptionProvider provider) {
+    // Assuming your default offering has monthly and weekly packages
+    final offering = provider.offerings.firstWhere(
+      (o) => o.identifier == 'default',
+      orElse: () => provider.offerings.first,
+    );
+
+    return ListView.separated(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: offering.availablePackages.length,
+      itemBuilder: (context, index) {
+        final package = offering.availablePackages[index];
+        return _buildPlanCard(provider, package);
+      },
+      separatorBuilder: (context, index) => const SizedBox(height: 12),
+    );
+  }
+
+  Widget _buildPlanCard(SubscriptionProvider provider, Package package) {
+    final textTheme = Theme.of(context).textTheme;
+    return GestureDetector(
+      onTap: () async {
+        final success = await provider.purchasePackage(package);
+        if (success && mounted) {
+          Navigator.of(context).pop();
+        }
+      },
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey.shade300),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    package.storeProduct.title,
+                    style: textTheme.labelLarge?.copyWith(
+                      color: AppColors.primaryRed,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    package.storeProduct.priceString,
+                    style: textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            provider.isLoading
+                ? const CircularProgressIndicator()
+                : const Icon(
+                    Icons.arrow_forward_ios,
+                    color: AppColors.primaryRed,
+                  ),
           ],
         ),
       ),
@@ -127,7 +194,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                   fontWeight: FontWeight.bold,
                   fontSize: 13,
                   height: 1.3,
-                  color: AppColors.primaryRed
+                  color: AppColors.primaryRed,
                 ),
                 children: [
                   TextSpan(
@@ -152,188 +219,8 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Image.asset('images/backgrounds/ratings_3.png', height: 74),
-        // const SizedBox(width: 10),
         Image.asset('images/backgrounds/ratings_4.png', height: 74),
       ],
-    );
-  }
-
-  Widget _buildMonthlyPlanCard(TextTheme textTheme) {
-    bool isSelected = _selectedPlan == SubscriptionPlan.monthly;
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        GestureDetector(
-          onTap: () => setState(() => _selectedPlan = SubscriptionPlan.monthly),
-          child: Container(
-            padding: const EdgeInsets.all(2), // This creates the border width
-            decoration: BoxDecoration(
-              gradient: isSelected
-                  ? const LinearGradient(
-                      colors: [AppColors.primaryOrange, AppColors.primaryRed],
-                    )
-                  : null,
-              color: isSelected ? null : Colors.grey.shade300, // Border color
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '88% off',
-                          style: textTheme.labelLarge?.copyWith(
-                              color: AppColors.primaryRed
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text.rich(
-                          TextSpan(
-                            text: '\$4.99',
-                            style: textTheme.headlineSmall?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
-                            children: [
-                              TextSpan(
-                                text: '/ month',
-                                style: textTheme.bodySmall?.copyWith(
-                                  color: AppColors.textSecondary,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text('only 4.99 per month', style: textTheme.bodySmall),
-                      ],
-                    ),
-                  ),
-                  Radio<SubscriptionPlan>(
-                    value: SubscriptionPlan.monthly,
-                    groupValue: _selectedPlan,
-                    onChanged: (value) {
-                      setState(() => _selectedPlan = value!);
-                    },
-                    activeColor: AppColors.primaryRed,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-        Positioned(
-          top: -10,
-          right: 20,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            decoration: BoxDecoration(
-              color: AppColors.primaryRed,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Text(
-              'MOST POPULAR',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 10,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildWeeklyPlanCard(TextTheme textTheme) {
-    bool isSelected = _selectedPlan == SubscriptionPlan.weekly;
-    return GestureDetector(
-      onTap: () => setState(() => _selectedPlan = SubscriptionPlan.weekly),
-      child: Container(
-        padding: const EdgeInsets.all(2),
-        decoration: BoxDecoration(
-          gradient: isSelected
-              ? const LinearGradient(
-                  colors: [AppColors.primaryOrange, AppColors.primaryRed],
-                )
-              : null,
-          color: isSelected ? null : Colors.grey.shade300,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Container(
-          padding: const EdgeInsets.only(left: 10, right: 10, top: 10),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '88% off',
-                      style: textTheme.labelLarge?.copyWith(
-                          color: AppColors.primaryRed
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text.rich(
-                      TextSpan(
-                        text: '9.99',
-                        style: textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                        children: [
-                          TextSpan(
-                            text: '/Week',
-                            style: textTheme.bodySmall?.copyWith(
-                              color: AppColors.textSecondary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    // const SizedBox(height: 2),
-                    Row(
-                      children: [
-                        Text('Try free trial', style: textTheme.bodySmall),
-                        // const SizedBox(width: 4),
-                        Transform.scale(
-                          scale: 0.6,
-                          child: Switch(
-                            value: _isTrialEnabled,
-                            onChanged: (value) {
-                              setState(() => _isTrialEnabled = value);
-                            },
-                            activeColor: AppColors.primaryRed,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              Radio<SubscriptionPlan>(
-                value: SubscriptionPlan.weekly,
-                groupValue: _selectedPlan,
-                onChanged: (value) {
-                  setState(() => _selectedPlan = value!);
-                },
-                activeColor: AppColors.primaryRed,
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }

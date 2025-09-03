@@ -2,9 +2,11 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:firstgenapp/auth_gate.dart';
 import 'package:firstgenapp/services/firebase_service.dart';
+import 'package:firstgenapp/services/inapp_purchase_service.dart';
 import 'package:firstgenapp/services/notification_service.dart';
 import 'package:firstgenapp/viewmodels/SignupViewModel.dart';
 import 'package:firstgenapp/viewmodels/auth_provider.dart';
+import 'package:firstgenapp/viewmodels/inapp_subscription_provider.dart';
 import 'package:firstgenapp/viewmodels/profile_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:firstgenapp/screens/onboarding/onboarding_screen.dart';
@@ -29,24 +31,21 @@ Future<void> main() async {
   FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
 
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  await RevenueCatService().init();
   tz.initializeTimeZones();
 
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
   await NotificationService().init();
 
-  // New: Set up the foreground listener
   NotificationService().setupForegroundNotificationListener();
   FirebaseMessaging.instance.onTokenRefresh
       .listen((fcmToken) {
-        // Note: This callback fires whenever a new token is generated.
         final firebaseService = FirebaseService();
         if (firebaseService.currentUser != null) {
           firebaseService.saveUserToken();
         }
       })
-      .onError((err) {
-        // Error getting token.
-      });
+      .onError((err) {});
 
   final SharedPreferencesAsync asyncPrefs = SharedPreferencesAsync();
   final bool onboardingDone =
@@ -65,6 +64,7 @@ class MyApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         Provider<FirebaseService>(create: (_) => FirebaseService()),
+        Provider<RevenueCatService>(create: (_) => RevenueCatService()),
         ChangeNotifierProvider<SignUpViewModel>(
           create: (context) => SignUpViewModel(context.read<FirebaseService>()),
         ),
@@ -80,7 +80,6 @@ class MyApp extends StatelessWidget {
               if (userProfileViewModel?.userProfileData == null &&
                   !userProfileViewModel!.isLoading) {
                 userProfileViewModel.fetchUserProfile().then((_) {
-                  // After fetching profile, schedule event reminders if enabled
                   if (userProfileViewModel
                           .userProfileData?['eventRemindersEnabled'] ??
                       false) {
@@ -105,6 +104,18 @@ class MyApp extends StatelessWidget {
               NotificationService().cancelAllEventReminders();
             }
             return userProfileViewModel!;
+          },
+        ),
+        ChangeNotifierProxyProvider<AuthProvider, SubscriptionProvider>(
+          create: (context) =>
+              SubscriptionProvider(context.read<RevenueCatService>()),
+          update: (context, auth, subscription) {
+            if (auth.user != null) {
+              context.read<RevenueCatService>().login(auth.user!.uid);
+            } else {
+              context.read<RevenueCatService>().logout();
+            }
+            return subscription!;
           },
         ),
       ],

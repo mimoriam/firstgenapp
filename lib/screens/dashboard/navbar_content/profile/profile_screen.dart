@@ -1,9 +1,11 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firstgenapp/constants/appVersion.dart';
 import 'package:firstgenapp/screens/dashboard/navbar_content/profile/profile_inner/profile_inner_screen.dart';
+import 'package:firstgenapp/screens/subscription/subscription_screen.dart';
 import 'package:firstgenapp/services/firebase_service.dart';
 import 'package:firstgenapp/services/notification_service.dart';
 import 'package:firstgenapp/viewmodels/community_viewmodel.dart';
+import 'package:firstgenapp/viewmodels/inapp_subscription_provider.dart';
 import 'package:firstgenapp/viewmodels/profile_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:firstgenapp/constants/appColors.dart';
@@ -20,7 +22,6 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  // Controllers for text fields in the advanced filters modal.
   final TextEditingController _languageController = TextEditingController();
   final TextEditingController _professionController = TextEditingController();
   final TextEditingController _interestController = TextEditingController();
@@ -45,6 +46,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       listen: false,
     );
     final user = firebaseService.currentUser;
+    final subscriptionProvider = Provider.of<SubscriptionProvider>(context);
 
     return Scaffold(
       backgroundColor: AppColors.primaryBackground,
@@ -65,10 +67,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ],
         ),
       ),
-      // Use a Consumer to listen for changes in the UserProfileViewModel.
       body: Consumer<UserProfileViewModel>(
         builder: (context, userProfileViewModel, child) {
-          // Show a loading indicator while the profile is being fetched.
           if (userProfileViewModel.isLoading ||
               userProfileViewModel.userProfileData == null) {
             return const Center(child: CircularProgressIndicator());
@@ -87,8 +87,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
               vertical: 8.0,
             ),
             children: [
-              _buildProfileCard(userData, user, textTheme),
+              _buildProfileCard(
+                userData,
+                user,
+                textTheme,
+                subscriptionProvider.isPremium,
+              ),
               const SizedBox(height: 10),
+              if (!subscriptionProvider.isPremium) ...[
+                _buildUpgradeCard(),
+                const SizedBox(height: 10),
+              ],
               _buildConnectionPreferences(userData, firebaseService),
               const SizedBox(height: 10),
               _buildNotificationSettings(appNotifications, eventReminders),
@@ -108,6 +117,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     Map<String, dynamic> userData,
     User? user,
     TextTheme textTheme,
+    bool isPremium,
   ) {
     final imageUrl = userData['profileImageUrl'];
     final hasPhoto = imageUrl != null && imageUrl.isNotEmpty;
@@ -126,12 +136,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 )
               : null,
         ),
-        title: Text(
-          userData['fullName'] ?? user?.displayName ?? 'No Name',
-          style: textTheme.labelLarge?.copyWith(
-            fontWeight: FontWeight.bold,
-            color: AppColors.textPrimary,
-          ),
+        title: Row(
+          children: [
+            Text(
+              userData['fullName'] ?? user?.displayName ?? 'No Name',
+              style: textTheme.labelLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            if (isPremium) ...[
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryRed.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Text(
+                  'Premium',
+                  style: TextStyle(
+                    color: AppColors.primaryRed,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ],
         ),
         subtitle: Text(
           userData['email'] ?? user?.email ?? 'No Email',
@@ -151,6 +183,56 @@ class _ProfileScreenState extends State<ProfileScreen> {
             );
           }
         },
+      ),
+    );
+  }
+
+  Widget _buildUpgradeCard() {
+    return GestureDetector(
+      onTap: () {
+        PersistentNavBarNavigator.pushNewScreen(
+          context,
+          screen: const SubscriptionScreen(),
+          withNavBar: false,
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [AppColors.primaryRed, AppColors.primaryOrange],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          children: [
+            const Icon(IconlyBold.star, color: Colors.white, size: 32),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Upgrade to Premium',
+                    style: Theme.of(
+                      context,
+                    ).textTheme.titleLarge?.copyWith(color: Colors.white),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Unlock all features and get the best experience.',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Colors.white.withOpacity(0.9),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.arrow_forward_ios, color: Colors.white, size: 16),
+          ],
+        ),
       ),
     );
   }
@@ -257,7 +339,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       listen: false,
     );
 
-    // Initialize local state for the modal from the view model's data.
     String? selectedGender = initialUserData['searchGender'];
     RangeValues currentRangeValues = RangeValues(
       initialUserData['searchMinAge']?.toDouble() ?? 25.0,
@@ -425,14 +506,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
             final notificationService = NotificationService();
             if (value) {
-              // Schedule reminders
               final events = Provider.of<CommunityViewModel>(
                 context,
                 listen: false,
               ).upcomingEvents;
               await notificationService.scheduleEventReminders(events);
             } else {
-              // Cancel reminders
               await notificationService.cancelAllEventReminders();
             }
           }),
@@ -474,7 +553,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         children: [
           Text('About App', style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 8),
-          // _buildInfoRow('Terms of Use', onTap: () {}),
           _buildInfoRow('Privacy Policy', onTap: () {}),
           _buildInfoRow('Contact Support', onTap: () {}),
           _buildInfoRow(
@@ -498,7 +576,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // Helper Widgets
   Widget _buildSectionCard({required Widget child}) {
     return Container(
       padding: const EdgeInsets.all(16.0),
