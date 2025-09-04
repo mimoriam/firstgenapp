@@ -1,15 +1,13 @@
 import 'dart:ui';
 
 import 'package:firstgenapp/common/gradient_btn.dart';
+import 'package:firstgenapp/common/post_card.dart';
 import 'package:firstgenapp/constants/appColors.dart';
 import 'package:firstgenapp/models/community_models.dart';
-import 'package:firstgenapp/screens/dashboard/navbar_content/communities/comments/comments_screen.dart';
 import 'package:firstgenapp/screens/dashboard/navbar_content/communities/community_detail/create_event_screen/create_event_screen.dart';
 import 'package:firstgenapp/services/firebase_service.dart';
-import 'package:firstgenapp/utils/time_ago.dart';
 import 'package:firstgenapp/viewmodels/community_viewmodel.dart';
 import 'package:flutter/material.dart';
-import 'package:iconly/iconly.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
@@ -232,8 +230,10 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
                 visible: !isMember && !isCreator,
                 child: ElevatedButton(
                   onPressed: () {
-                    final viewModel = Provider.of<CommunityViewModel>(context,
-                        listen: false);
+                    final viewModel = Provider.of<CommunityViewModel>(
+                      context,
+                      listen: false,
+                    );
                     firebaseService
                         .joinCommunity(widget.community.id, userId!)
                         .then((_) => viewModel.refreshAllData());
@@ -302,331 +302,13 @@ class _FeedTab extends StatelessWidget {
           ),
           itemCount: posts.length,
           itemBuilder: (context, index) {
-            return _PostCard(post: posts[index]);
+            // *** PERFORMANCE OPTIMIZATION ***
+            // Using a ValueKey helps Flutter efficiently update the list.
+            return PostCard(key: ValueKey(posts[index].id), post: posts[index]);
           },
           separatorBuilder: (context, index) => const SizedBox(height: 16),
         );
       },
-    );
-  }
-}
-
-class _PostCard extends StatelessWidget {
-  final Post post;
-  const _PostCard({required this.post});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildPostHeader(context),
-          const SizedBox(height: 12),
-          _buildPostBody(context),
-          const SizedBox(height: 16),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 0.0),
-            child: Divider(height: 1, color: Colors.grey.shade200),
-          ),
-          const SizedBox(height: 8),
-          _buildPostFooter(context),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPostHeader(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    final firebaseService = Provider.of<FirebaseService>(
-      context,
-      listen: false,
-    );
-    final viewModel = Provider.of<CommunityViewModel>(context, listen: false);
-
-    return FutureBuilder<Map<String, dynamic>?>(
-      future: firebaseService.getUserData(post.authorId),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          return const SizedBox.shrink();
-        }
-        final authorData = snapshot.data;
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                CircleAvatar(
-                  backgroundImage: NetworkImage(
-                    authorData?['profileImageUrl'] ?? "",
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        authorData?['fullName'] ?? "Anonymous",
-                        style: textTheme.labelLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textPrimary,
-                        ),
-                      ),
-                      Text(
-                        TimeAgo.format(
-                          post.timestamp.toDate().toIso8601String(),
-                        ),
-                        style: textTheme.bodySmall,
-                      ),
-                    ],
-                  ),
-                ),
-                PopupMenuButton<String>(
-                  onSelected: (value) {
-                    if (value == 'share') {
-                      viewModel.sharePost(post.id);
-                    } else if (value == 'hide') {
-                      debugPrint('Hide post tapped');
-                    }
-                  },
-                  icon: const Icon(
-                    Icons.more_vert,
-                    color: AppColors.textSecondary,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  itemBuilder: (BuildContext context) =>
-                  <PopupMenuEntry<String>>[
-                    PopupMenuItem<String>(
-                      value: 'share',
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Icons.share_outlined,
-                            color: AppColors.textSecondary,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Share Post',
-                            style: textTheme.labelLarge?.copyWith(
-                              color: AppColors.textPrimary,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    // PopupMenuItem<String>(
-                    //   value: 'hide',
-                    //   child: Row(
-                    //     children: [
-                    //       const Icon(
-                    //         IconlyLight.hide,
-                    //         color: AppColors.textSecondary,
-                    //       ),
-                    //       const SizedBox(width: 8),
-                    //       Text(
-                    //         'Hide Post',
-                    //         style: textTheme.labelLarge?.copyWith(
-                    //           color: AppColors.textPrimary,
-                    //           fontWeight: FontWeight.w600,
-                    //         ),
-                    //       ),
-                    //     ],
-                    //   ),
-                    // ),
-                  ],
-                ),
-              ],
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _buildPostBody(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (post.imageUrl != null)
-          ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: Image.network(post.imageUrl!),
-          ),
-        if (post.content.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.only(top: 12.0),
-            child: Text(
-              post.content,
-              style: textTheme.bodyMedium?.copyWith(
-                color: AppColors.textPrimary,
-                fontSize: 14,
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-
-  Widget _buildPostFooter(BuildContext context) {
-    return _PostActions(
-      post: post,
-      onComment: () {
-        PersistentNavBarNavigator.pushNewScreen(
-          context,
-          screen: CommentsScreen(postId: post.id),
-          withNavBar: false,
-        );
-      },
-      onShare: () {
-        Provider.of<CommunityViewModel>(context, listen: false)
-            .sharePost(post.id);
-      },
-    );
-  }
-}
-
-class _PostActions extends StatefulWidget {
-  final Post post;
-  final VoidCallback onComment;
-  final VoidCallback onShare;
-
-  const _PostActions({
-    required this.post,
-    required this.onComment,
-    required this.onShare,
-  });
-
-  @override
-  __PostActionsState createState() => __PostActionsState();
-}
-
-class __PostActionsState extends State<_PostActions> {
-  late Map<String, bool> _likes;
-  late int _commentCount;
-
-  @override
-  void initState() {
-    super.initState();
-    _likes = widget.post.likes;
-    _commentCount = widget.post.commentCount;
-  }
-
-  void _toggleLike() {
-    final firebaseService = Provider.of<FirebaseService>(
-      context,
-      listen: false,
-    );
-    final userId = firebaseService.currentUser!.uid;
-
-    setState(() {
-      if (_likes.containsKey(userId)) {
-        _likes.remove(userId);
-      } else {
-        _likes[userId] = true;
-      }
-    });
-
-    firebaseService.togglePostLike(widget.post.id, userId);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    final firebaseService = Provider.of<FirebaseService>(
-      context,
-      listen: false,
-    );
-    final currentUserId = firebaseService.currentUser?.uid;
-    final isLiked = _likes[currentUserId] == true;
-
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Row(
-          children: [
-            GestureDetector(
-              onTap: _toggleLike,
-              child: _buildFooterIcon(
-                isLiked ? Icons.favorite : Icons.favorite_border,
-                _likes.length.toString(),
-                AppColors.primaryRed,
-                AppColors.textSecondary,
-              ),
-            ),
-            const SizedBox(width: 24),
-            GestureDetector(
-              onTap: widget.onComment,
-              child: _buildFooterIcon(
-                Iconsax.messages_2_copy,
-                _commentCount.toString(),
-                const Color(0xFF0A75BA),
-                AppColors.textSecondary,
-              ),
-            ),
-            const SizedBox(width: 24),
-            GestureDetector(
-              onTap: widget.onShare,
-              child: _buildFooterIcon(
-                Icons.share_outlined,
-                "0",
-                const Color(0xFF009E60),
-                AppColors.textSecondary,
-              ),
-            ),
-          ],
-        ),
-        TextButton.icon(
-          onPressed: widget.onComment,
-          icon: const Icon(
-            IconlyLight.send,
-            color: AppColors.textSecondary,
-            size: 20,
-          ),
-          label: Text(
-            'Comment',
-            style: textTheme.labelLarge?.copyWith(
-              color: AppColors.textSecondary,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          style: TextButton.styleFrom(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildFooterIcon(
-      IconData icon,
-      String count,
-      Color iconColor,
-      Color color,
-      ) {
-    return Row(
-      children: [
-        Icon(icon, color: iconColor, size: 20),
-        const SizedBox(width: 4),
-        Text(
-          count,
-          style: TextStyle(
-            color: color,
-            fontWeight: FontWeight.w600,
-            fontSize: 13,
-          ),
-        ),
-      ],
     );
   }
 }
@@ -761,10 +443,10 @@ class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
 
   @override
   Widget build(
-      BuildContext context,
-      double shrinkOffset,
-      bool overlapsContent,
-      ) {
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
     return Container(color: AppColors.primaryBackground, child: _tabBar);
   }
 
@@ -892,45 +574,45 @@ class _EventCardState extends State<EventCard> {
                 Expanded(
                   child: _isInterested
                       ? GradientButton(
-                    text: "I'm Interested",
-                    onPressed: isCreator
-                        ? null
-                        : () {
-                      if (currentUserId != null) {
-                        firebaseService.toggleEventInterest(
-                          widget.event.id,
-                          currentUserId,
-                        );
-                        setState(() {
-                          _isInterested = false;
-                        });
-                      }
-                    },
-                    fontSize: 13,
-                    insets: 13,
-                  )
+                          text: "I'm Interested",
+                          onPressed: isCreator
+                              ? null
+                              : () {
+                                  if (currentUserId != null) {
+                                    firebaseService.toggleEventInterest(
+                                      widget.event.id,
+                                      currentUserId,
+                                    );
+                                    setState(() {
+                                      _isInterested = false;
+                                    });
+                                  }
+                                },
+                          fontSize: 13,
+                          insets: 10,
+                        )
                       : OutlinedButton(
-                    onPressed: () {
-                      if (currentUserId != null) {
-                        firebaseService.toggleEventInterest(
-                          widget.event.id,
-                          currentUserId,
-                        );
-                        setState(() {
-                          _isInterested = true;
-                        });
-                      }
-                    },
-                    style: buttonStyle.copyWith(
-                      side: MaterialStateProperty.all(
-                        const BorderSide(color: AppColors.primaryRed),
-                      ),
-                      foregroundColor: MaterialStateProperty.all(
-                        AppColors.primaryRed,
-                      ),
-                    ),
-                    child: const Text("I'm Interested"),
-                  ),
+                          onPressed: () {
+                            if (currentUserId != null) {
+                              firebaseService.toggleEventInterest(
+                                widget.event.id,
+                                currentUserId,
+                              );
+                              setState(() {
+                                _isInterested = true;
+                              });
+                            }
+                          },
+                          style: buttonStyle.copyWith(
+                            side: MaterialStateProperty.all(
+                              const BorderSide(color: AppColors.primaryRed),
+                            ),
+                            foregroundColor: MaterialStateProperty.all(
+                              AppColors.primaryRed,
+                            ),
+                          ),
+                          child: const Text("I'm Interested"),
+                        ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -943,10 +625,11 @@ class _EventCardState extends State<EventCard> {
                         PersistentNavBarNavigator.pushNewScreen(
                           context,
                           screen: ChangeNotifierProvider.value(
-                            value: Provider.of<CommunityViewModel>(context,
-                                listen: false),
-                            child:
-                            CommunityDetailScreen(community: community),
+                            value: Provider.of<CommunityViewModel>(
+                              context,
+                              listen: false,
+                            ),
+                            child: CommunityDetailScreen(community: community),
                           ),
                           withNavBar: false,
                         );

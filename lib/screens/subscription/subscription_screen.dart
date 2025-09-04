@@ -3,7 +3,6 @@ import 'package:firstgenapp/constants/appColors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
 import 'package:hugeicons/hugeicons.dart';
-import 'package:iconsax_flutter/iconsax_flutter.dart';
 
 class SubscriptionScreen extends StatefulWidget {
   const SubscriptionScreen({super.key});

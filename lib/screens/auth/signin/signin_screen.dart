@@ -3,7 +3,6 @@ import 'package:firstgenapp/common/gradient_btn.dart';
 import 'package:firstgenapp/constants/appColors.dart';
 import 'package:firstgenapp/screens/auth/signin/signin_indirect_screen.dart';
 import 'package:firstgenapp/screens/auth/signup/signup_screen.dart';
-import 'package:firstgenapp/screens/subscription/subscription_screen.dart';
 import 'package:firstgenapp/services/firebase_service.dart';
 import 'package:firstgenapp/utils/authException.dart';
 import 'package:flutter/material.dart';
