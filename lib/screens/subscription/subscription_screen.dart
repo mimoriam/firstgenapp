@@ -20,6 +20,8 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
   Package? _selectedPackage;
   bool _isTrialEnabled = true;
 
+
+
   @override
   void initState() {
     super.initState();
@@ -173,14 +175,17 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     final offerings = provider.offerings.firstOrNull;
     if (offerings == null) return const SizedBox.shrink();
 
-    final monthlyPackage = offerings.availablePackages.firstWhere(
-      (p) => p.identifier.contains('monthly'),
-      orElse: () => offerings.monthly!,
-    );
-    final weeklyPackage = offerings.availablePackages.firstWhere(
-      (p) => p.identifier.contains('weekly'),
-      orElse: () => offerings.weekly!,
-    );
+    // final monthlyPackage = offerings.availablePackages.firstWhere(
+    //   (p) => p.identifier.contains('monthly'),
+    //   orElse: () => offerings.monthly!,
+    // );
+    // final weeklyPackage = offerings.availablePackages.firstWhere(
+    //   (p) => p.identifier.contains('weekly'),
+    //   orElse: () => offerings.weekly!,
+    // );
+
+    final monthlyPackage = offerings.monthly;
+    final weeklyPackage = offerings.weekly;
 
     return Column(
       children: [

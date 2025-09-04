@@ -1,9 +1,10 @@
 import 'dart:developer';
+import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 
-// Use your RevenueCat API keys
-const _googleApiKey = 'AIzaSyDj3slusUFe6P7etN0DTDzsngsNSX3TdD8'; // REPLACE WITH YOUR KEY
+// It's better to load these from environment variables
+const _googleApiKey = 'googl_your_google_api_key'; // REPLACE WITH YOUR KEY
 const _appleApiKey = 'appl_your_apple_api_key'; // REPLACE WITH YOUR KEY
 
 class RevenueCatService {
@@ -14,9 +15,14 @@ class RevenueCatService {
   Future<void> init() async {
     await Purchases.setLogLevel(LogLevel.debug);
 
-    // Platform specific configuration is handled by RevenueCat
-    PurchasesConfiguration configuration = PurchasesConfiguration(_googleApiKey)
-      ..appUserID = null;
+    PurchasesConfiguration configuration;
+    if (Platform.isAndroid) {
+      configuration = PurchasesConfiguration(_googleApiKey);
+    } else if (Platform.isIOS) {
+      configuration = PurchasesConfiguration(_appleApiKey);
+    } else {
+      return;
+    }
     await Purchases.configure(configuration);
   }
 
@@ -59,6 +65,14 @@ class RevenueCatService {
     } catch (e) {
       log("Error purchasing package: $e");
       return false;
+    }
+  }
+
+  Future<void> restorePurchases() async {
+    try {
+      await Purchases.restorePurchases();
+    } catch (e) {
+      log("Error restoring purchases: $e");
     }
   }
 }
