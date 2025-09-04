@@ -10,16 +10,20 @@ class CommunityViewModel extends ChangeNotifier {
   final FirebaseService _firebaseService;
   final String _userId;
 
-  // Add a subscription variable to manage the stream listener
+  // --- START PERFORMANCE & REAL-TIME FIX ---
+  // A cache to hold active user streams. This prevents creating duplicate listeners
+  // for the same user, solving both performance lag and stale data issues.
+  final Map<String, Stream<DocumentSnapshot<Map<String, dynamic>>>>
+  _userStreamCache = {};
+  // --- END PERFORMANCE & REAL-TIME FIX ---
+
   StreamSubscription? _eventsSubscription;
-  // Add a flag to check if the view model has been disposed
   bool _isDisposed = false;
 
   CommunityViewModel(this._firebaseService, this._userId) {
     _fetchInitialData();
   }
 
-  // Override dispose to cancel subscriptions and set the flag
   @override
   void dispose() {
     _isDisposed = true;
@@ -27,7 +31,6 @@ class CommunityViewModel extends ChangeNotifier {
     super.dispose();
   }
 
-  // Helper to safely call notifyListeners
   void _safeNotifyListeners() {
     if (!_isDisposed) {
       notifyListeners();
@@ -71,8 +74,8 @@ class CommunityViewModel extends ChangeNotifier {
   }
 
   Future<void> refreshAllData() async {
-    // Cancel existing subscription before fetching new data to avoid duplicates.
     await _eventsSubscription?.cancel();
+    _userStreamCache.clear(); // Clear stream cache on refresh
 
     await Future.wait([
       fetchAllCommunities(isInitial: true),
@@ -83,11 +86,25 @@ class CommunityViewModel extends ChangeNotifier {
     _safeNotifyListeners();
   }
 
+  // --- START PERFORMANCE & REAL-TIME FIX ---
+  /// Provides a stream for a user's profile.
+  /// It creates a new stream if one doesn't exist for the user ID,
+  /// otherwise returns the cached stream. This ensures only one listener
+  /// per user is active at any time.
+  Stream<DocumentSnapshot<Map<String, dynamic>>> getUserStream(String userId) {
+    if (!_userStreamCache.containsKey(userId)) {
+      _userStreamCache[userId] = _firebaseService
+          .getUserStream(userId)
+          .asBroadcastStream();
+    }
+    return _userStreamCache[userId]!;
+  }
+  // --- END PERFORMANCE & REAL-TIME FIX ---
+
   Future<void> fetchUpcomingEvents() async {
     _isLoadingEvents = true;
     _safeNotifyListeners();
     try {
-      // Assign the subscription to the variable so it can be cancelled later.
       _eventsSubscription = _firebaseService
           .getInterestedEventsForUser(_userId)
           .listen((events) {
@@ -96,7 +113,6 @@ class CommunityViewModel extends ChangeNotifier {
             _safeNotifyListeners();
           });
     } catch (e) {
-      // Handle error
       _isLoadingEvents = false;
       _safeNotifyListeners();
     }
@@ -122,8 +138,6 @@ class CommunityViewModel extends ChangeNotifier {
         _lastAllCommunityDoc = newCommunities.last.originalDoc;
         _allCommunities.addAll(newCommunities);
       }
-    } catch (e) {
-      // Handle error
     } finally {
       _isLoadingAll = false;
       _safeNotifyListeners();
@@ -151,8 +165,6 @@ class CommunityViewModel extends ChangeNotifier {
         _lastFeedPostDoc = newPosts.last.originalDoc;
         _feedPosts.addAll(newPosts);
       }
-    } catch (e) {
-      // Handle error
     } finally {
       _isLoadingFeed = false;
       _safeNotifyListeners();
@@ -167,8 +179,6 @@ class CommunityViewModel extends ChangeNotifier {
         _userId,
       );
       _joinedCommunities = await _firebaseService.getJoinedCommunities(_userId);
-    } catch (e) {
-      // Handle error
     } finally {
       _isLoadingMyCommunities = false;
       _safeNotifyListeners();
@@ -191,38 +201,54 @@ class CommunityViewModel extends ChangeNotifier {
         link: link,
         emojis: emojis,
       );
-      await fetchMyFeed(isInitial: true); // Refresh feed after posting
+      await fetchMyFeed(isInitial: true);
     } catch (e) {
       // Handle error
     }
   }
 
-  Future<void> togglePostLike(String postId) async {
-    await _firebaseService.togglePostLike(postId, _userId);
-    // No need to refresh the whole feed, the local state will update
-    // fetchMyFeed(isInitial: true);
-    _safeNotifyListeners();
-  }
-
   Future<void> sharePost(String postId) async {
-    // Implement sharing logic, e.g., using the `share_plus` package
-    final post = _feedPosts.firstWhere((p) => p.id == postId);
+    final post = _feedPosts.firstWhere(
+      (p) => p.id == postId,
+      orElse: () {
+        return Post(
+          id: 'not-found',
+          authorId: '',
+          content: 'Check out this post!',
+          timestamp: Timestamp.now(),
+          likes: {},
+          commentCount: 0,
+          originalDoc: MockDocumentSnapshot(),
+        );
+      },
+    );
+
     if (post.imageUrl != null && post.imageUrl!.isNotEmpty) {
-      SharePlus.instance.share(
-        ShareParams(
-          text: post.imageUrl,
-          title: post.content,
-          subject: 'Check out this post from First Gen!',
-        ),
+      Share.share(
+        'Check out this post from First Gen!\n\n${post.content}\n\n${post.imageUrl}',
       );
     } else {
-      SharePlus.instance.share(
-        ShareParams(
-          title: 'Check out this post from First Gen!',
-          text: post.content,
-        ),
-      );
+      Share.share('Check out this post from First Gen!\n\n${post.content}');
     }
-    // Share.share(post.content, subject: 'Check out this post from First Gen!');
   }
+}
+
+class MockDocumentSnapshot implements DocumentSnapshot {
+  @override
+  dynamic get(Object field) => null;
+
+  @override
+  dynamic operator [](Object field) => null;
+
+  @override
+  String get id => 'mock';
+  @override
+  Map<String, dynamic>? data() => {};
+  @override
+  bool get exists => false;
+  @override
+  SnapshotMetadata get metadata => throw UnimplementedError();
+
+  @override
+  DocumentReference<Object?> get reference => throw UnimplementedError();
 }

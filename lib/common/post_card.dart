@@ -14,11 +14,13 @@ import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 import 'package:provider/provider.dart';
 
 /// A reusable widget to display a single post in a feed.
-/// It's optimized for performance in lists.
+/// It's optimized for performance by using cached user data and optimized image loading.
 class PostCard extends StatelessWidget {
   final Post post;
+  // --- FIX: Explicitly require the viewModel to avoid context issues. ---
+  final CommunityViewModel viewModel;
 
-  const PostCard({super.key, required this.post});
+  const PostCard({super.key, required this.post, required this.viewModel});
 
   @override
   Widget build(BuildContext context) {
@@ -32,7 +34,8 @@ class PostCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildPostHeader(context),
+          // --- FIX: Pass the viewModel down to the header. ---
+          _buildPostHeader(context, viewModel),
           const SizedBox(height: 12),
           _buildPostBody(context),
           const SizedBox(height: 16),
@@ -41,26 +44,25 @@ class PostCard extends StatelessWidget {
             child: Divider(height: 1, color: Colors.grey.shade200),
           ),
           const SizedBox(height: 8),
-          PostActions(post: post),
+          // --- FIX: Pass the viewModel down to the actions. ---
+          PostActions(post: post, viewModel: viewModel),
         ],
       ),
     );
   }
 
-  Widget _buildPostHeader(BuildContext context) {
+  Widget _buildPostHeader(BuildContext context, CommunityViewModel viewModel) {
     final textTheme = Theme.of(context).textTheme;
-    final firebaseService = Provider.of<FirebaseService>(
-      context,
-      listen: false,
-    );
-    final viewModel = Provider.of<CommunityViewModel>(context, listen: false);
 
-    // Using a StreamBuilder to get real-time updates for user data like name/avatar.
     return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-      stream: firebaseService.getUserStream(post.authorId),
+      // --- FIX: Use the passed-in viewModel to get the user stream. ---
+      stream: viewModel.getUserStream(post.authorId),
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
-          return const SizedBox(height: 50); // Placeholder while loading
+          return const SizedBox(
+            height: 50,
+            child: Center(child: LinearProgressIndicator(minHeight: 1)),
+          );
         }
         final authorData = snapshot.data?.data();
         final profileImageUrl = authorData?['profileImageUrl'];
@@ -78,9 +80,11 @@ class PostCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (post.communityId != null)
-              // This FutureBuilder fetches the community name for the post header.
               FutureBuilder<Community?>(
-                future: firebaseService.getCommunityById(post.communityId!),
+                future: Provider.of<FirebaseService>(
+                  context,
+                  listen: false,
+                ).getCommunityById(post.communityId!),
                 builder: (context, communitySnapshot) {
                   return Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -226,9 +230,7 @@ class PostCard extends StatelessWidget {
 
   Widget _buildPostBody(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    // Get the screen width to calculate the cache size for the image.
     final screenWidth = MediaQuery.of(context).size.width;
-    // Calculate a reasonable cache width based on screen size minus padding.
     final imageCacheWidth = (screenWidth - 48).round();
 
     return Column(
@@ -240,8 +242,6 @@ class PostCard extends StatelessWidget {
             child: Image.network(
               post.imageUrl!,
               fit: BoxFit.cover,
-              // *** PERFORMANCE OPTIMIZATION ***
-              // Caching the image at a specific size reduces memory usage and improves scroll performance.
               cacheWidth: imageCacheWidth,
               loadingBuilder:
                   (
@@ -296,12 +296,12 @@ class PostCard extends StatelessWidget {
   }
 }
 
-/// A stateful widget to manage the actions (like, comment, share) for a post.
-/// It uses optimistic updates for the like functionality for a snappier user experience.
 class PostActions extends StatefulWidget {
   final Post post;
+  // --- FIX: Explicitly require the viewModel. ---
+  final CommunityViewModel viewModel;
 
-  const PostActions({super.key, required this.post});
+  const PostActions({super.key, required this.post, required this.viewModel});
 
   @override
   State<PostActions> createState() => _PostActionsState();
@@ -331,14 +331,10 @@ class _PostActionsState extends State<PostActions> {
   }
 
   void _onShare() {
-    Provider.of<CommunityViewModel>(
-      context,
-      listen: false,
-    ).sharePost(widget.post.id);
+    // --- FIX: Use the passed-in viewModel. ---
+    widget.viewModel.sharePost(widget.post.id);
   }
 
-  /// *** OPTIMISTIC UPDATE LOGIC ***
-  /// Toggles the like status immediately in the UI and then sends the update to Firebase.
   void _toggleLike() {
     final firebaseService = Provider.of<FirebaseService>(
       context,
@@ -346,7 +342,6 @@ class _PostActionsState extends State<PostActions> {
     );
     final userId = firebaseService.currentUser!.uid;
 
-    // 1. Optimistically update the local state.
     setState(() {
       if (_isLiked) {
         _isLiked = false;
@@ -357,7 +352,6 @@ class _PostActionsState extends State<PostActions> {
       }
     });
 
-    // 2. Send the update to the backend without waiting for it.
     firebaseService.togglePostLike(widget.post.id, userId);
   }
 
@@ -394,7 +388,7 @@ class _PostActionsState extends State<PostActions> {
               onTap: _onShare,
               child: _buildFooterIcon(
                 Icons.share_outlined,
-                "0", // Share count not in model yet
+                "0",
                 const Color(0xFF009E60),
                 AppColors.textSecondary,
               ),

@@ -10,7 +10,6 @@ import 'package:firstgenapp/viewmodels/community_viewmodel.dart';
 import 'package:flutter/material.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:intl/intl.dart';
-import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 import 'package:provider/provider.dart';
 
 class CommunityDetailScreen extends StatefulWidget {
@@ -280,6 +279,9 @@ class _FeedTab extends StatelessWidget {
       context,
       listen: false,
     );
+    // --- FIX: Get the view model here to pass it to the PostCard ---
+    final viewModel = Provider.of<CommunityViewModel>(context, listen: false);
+
     return StreamBuilder<List<Post>>(
       stream: firebaseService.getPostsForCommunityStream(community.id),
       builder: (context, snapshot) {
@@ -302,9 +304,13 @@ class _FeedTab extends StatelessWidget {
           ),
           itemCount: posts.length,
           itemBuilder: (context, index) {
-            // *** PERFORMANCE OPTIMIZATION ***
-            // Using a ValueKey helps Flutter efficiently update the list.
-            return PostCard(key: ValueKey(posts[index].id), post: posts[index]);
+            final post = posts[index];
+            // --- FIX: Use the shared, optimized PostCard widget and pass the viewModel ---
+            return PostCard(
+              key: ValueKey(post.id),
+              post: post,
+              viewModel: viewModel,
+            );
           },
           separatorBuilder: (context, index) => const SizedBox(height: 16),
         );
@@ -589,7 +595,7 @@ class _EventCardState extends State<EventCard> {
                                   }
                                 },
                           fontSize: 13,
-                          insets: 10,
+                          insets: 13,
                         )
                       : OutlinedButton(
                           onPressed: () {
@@ -622,16 +628,18 @@ class _EventCardState extends State<EventCard> {
                         widget.event.communityId,
                       );
                       if (community != null && context.mounted) {
-                        PersistentNavBarNavigator.pushNewScreen(
-                          context,
-                          screen: ChangeNotifierProvider.value(
-                            value: Provider.of<CommunityViewModel>(
-                              context,
-                              listen: false,
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => ChangeNotifierProvider.value(
+                              value: Provider.of<CommunityViewModel>(
+                                context,
+                                listen: false,
+                              ),
+                              child: CommunityDetailScreen(
+                                community: community,
+                              ),
                             ),
-                            child: CommunityDetailScreen(community: community),
                           ),
-                          withNavBar: false,
                         );
                       }
                     },

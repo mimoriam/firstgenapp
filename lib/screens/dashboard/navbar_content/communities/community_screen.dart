@@ -84,7 +84,6 @@ class _CommunityScreenState extends State<CommunityScreen>
                     context,
                     listen: false,
                   );
-                  // Await the result of the navigation to refresh data
                   await PersistentNavBarNavigator.pushNewScreen(
                     context,
                     screen: ChangeNotifierProvider.value(
@@ -93,7 +92,6 @@ class _CommunityScreenState extends State<CommunityScreen>
                     ),
                     withNavBar: false,
                   );
-                  // Refresh data after returning from CreateCommunityScreen
                   await viewModel.refreshAllData();
                 }
               },
@@ -170,7 +168,6 @@ class _AllCommunitiesSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    // Use Consumer here to automatically rebuild when data changes
     return Consumer<CommunityViewModel>(
       builder: (context, viewModel, child) {
         return Padding(
@@ -304,6 +301,9 @@ class __MyFeedTabState extends State<_MyFeedTab> {
 
   @override
   Widget build(BuildContext context) {
+    // --- FIX: Get the view model here to pass it to the PostCard ---
+    final viewModel = Provider.of<CommunityViewModel>(context, listen: false);
+
     return StreamBuilder<List<Post>>(
       stream: _feedStream,
       builder: (context, snapshot) {
@@ -322,9 +322,12 @@ class __MyFeedTabState extends State<_MyFeedTab> {
           itemCount: posts.length,
           itemBuilder: (context, index) {
             final post = posts[index];
-            // *** PERFORMANCE OPTIMIZATION ***
-            // Using a ValueKey helps Flutter efficiently update the list.
-            return PostCard(key: ValueKey(post.id), post: post);
+            // --- FIX: Pass the viewModel instance to the PostCard ---
+            return PostCard(
+              key: ValueKey(post.id),
+              post: post,
+              viewModel: viewModel,
+            );
           },
           separatorBuilder: (context, index) => const SizedBox(height: 16),
         );
@@ -643,9 +646,7 @@ class __CreatePostSectionState extends State<_CreatePostSection> {
               height: 250,
               child: EmojiPicker(
                 textEditingController: _postContentController,
-                onBackspacePressed: () {
-                  // Do something when the user taps the backspace button (optional)
-                },
+                onBackspacePressed: () {},
                 config: const Config(
                   emojiViewConfig: EmojiViewConfig(
                     columns: 7,
