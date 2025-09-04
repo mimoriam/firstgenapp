@@ -75,8 +75,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
         textStyle: textStyle,
       ),
       PersistentBottomNavBarItem(
-        icon: const Icon(IconlyBold.message),
-        inactiveIcon: const Icon(IconlyLight.message),
+        icon: const _MessageBadge(child: Icon(IconlyBold.message)),
+        inactiveIcon: const _MessageBadge(child: Icon(IconlyLight.message)),
         title: ("Chats"),
         activeColorPrimary: AppColors.primaryRed,
         inactiveColorPrimary: AppColors.textSecondary,
@@ -155,6 +155,61 @@ class _DashboardScreenState extends State<DashboardScreen> {
           },
         ),
       ),
+    );
+  }
+}
+
+class _MessageBadge extends StatelessWidget {
+  final Widget child;
+
+  const _MessageBadge({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    final firebaseService = Provider.of<FirebaseService>(
+      context,
+      listen: false,
+    );
+    return StreamBuilder<int>(
+      stream: firebaseService.unreadMessagesCount,
+      builder: (context, snapshot) {
+        final count = snapshot.data ?? 0;
+        return Stack(
+          clipBehavior: Clip.none,
+          children: <Widget>[
+            child,
+            if (count > 0)
+              Positioned(
+                top: -4,
+                right: -4,
+                child: Container(
+                  padding: EdgeInsets.all(count > 9 ? 4 : 5),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryRed,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: AppColors.primaryBackground,
+                      width: 1.5,
+                    ),
+                  ),
+                  constraints: const BoxConstraints(
+                    minWidth: 18,
+                    minHeight: 18,
+                  ),
+                  child: Text(
+                    count > 9 ? '9+' : '$count',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 9,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 }
