@@ -1,3 +1,4 @@
+import 'package:firstgenapp/common/gradient_btn.dart';
 import 'package:firstgenapp/constants/appColors.dart';
 import 'package:firstgenapp/viewmodels/inapp_subscription_provider.dart';
 import 'package:flutter/material.dart';
@@ -13,16 +14,40 @@ class SubscriptionScreen extends StatefulWidget {
   State<SubscriptionScreen> createState() => _SubscriptionScreenState();
 }
 
+enum SubscriptionPlan { monthly, weekly }
+
 class _SubscriptionScreenState extends State<SubscriptionScreen> {
+  Package? _selectedPackage;
+  bool _isTrialEnabled = true;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<SubscriptionProvider>(
+      final provider = Provider.of<SubscriptionProvider>(
         context,
         listen: false,
-      ).fetchOfferings();
+      );
+      if (provider.offerings.isEmpty) {
+        provider.fetchOfferings();
+      }
     });
+  }
+
+  void _onSubscribePressed() async {
+    if (_selectedPackage == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Please select a plan.')));
+      return;
+    }
+
+    final provider = Provider.of<SubscriptionProvider>(context, listen: false);
+    final success = await provider.purchasePackage(_selectedPackage!);
+
+    if (success && mounted) {
+      Navigator.of(context).pop();
+    }
   }
 
   @override
@@ -79,20 +104,54 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
             const SizedBox(height: 12),
             _buildRatingsSection(),
             const SizedBox(height: 12),
-            if (subscriptionProvider.isLoading)
+            if (subscriptionProvider.isLoading &&
+                subscriptionProvider.offerings.isEmpty)
               const Center(child: CircularProgressIndicator())
             else if (subscriptionProvider.offerings.isNotEmpty)
-              _buildSubscriptionOptions(subscriptionProvider)
+              _buildSubscriptionCards(textTheme, subscriptionProvider)
             else
               const Center(child: Text('No subscription plans available.')),
-            const SizedBox(height: 24),
+            const SizedBox(height: 12),
+            const Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.check, color: AppColors.primaryRed, size: 20),
+                SizedBox(width: 8),
+                Text(
+                  'No Payment Due Today',
+                  style: TextStyle(color: AppColors.primaryRed),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            GradientButton(
+              text: 'Subscribe Now',
+              onPressed:
+                  _selectedPackage == null || subscriptionProvider.isLoading
+                  ? null
+                  : _onSubscribePressed,
+              child: subscriptionProvider.isLoading
+                  ? const Center(
+                      child: SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.white,
+                          ),
+                        ),
+                      ),
+                    )
+                  : null,
+            ),
             Center(
               child: TextButton(
                 onPressed: () {
                   // TODO: Handle Restore Purchases
                 },
                 child: Text(
-                  'Restore Purchases',
+                  'Cancel anytime',
                   style: Theme.of(
                     context,
                   ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w100),
@@ -105,72 +164,32 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     );
   }
 
-  Widget _buildSubscriptionOptions(SubscriptionProvider provider) {
-    // Assuming your default offering has monthly and weekly packages
-    final offering = provider.offerings.firstWhere(
-      (o) => o.identifier == 'default',
-      orElse: () => provider.offerings.first,
+  Widget _buildSubscriptionCards(
+    TextTheme textTheme,
+    SubscriptionProvider provider,
+  ) {
+    // This logic assumes your RevenueCat offering has packages with identifiers
+    // that contain "monthly" or "weekly". Adjust if your identifiers are different.
+    final offerings = provider.offerings.firstOrNull;
+    if (offerings == null) return const SizedBox.shrink();
+
+    final monthlyPackage = offerings.availablePackages.firstWhere(
+      (p) => p.identifier.contains('monthly'),
+      orElse: () => offerings.monthly!,
+    );
+    final weeklyPackage = offerings.availablePackages.firstWhere(
+      (p) => p.identifier.contains('weekly'),
+      orElse: () => offerings.weekly!,
     );
 
-    return ListView.separated(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: offering.availablePackages.length,
-      itemBuilder: (context, index) {
-        final package = offering.availablePackages[index];
-        return _buildPlanCard(provider, package);
-      },
-      separatorBuilder: (context, index) => const SizedBox(height: 12),
-    );
-  }
-
-  Widget _buildPlanCard(SubscriptionProvider provider, Package package) {
-    final textTheme = Theme.of(context).textTheme;
-    return GestureDetector(
-      onTap: () async {
-        final success = await provider.purchasePackage(package);
-        if (success && mounted) {
-          Navigator.of(context).pop();
-        }
-      },
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.grey.shade300),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    package.storeProduct.title,
-                    style: textTheme.labelLarge?.copyWith(
-                      color: AppColors.primaryRed,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    package.storeProduct.priceString,
-                    style: textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            provider.isLoading
-                ? const CircularProgressIndicator()
-                : const Icon(
-                    Icons.arrow_forward_ios,
-                    color: AppColors.primaryRed,
-                  ),
-          ],
-        ),
-      ),
+    return Column(
+      children: [
+        if (monthlyPackage != null)
+          _buildMonthlyPlanCard(textTheme, monthlyPackage),
+        const SizedBox(height: 12),
+        if (weeklyPackage != null)
+          _buildWeeklyPlanCard(textTheme, weeklyPackage),
+      ],
     );
   }
 
@@ -221,6 +240,186 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
         Image.asset('images/backgrounds/ratings_3.png', height: 74),
         Image.asset('images/backgrounds/ratings_4.png', height: 74),
       ],
+    );
+  }
+
+  Widget _buildMonthlyPlanCard(TextTheme textTheme, Package package) {
+    bool isSelected = _selectedPackage == package;
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        GestureDetector(
+          onTap: () => setState(() => _selectedPackage = package),
+          child: Container(
+            padding: const EdgeInsets.all(2),
+            decoration: BoxDecoration(
+              gradient: isSelected
+                  ? const LinearGradient(
+                      colors: [AppColors.primaryOrange, AppColors.primaryRed],
+                    )
+                  : null,
+              color: isSelected ? null : Colors.grey.shade300,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          package.storeProduct.title,
+                          style: textTheme.labelLarge?.copyWith(
+                            color: AppColors.primaryRed,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text.rich(
+                          TextSpan(
+                            text: package.storeProduct.priceString,
+                            style: textTheme.headlineSmall?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                            children: [
+                              TextSpan(
+                                text: ' / month',
+                                style: textTheme.bodySmall?.copyWith(
+                                  color: AppColors.textSecondary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          package.storeProduct.description,
+                          style: textTheme.bodySmall,
+                        ),
+                      ],
+                    ),
+                  ),
+                  Radio<Package?>(
+                    value: package,
+                    groupValue: _selectedPackage,
+                    onChanged: (value) {
+                      setState(() => _selectedPackage = value);
+                    },
+                    activeColor: AppColors.primaryRed,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        Positioned(
+          top: -10,
+          right: 20,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            decoration: BoxDecoration(
+              color: AppColors.primaryRed,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Text(
+              'MOST POPULAR',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildWeeklyPlanCard(TextTheme textTheme, Package package) {
+    bool isSelected = _selectedPackage == package;
+    return GestureDetector(
+      onTap: () => setState(() => _selectedPackage = package),
+      child: Container(
+        padding: const EdgeInsets.all(2),
+        decoration: BoxDecoration(
+          gradient: isSelected
+              ? const LinearGradient(
+                  colors: [AppColors.primaryOrange, AppColors.primaryRed],
+                )
+              : null,
+          color: isSelected ? null : Colors.grey.shade300,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Container(
+          padding: const EdgeInsets.only(left: 10, right: 10, top: 10),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      package.storeProduct.title,
+                      style: textTheme.labelLarge?.copyWith(
+                        color: AppColors.primaryRed,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text.rich(
+                      TextSpan(
+                        text: package.storeProduct.priceString,
+                        style: textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                        children: [
+                          TextSpan(
+                            text: '/ week',
+                            style: textTheme.bodySmall?.copyWith(
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Row(
+                      children: [
+                        Text('Try free trial', style: textTheme.bodySmall),
+                        Transform.scale(
+                          scale: 0.6,
+                          child: Switch(
+                            value: _isTrialEnabled,
+                            onChanged: (value) {
+                              setState(() => _isTrialEnabled = value);
+                            },
+                            activeColor: AppColors.primaryRed,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              Radio<Package?>(
+                value: package,
+                groupValue: _selectedPackage,
+                onChanged: (value) {
+                  setState(() => _selectedPackage = value);
+                },
+                activeColor: AppColors.primaryRed,
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

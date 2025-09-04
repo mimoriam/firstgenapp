@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
 
 // Use your RevenueCat API keys
-const _googleApiKey = 'goog_your_google_api_key'; // REPLACE WITH YOUR KEY
+const _googleApiKey = 'AIzaSyDj3slusUFe6P7etN0DTDzsngsNSX3TdD8'; // REPLACE WITH YOUR KEY
 const _appleApiKey = 'appl_your_apple_api_key'; // REPLACE WITH YOUR KEY
 
 class RevenueCatService {
