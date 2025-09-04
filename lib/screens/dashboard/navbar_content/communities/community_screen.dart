@@ -301,9 +301,6 @@ class __MyFeedTabState extends State<_MyFeedTab> {
 
   @override
   Widget build(BuildContext context) {
-    // --- FIX: Get the view model here to pass it to the PostCard ---
-    final viewModel = Provider.of<CommunityViewModel>(context, listen: false);
-
     return StreamBuilder<List<Post>>(
       stream: _feedStream,
       builder: (context, snapshot) {
@@ -322,11 +319,9 @@ class __MyFeedTabState extends State<_MyFeedTab> {
           itemCount: posts.length,
           itemBuilder: (context, index) {
             final post = posts[index];
-            // --- FIX: Pass the viewModel instance to the PostCard ---
             return PostCard(
               key: ValueKey(post.id),
               post: post,
-              viewModel: viewModel,
             );
           },
           separatorBuilder: (context, index) => const SizedBox(height: 16),

@@ -5,6 +5,7 @@ import 'package:firstgenapp/models/community_models.dart';
 import 'package:firstgenapp/services/firebase_service.dart';
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:rxdart/rxdart.dart';
 
 class CommunityViewModel extends ChangeNotifier {
   final FirebaseService _firebaseService;
@@ -28,6 +29,7 @@ class CommunityViewModel extends ChangeNotifier {
   void dispose() {
     _isDisposed = true;
     _eventsSubscription?.cancel();
+    _userStreamCache.clear();
     super.dispose();
   }
 
@@ -95,7 +97,7 @@ class CommunityViewModel extends ChangeNotifier {
     if (!_userStreamCache.containsKey(userId)) {
       _userStreamCache[userId] = _firebaseService
           .getUserStream(userId)
-          .asBroadcastStream();
+          .shareReplay(maxSize: 1);
     }
     return _userStreamCache[userId]!;
   }

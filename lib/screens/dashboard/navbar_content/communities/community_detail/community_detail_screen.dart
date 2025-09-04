@@ -279,8 +279,6 @@ class _FeedTab extends StatelessWidget {
       context,
       listen: false,
     );
-    // --- FIX: Get the view model here to pass it to the PostCard ---
-    final viewModel = Provider.of<CommunityViewModel>(context, listen: false);
 
     return StreamBuilder<List<Post>>(
       stream: firebaseService.getPostsForCommunityStream(community.id),
@@ -305,12 +303,7 @@ class _FeedTab extends StatelessWidget {
           itemCount: posts.length,
           itemBuilder: (context, index) {
             final post = posts[index];
-            // --- FIX: Use the shared, optimized PostCard widget and pass the viewModel ---
-            return PostCard(
-              key: ValueKey(post.id),
-              post: post,
-              viewModel: viewModel,
-            );
+            return PostCard(key: ValueKey(post.id), post: post);
           },
           separatorBuilder: (context, index) => const SizedBox(height: 16),
         );

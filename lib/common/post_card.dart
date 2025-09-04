@@ -17,13 +17,12 @@ import 'package:provider/provider.dart';
 /// It's optimized for performance by using cached user data and optimized image loading.
 class PostCard extends StatelessWidget {
   final Post post;
-  // --- FIX: Explicitly require the viewModel to avoid context issues. ---
-  final CommunityViewModel viewModel;
 
-  const PostCard({super.key, required this.post, required this.viewModel});
+  const PostCard({super.key, required this.post});
 
   @override
   Widget build(BuildContext context) {
+    final viewModel = Provider.of<CommunityViewModel>(context, listen: false);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       decoration: BoxDecoration(
@@ -34,7 +33,6 @@ class PostCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // --- FIX: Pass the viewModel down to the header. ---
           _buildPostHeader(context, viewModel),
           const SizedBox(height: 12),
           _buildPostBody(context),
@@ -44,7 +42,6 @@ class PostCard extends StatelessWidget {
             child: Divider(height: 1, color: Colors.grey.shade200),
           ),
           const SizedBox(height: 8),
-          // --- FIX: Pass the viewModel down to the actions. ---
           PostActions(post: post, viewModel: viewModel),
         ],
       ),
@@ -55,7 +52,6 @@ class PostCard extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
 
     return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-      // --- FIX: Use the passed-in viewModel to get the user stream. ---
       stream: viewModel.getUserStream(post.authorId),
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
@@ -298,7 +294,6 @@ class PostCard extends StatelessWidget {
 
 class PostActions extends StatefulWidget {
   final Post post;
-  // --- FIX: Explicitly require the viewModel. ---
   final CommunityViewModel viewModel;
 
   const PostActions({super.key, required this.post, required this.viewModel});
@@ -331,7 +326,6 @@ class _PostActionsState extends State<PostActions> {
   }
 
   void _onShare() {
-    // --- FIX: Use the passed-in viewModel. ---
     widget.viewModel.sharePost(widget.post.id);
   }
 
