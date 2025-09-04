@@ -328,6 +328,8 @@ class __MyFeedTabState extends State<_MyFeedTab> {
   }
 }
 
+// lib/screens/dashboard/navbar_content/communities/community_screen.dart
+
 class _CreatePostSection extends StatefulWidget {
   @override
   __CreatePostSectionState createState() => __CreatePostSectionState();
@@ -362,6 +364,17 @@ class __CreatePostSectionState extends State<_CreatePostSection> {
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final viewModel = Provider.of<CommunityViewModel>(context, listen: false);
+
+    // --- FIX FOR DUPLICATE COMMUNITY ENTRIES ---
+    final allCommunities = [
+      ...viewModel.joinedCommunities,
+      ...viewModel.createdCommunities
+    ];
+    final uniqueCommunityIds = <String>{};
+    final uniqueCommunities = allCommunities.where((community) {
+      return uniqueCommunityIds.add(community.id);
+    }).toList();
+    // --- END OF FIX ---
 
     final postContentField = _formKey.currentState?.fields['post_content'];
     final hasError = postContentField?.hasError ?? false;
@@ -418,7 +431,7 @@ class __CreatePostSectionState extends State<_CreatePostSection> {
                             },
                             decoration: InputDecoration(
                               hintText:
-                                  "What's on your mind? Ask a question or share your story..",
+                              "What's on your mind? Ask a question or share your story..",
                               hintStyle: textTheme.bodySmall?.copyWith(
                                 color: AppColors.textSecondary,
                               ),
@@ -528,19 +541,7 @@ class __CreatePostSectionState extends State<_CreatePostSection> {
                   underline: const SizedBox(),
                   items: [
                     const DropdownMenuItem(value: null, child: Text('My Feed')),
-                    ...viewModel.joinedCommunities.map((community) {
-                      return DropdownMenuItem(
-                        value: community.id,
-                        child: SizedBox(
-                          width: 100,
-                          child: Text(
-                            community.name,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      );
-                    }),
-                    ...viewModel.createdCommunities.map((community) {
+                    ...uniqueCommunities.map((community) {
                       return DropdownMenuItem(
                         value: community.id,
                         child: SizedBox(
@@ -564,55 +565,55 @@ class __CreatePostSectionState extends State<_CreatePostSection> {
                   onPressed: _isPosting
                       ? null
                       : () {
-                          if (_formKey.currentState?.saveAndValidate() ??
-                              false) {
-                            setState(() {
-                              _isPosting = true;
-                            });
-                            final postContent =
-                                _formKey.currentState?.value['post_content'] ??
-                                '';
-                            viewModel
-                                .createPost(
-                                  content: postContent,
-                                  communityId: _selectedCommunityId,
-                                  image: _image,
-                                  link: _link,
-                                  emojis: _postContentController.text.characters
-                                      .where(
-                                        (char) => char.contains(
-                                          RegExp(
-                                            r'(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])',
-                                          ),
-                                        ),
-                                      )
-                                      .toList(),
-                                )
-                                .then((_) {
-                                  _formKey.currentState?.reset();
-                                  setState(() {
-                                    _image = null;
-                                    _isPosting = false;
-                                    _link = null;
-                                  });
-                                  if (context.mounted) {
-                                    FocusScope.of(context).unfocus();
-                                  }
-                                });
-                          }
-                        },
-                  icon: _isPosting
-                      ? Container(
-                          width: 20,
-                          height: 20,
-                          padding: const EdgeInsets.all(2.0),
-                          child: const CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              Colors.white,
+                    if (_formKey.currentState?.saveAndValidate() ??
+                        false) {
+                      setState(() {
+                        _isPosting = true;
+                      });
+                      final postContent =
+                          _formKey.currentState?.value['post_content'] ??
+                              '';
+                      viewModel
+                          .createPost(
+                        content: postContent,
+                        communityId: _selectedCommunityId,
+                        image: _image,
+                        link: _link,
+                        emojis: _postContentController.text.characters
+                            .where(
+                              (char) => char.contains(
+                            RegExp(
+                              r'(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])',
                             ),
                           ),
                         )
+                            .toList(),
+                      )
+                          .then((_) {
+                        _formKey.currentState?.reset();
+                        setState(() {
+                          _image = null;
+                          _isPosting = false;
+                          _link = null;
+                        });
+                        if (context.mounted) {
+                          FocusScope.of(context).unfocus();
+                        }
+                      });
+                    }
+                  },
+                  icon: _isPosting
+                      ? Container(
+                    width: 20,
+                    height: 20,
+                    padding: const EdgeInsets.all(2.0),
+                    child: const CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        Colors.white,
+                      ),
+                    ),
+                  )
                       : const Icon(IconlyLight.send, size: 18),
                   label: _isPosting
                       ? const SizedBox.shrink()

@@ -118,6 +118,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
     );
   }
+  // lib/screens/dashboard/navbar_content/profile/profile_screen.dart
 
   Widget _buildProfileCard(
     Map<String, dynamic> userData,
@@ -144,11 +145,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
         title: Row(
           children: [
-            Text(
-              userData['fullName'] ?? user?.displayName ?? 'No Name',
-              style: textTheme.labelLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary,
+            // This Flexible widget prevents the text from overflowing
+            Flexible(
+              child: Text(
+                userData['fullName'] ?? user?.displayName ?? 'No Name',
+                style: textTheme.labelLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary,
+                ),
+                overflow: TextOverflow.ellipsis, // Add ellipsis for long names
               ),
             ),
             if (isPremium) ...[

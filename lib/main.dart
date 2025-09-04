@@ -1,8 +1,9 @@
+// lib/main.dart
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:firstgenapp/auth_gate.dart';
 import 'package:firstgenapp/services/firebase_service.dart';
-// import 'package:firstgenapp/services/inapp_purchase_service.dart'; // Commented out
 import 'package:firstgenapp/services/notification_service.dart';
 import 'package:firstgenapp/viewmodels/SignupViewModel.dart';
 import 'package:firstgenapp/viewmodels/auth_provider.dart';
@@ -31,7 +32,6 @@ Future<void> main() async {
   FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
 
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  // await RevenueCatService().init(); // Commented out RevenueCat initialization
   tz.initializeTimeZones();
 
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
@@ -64,7 +64,6 @@ class MyApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         Provider<FirebaseService>(create: (_) => FirebaseService()),
-        // Provider<RevenueCatService>(create: (_) => RevenueCatService()), // Commented out RevenueCat service provider
         ChangeNotifierProvider<SignUpViewModel>(
           create: (context) => SignUpViewModel(context.read<FirebaseService>()),
         ),
@@ -106,31 +105,17 @@ class MyApp extends StatelessWidget {
             return userProfileViewModel!;
           },
         ),
-        // --- START: Original RevenueCat Subscription Provider (Commented out) ---
-        // ChangeNotifierProxyProvider<AuthProvider, SubscriptionProvider>(
-        //   create: (context) =>
-        //       SubscriptionProvider(context.read<RevenueCatService>()),
-        //   update: (context, auth, subscription) {
-        //     if (auth.user != null) {
-        //       context.read<RevenueCatService>().login(auth.user!.uid);
-        //     } else {
-        //       context.read<RevenueCatService>().logout();
-        //     }
-        //     return subscription!;
-        //   },
-        // ),
-        // --- END: Original RevenueCat Subscription Provider ---
-
-        // --- START: New Firebase Subscription Provider ---
-        // This provider now uses FirebaseService directly to check subscription status.
-        // It's a simple ChangeNotifierProvider because it no longer needs to be updated
-        // by the AuthProvider in the same way. The auth state is handled internally
-        // by the FirebaseService methods it calls.
-        ChangeNotifierProvider<SubscriptionProvider>(
+        ChangeNotifierProxyProvider<AuthProvider, SubscriptionProvider>(
           create: (context) =>
               SubscriptionProvider(context.read<FirebaseService>()),
+          update: (context, auth, previous) {
+            // When auth state changes, re-initialize the subscription provider for the new user
+            if (auth.user?.uid != previous?.userId) {
+              return SubscriptionProvider(context.read<FirebaseService>());
+            }
+            return previous!;
+          },
         ),
-        // --- END: New Firebase Subscription Provider ---
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,

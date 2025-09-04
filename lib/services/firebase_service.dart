@@ -522,6 +522,10 @@ class FirebaseService {
     }
   }
 
+  // lib/services/firebase_service.dart
+
+  // lib/services/firebase_service.dart
+
   Future<List<QueryDocumentSnapshot<Map<String, dynamic>>>> searchUsersStrict({
     String? continent,
     List<String>? languages,
@@ -542,11 +546,23 @@ class FirebaseService {
     if (!currentUserDoc.exists) return [];
 
     final currentUserData = currentUserDoc.data()!;
+
+    // Get users that the current user has already liked or matched with to exclude them.
     final likedUserIds =
         (currentUserData['likedUsers'] as Map?)?.keys.toList() ?? [];
     final matchedUserIds =
         (currentUserData['matches'] as Map?)?.keys.toList() ?? [];
     final usersToExclude = [...likedUserIds, ...matchedUserIds, user.uid];
+
+    // Get users who have liked the current user to prioritize them.
+    final likedByUsersSnapshot = await _firestore
+        .collection(userCollection)
+        .where('likedUsers.${user.uid}', isEqualTo: true)
+        .get();
+    final likedByUserIds = likedByUsersSnapshot.docs
+        .map((doc) => doc.id)
+        .where((id) => !usersToExclude.contains(id))
+        .toList();
 
     final List<String> currentUserCommunities = List<String>.from(
       currentUserData['joinedCommunities'] ?? [],
@@ -649,7 +665,15 @@ class FirebaseService {
         }).toList();
       }
 
-      return results;
+      // Prioritize users who have liked the current user.
+      final likedByUsers = results
+          .where((doc) => likedByUserIds.contains(doc.id))
+          .toList();
+      final otherUsers = results
+          .where((doc) => !likedByUserIds.contains(doc.id))
+          .toList();
+
+      return [...likedByUsers, ...otherUsers];
     } catch (e) {
       log('Error searching users: $e');
       return [];
@@ -1124,10 +1148,20 @@ class FirebaseService {
         .where('userId', isEqualTo: user.uid)
         .orderBy('timestamp', descending: true)
         .snapshots()
-        .map(
-          (snapshot) =>
-              snapshot.docs.map((doc) => Activity.fromFirestore(doc)).toList(),
-        );
+        .map((snapshot) {
+          final activities = snapshot.docs
+              .map((doc) => Activity.fromFirestore(doc))
+              .toList();
+          final uniqueActivities = <String, Activity>{};
+          for (final activity in activities) {
+            // Use a combination of fromUserId and type to identify unique actions
+            final uniqueKey = '${activity.fromUserId}-${activity.type}';
+            if (!uniqueActivities.containsKey(uniqueKey)) {
+              uniqueActivities[uniqueKey] = activity;
+            }
+          }
+          return uniqueActivities.values.toList();
+        });
   }
 
   Future<void> createMatch(String matchedUserId) async {
