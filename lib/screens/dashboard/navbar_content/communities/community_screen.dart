@@ -461,18 +461,18 @@ class __CreatePostSectionState extends State<_CreatePostSection> {
                                     size: 22,
                                   ),
                                 ),
-                                IconButton(
-                                  onPressed: () {
-                                    setState(() {
-                                      _emojiShowing = !_emojiShowing;
-                                    });
-                                  },
-                                  icon: const Icon(
-                                    Icons.emoji_emotions_outlined,
-                                    color: AppColors.textSecondary,
-                                    size: 21,
-                                  ),
-                                ),
+                                // IconButton(
+                                //   onPressed: () {
+                                //     setState(() {
+                                //       _emojiShowing = !_emojiShowing;
+                                //     });
+                                //   },
+                                //   icon: const Icon(
+                                //     Icons.emoji_emotions_outlined,
+                                //     color: AppColors.textSecondary,
+                                //     size: 21,
+                                //   ),
+                                // ),
                               ],
                             ),
                           ),
