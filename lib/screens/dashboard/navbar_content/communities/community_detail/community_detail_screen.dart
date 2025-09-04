@@ -10,6 +10,7 @@ import 'package:firstgenapp/viewmodels/community_viewmodel.dart';
 import 'package:flutter/material.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:intl/intl.dart';
+import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 import 'package:provider/provider.dart';
 
 class CommunityDetailScreen extends StatefulWidget {
@@ -279,7 +280,6 @@ class _FeedTab extends StatelessWidget {
       context,
       listen: false,
     );
-
     return StreamBuilder<List<Post>>(
       stream: firebaseService.getPostsForCommunityStream(community.id),
       builder: (context, snapshot) {
@@ -621,18 +621,19 @@ class _EventCardState extends State<EventCard> {
                         widget.event.communityId,
                       );
                       if (community != null && context.mounted) {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) => ChangeNotifierProvider.value(
-                              value: Provider.of<CommunityViewModel>(
-                                context,
-                                listen: false,
+                        PersistentNavBarNavigator.pushNewScreen(
+                          context,
+                          screen:
+                              ChangeNotifierProvider<CommunityViewModel>.value(
+                                value: Provider.of<CommunityViewModel>(
+                                  context,
+                                  listen: false,
+                                ),
+                                child: CommunityDetailScreen(
+                                  community: community,
+                                ),
                               ),
-                              child: CommunityDetailScreen(
-                                community: community,
-                              ),
-                            ),
-                          ),
+                          withNavBar: false,
                         );
                       }
                     },

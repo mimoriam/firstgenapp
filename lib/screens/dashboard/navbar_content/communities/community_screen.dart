@@ -319,10 +319,7 @@ class __MyFeedTabState extends State<_MyFeedTab> {
           itemCount: posts.length,
           itemBuilder: (context, index) {
             final post = posts[index];
-            return PostCard(
-              key: ValueKey(post.id),
-              post: post,
-            );
+            return PostCard(key: ValueKey(post.id), post: post);
           },
           separatorBuilder: (context, index) => const SizedBox(height: 16),
         );
