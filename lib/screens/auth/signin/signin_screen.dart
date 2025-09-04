@@ -222,9 +222,9 @@ class _SigninScreenState extends State<SigninScreen> {
                               if (context.mounted) {
                                 Navigator.of(context).push(
                                   MaterialPageRoute(
-                                    // builder: (context) => const SignUpScreen(),
-                                    builder: (context) =>
-                                        const SubscriptionScreen(),
+                                    builder: (context) => const SignUpScreen(),
+                                    // builder: (context) =>
+                                    //     const SubscriptionScreen(),
                                   ),
                                 );
                               }
