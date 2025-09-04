@@ -1,11 +1,9 @@
 import 'package:firstgenapp/common/gradient_btn.dart';
 import 'package:firstgenapp/constants/appColors.dart';
-import 'package:firstgenapp/viewmodels/inapp_subscription_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
 import 'package:hugeicons/hugeicons.dart';
-import 'package:provider/provider.dart';
-import 'package:purchases_flutter/purchases_flutter.dart';
+import 'package:iconsax_flutter/iconsax_flutter.dart';
 
 class SubscriptionScreen extends StatefulWidget {
   const SubscriptionScreen({super.key});
@@ -17,45 +15,12 @@ class SubscriptionScreen extends StatefulWidget {
 enum SubscriptionPlan { monthly, weekly }
 
 class _SubscriptionScreenState extends State<SubscriptionScreen> {
-  Package? _selectedPackage;
+  SubscriptionPlan _selectedPlan = SubscriptionPlan.monthly;
   bool _isTrialEnabled = true;
-
-
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final provider = Provider.of<SubscriptionProvider>(
-        context,
-        listen: false,
-      );
-      if (provider.offerings.isEmpty) {
-        provider.fetchOfferings();
-      }
-    });
-  }
-
-  void _onSubscribePressed() async {
-    if (_selectedPackage == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Please select a plan.')));
-      return;
-    }
-
-    final provider = Provider.of<SubscriptionProvider>(context, listen: false);
-    final success = await provider.purchasePackage(_selectedPackage!);
-
-    if (success && mounted) {
-      Navigator.of(context).pop();
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    final subscriptionProvider = Provider.of<SubscriptionProvider>(context);
 
     return Scaffold(
       backgroundColor: AppColors.primaryBackground,
@@ -73,12 +38,14 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // const SizedBox(height: 8),
             Text(
               'Time to give yourself the good stuff you deserve.',
               style: textTheme.headlineSmall,
             ),
             const SizedBox(height: 12),
             _buildFeatureItem(
+              // icon: Iconsax.global,
               icon: TablerIcons.world_bolt,
               title: 'Unlimited Connections',
               subtitle: 'Meet more people from around the globe',
@@ -106,13 +73,9 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
             const SizedBox(height: 12),
             _buildRatingsSection(),
             const SizedBox(height: 12),
-            if (subscriptionProvider.isLoading &&
-                subscriptionProvider.offerings.isEmpty)
-              const Center(child: CircularProgressIndicator())
-            else if (subscriptionProvider.offerings.isNotEmpty)
-              _buildSubscriptionCards(textTheme, subscriptionProvider)
-            else
-              const Center(child: Text('No subscription plans available.')),
+            _buildMonthlyPlanCard(textTheme),
+            const SizedBox(height: 12),
+            _buildWeeklyPlanCard(textTheme),
             const SizedBox(height: 12),
             const Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -126,32 +89,10 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
               ],
             ),
             const SizedBox(height: 8),
-            GradientButton(
-              text: 'Subscribe Now',
-              onPressed:
-                  _selectedPackage == null || subscriptionProvider.isLoading
-                  ? null
-                  : _onSubscribePressed,
-              child: subscriptionProvider.isLoading
-                  ? const Center(
-                      child: SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            Colors.white,
-                          ),
-                        ),
-                      ),
-                    )
-                  : null,
-            ),
+            GradientButton(text: 'Subscribe Now', onPressed: () {}),
             Center(
               child: TextButton(
-                onPressed: () {
-                  // TODO: Handle Restore Purchases
-                },
+                onPressed: () {},
                 child: Text(
                   'Cancel anytime',
                   style: Theme.of(
@@ -163,38 +104,6 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildSubscriptionCards(
-    TextTheme textTheme,
-    SubscriptionProvider provider,
-  ) {
-    // This logic assumes your RevenueCat offering has packages with identifiers
-    // that contain "monthly" or "weekly". Adjust if your identifiers are different.
-    final offerings = provider.offerings.firstOrNull;
-    if (offerings == null) return const SizedBox.shrink();
-
-    // final monthlyPackage = offerings.availablePackages.firstWhere(
-    //   (p) => p.identifier.contains('monthly'),
-    //   orElse: () => offerings.monthly!,
-    // );
-    // final weeklyPackage = offerings.availablePackages.firstWhere(
-    //   (p) => p.identifier.contains('weekly'),
-    //   orElse: () => offerings.weekly!,
-    // );
-
-    final monthlyPackage = offerings.monthly;
-    final weeklyPackage = offerings.weekly;
-
-    return Column(
-      children: [
-        if (monthlyPackage != null)
-          _buildMonthlyPlanCard(textTheme, monthlyPackage),
-        const SizedBox(height: 12),
-        if (weeklyPackage != null)
-          _buildWeeklyPlanCard(textTheme, weeklyPackage),
-      ],
     );
   }
 
@@ -215,10 +124,10 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
               TextSpan(
                 text: '$title – ',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
-                  height: 1.3,
-                  color: AppColors.primaryRed,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    height: 1.3,
+                    color: AppColors.primaryRed
                 ),
                 children: [
                   TextSpan(
@@ -243,27 +152,28 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Image.asset('images/backgrounds/ratings_3.png', height: 74),
+        // const SizedBox(width: 10),
         Image.asset('images/backgrounds/ratings_4.png', height: 74),
       ],
     );
   }
 
-  Widget _buildMonthlyPlanCard(TextTheme textTheme, Package package) {
-    bool isSelected = _selectedPackage == package;
+  Widget _buildMonthlyPlanCard(TextTheme textTheme) {
+    bool isSelected = _selectedPlan == SubscriptionPlan.monthly;
     return Stack(
       clipBehavior: Clip.none,
       children: [
         GestureDetector(
-          onTap: () => setState(() => _selectedPackage = package),
+          onTap: () => setState(() => _selectedPlan = SubscriptionPlan.monthly),
           child: Container(
-            padding: const EdgeInsets.all(2),
+            padding: const EdgeInsets.all(2), // This creates the border width
             decoration: BoxDecoration(
               gradient: isSelected
                   ? const LinearGradient(
-                      colors: [AppColors.primaryOrange, AppColors.primaryRed],
-                    )
+                colors: [AppColors.primaryOrange, AppColors.primaryRed],
+              )
                   : null,
-              color: isSelected ? null : Colors.grey.shade300,
+              color: isSelected ? null : Colors.grey.shade300, // Border color
               borderRadius: BorderRadius.circular(16),
             ),
             child: Container(
@@ -279,21 +189,21 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          package.storeProduct.title,
+                          '88% off',
                           style: textTheme.labelLarge?.copyWith(
-                            color: AppColors.primaryRed,
+                              color: AppColors.primaryRed
                           ),
                         ),
                         const SizedBox(height: 2),
                         Text.rich(
                           TextSpan(
-                            text: package.storeProduct.priceString,
+                            text: '\$4.99',
                             style: textTheme.headlineSmall?.copyWith(
                               fontWeight: FontWeight.bold,
                             ),
                             children: [
                               TextSpan(
-                                text: ' / month',
+                                text: '/ month',
                                 style: textTheme.bodySmall?.copyWith(
                                   color: AppColors.textSecondary,
                                 ),
@@ -302,18 +212,15 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                           ),
                         ),
                         const SizedBox(height: 2),
-                        Text(
-                          package.storeProduct.description,
-                          style: textTheme.bodySmall,
-                        ),
+                        Text('only 4.99 per month', style: textTheme.bodySmall),
                       ],
                     ),
                   ),
-                  Radio<Package?>(
-                    value: package,
-                    groupValue: _selectedPackage,
+                  Radio<SubscriptionPlan>(
+                    value: SubscriptionPlan.monthly,
+                    groupValue: _selectedPlan,
                     onChanged: (value) {
-                      setState(() => _selectedPackage = value);
+                      setState(() => _selectedPlan = value!);
                     },
                     activeColor: AppColors.primaryRed,
                   ),
@@ -345,17 +252,17 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     );
   }
 
-  Widget _buildWeeklyPlanCard(TextTheme textTheme, Package package) {
-    bool isSelected = _selectedPackage == package;
+  Widget _buildWeeklyPlanCard(TextTheme textTheme) {
+    bool isSelected = _selectedPlan == SubscriptionPlan.weekly;
     return GestureDetector(
-      onTap: () => setState(() => _selectedPackage = package),
+      onTap: () => setState(() => _selectedPlan = SubscriptionPlan.weekly),
       child: Container(
         padding: const EdgeInsets.all(2),
         decoration: BoxDecoration(
           gradient: isSelected
               ? const LinearGradient(
-                  colors: [AppColors.primaryOrange, AppColors.primaryRed],
-                )
+            colors: [AppColors.primaryOrange, AppColors.primaryRed],
+          )
               : null,
           color: isSelected ? null : Colors.grey.shade300,
           borderRadius: BorderRadius.circular(16),
@@ -373,21 +280,21 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      package.storeProduct.title,
+                      '88% off',
                       style: textTheme.labelLarge?.copyWith(
-                        color: AppColors.primaryRed,
+                          color: AppColors.primaryRed
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text.rich(
                       TextSpan(
-                        text: package.storeProduct.priceString,
+                        text: '9.99',
                         style: textTheme.headlineSmall?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
                         children: [
                           TextSpan(
-                            text: '/ week',
+                            text: '/Week',
                             style: textTheme.bodySmall?.copyWith(
                               color: AppColors.textSecondary,
                             ),
@@ -395,9 +302,11 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                         ],
                       ),
                     ),
+                    // const SizedBox(height: 2),
                     Row(
                       children: [
                         Text('Try free trial', style: textTheme.bodySmall),
+                        // const SizedBox(width: 4),
                         Transform.scale(
                           scale: 0.6,
                           child: Switch(
@@ -413,11 +322,11 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                   ],
                 ),
               ),
-              Radio<Package?>(
-                value: package,
-                groupValue: _selectedPackage,
+              Radio<SubscriptionPlan>(
+                value: SubscriptionPlan.weekly,
+                groupValue: _selectedPlan,
                 onChanged: (value) {
-                  setState(() => _selectedPackage = value);
+                  setState(() => _selectedPlan = value!);
                 },
                 activeColor: AppColors.primaryRed,
               ),
