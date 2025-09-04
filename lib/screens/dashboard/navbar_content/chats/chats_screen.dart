@@ -11,6 +11,7 @@ import 'package:iconly/iconly.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 import 'package:provider/provider.dart';
+import 'package:tap_debouncer/tap_debouncer.dart';
 
 class ChatsScreen extends StatefulWidget {
   const ChatsScreen({super.key});
@@ -220,73 +221,81 @@ class _ChatsScreenState extends State<ChatsScreen> {
     Conversation conversation,
     TextTheme textTheme,
   ) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: () {
-        PersistentNavBarNavigator.pushNewScreen(
+    return TapDebouncer(
+      cooldown: const Duration(milliseconds: 300),
+      onTap: () async {
+        await PersistentNavBarNavigator.pushNewScreen(
           context,
           screen: ConversationScreen(conversation: conversation),
           withNavBar: false,
         );
       },
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8.0),
-        child: Row(
-          children: [
-            CircleAvatar(
-              radius: 26,
-              backgroundImage: NetworkImage(conversation.otherUser.avatarUrl),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    conversation.otherUser.name,
-                    style: textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+      builder: (BuildContext context, TapDebouncerFunc? onTap) {
+        return GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8.0),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 26,
+                  backgroundImage: NetworkImage(
+                    conversation.otherUser.avatarUrl,
                   ),
-                  const SizedBox(height: 4),
-                  Row(
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(
-                        Iconsax.export_2_copy,
-                        size: 14,
-                        color: AppColors.textSecondary,
-                      ),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Text(
-                          conversation.lastMessage,
-                          style: textTheme.bodySmall,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                      Text(
+                        conversation.otherUser.name,
+                        style: textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          const Icon(
+                            Iconsax.export_2_copy,
+                            size: 14,
+                            color: AppColors.textSecondary,
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              conversation.lastMessage,
+                              style: textTheme.bodySmall,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 10),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  TimeAgo.format(conversation.lastMessageTimestamp),
-                  style: textTheme.bodySmall,
                 ),
-                const SizedBox(height: 6),
-                _buildStatusIndicator(context, conversation, textTheme),
+                const SizedBox(width: 10),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      TimeAgo.format(conversation.lastMessageTimestamp),
+                      style: textTheme.bodySmall,
+                    ),
+                    const SizedBox(height: 6),
+                    _buildStatusIndicator(context, conversation, textTheme),
+                  ],
+                ),
               ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
@@ -375,7 +384,8 @@ class _RecentMatchesListState extends State<RecentMatchesList> {
             itemCount: matches.length,
             itemBuilder: (context, index) {
               final match = matches[index];
-              return GestureDetector(
+              return TapDebouncer(
+                cooldown: const Duration(seconds: 1),
                 onTap: () async {
                   final firebaseService = Provider.of<FirebaseService>(
                     context,
@@ -389,29 +399,34 @@ class _RecentMatchesListState extends State<RecentMatchesList> {
                   final conversation = await firebaseService
                       .getOrCreateConversationWithUser(otherUser);
                   if (context.mounted) {
-                    PersistentNavBarNavigator.pushNewScreen(
+                    await PersistentNavBarNavigator.pushNewScreen(
                       context,
                       screen: ConversationScreen(conversation: conversation),
                       withNavBar: false,
                     );
                   }
                 },
-                child: Padding(
-                  padding: const EdgeInsets.only(right: 16.0),
-                  child: Column(
-                    children: [
-                      CircleAvatar(
-                        radius: 26,
-                        backgroundImage: NetworkImage(match['avatar']!),
+                builder: (BuildContext context, TapDebouncerFunc? onTap) {
+                  return GestureDetector(
+                    onTap: onTap,
+                    child: Padding(
+                      padding: const EdgeInsets.only(right: 16.0),
+                      child: Column(
+                        children: [
+                          CircleAvatar(
+                            radius: 26,
+                            backgroundImage: NetworkImage(match['avatar']!),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            match['name']!,
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 6),
-                      Text(
-                        match['name']!,
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ],
-                  ),
-                ),
+                    ),
+                  );
+                },
               );
             },
           ),
