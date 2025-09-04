@@ -12,6 +12,7 @@ import 'package:iconly/iconly.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 import 'package:provider/provider.dart';
+import 'package:firstgenapp/screens/dashboard/navbar_content/home/match_detail/match_detail_screen.dart';
 
 /// A reusable widget to display a single post in a feed.
 /// It's optimized for performance by using cached user data and optimized image loading.
@@ -50,6 +51,11 @@ class PostCard extends StatelessWidget {
 
   Widget _buildPostHeader(BuildContext context, CommunityViewModel viewModel) {
     final textTheme = Theme.of(context).textTheme;
+    final firebaseService = Provider.of<FirebaseService>(
+      context,
+      listen: false,
+    );
+    final currentUserId = firebaseService.currentUser?.uid;
 
     return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
       stream: viewModel.getUserStream(post.authorId),
@@ -139,10 +145,28 @@ class PostCard extends StatelessWidget {
                   child: GestureDetector(
                     behavior: HitTestBehavior.opaque,
                     onTap: () {
-                      if (imageUrls.isNotEmpty) {
+                      if (context.mounted && post.authorId != currentUserId) {
+                        final Map<String, dynamic> userProfile = {
+                          'uid': post.authorId,
+                          'name': authorData?['fullName'] ?? "Author Name",
+                          'imageUrl':
+                              authorData?['profileImageUrl'] ??
+                              "https://randomuser.me/api/portraits/women/1.jpg",
+                          'about': authorData?['about'] ?? 'No bio yet.',
+                          'profession': authorData?['profession'] ?? 'N/A',
+                          'countryCode': authorData?['countryCode'] ?? '',
+                          'interests': authorData?['interests'] ?? [],
+                          'age': authorData?['age'] ?? 'N/A',
+                          'distance': authorData?['distance'] ?? 2.5,
+                          'matchPercentage':
+                              authorData?['matchPercentage'] ?? 0.80,
+                        };
                         PersistentNavBarNavigator.pushNewScreen(
                           context,
-                          screen: FullScreenImageViewer(imageUrls: imageUrls),
+                          screen: MatchDetailScreen(
+                            userProfile: userProfile,
+                            isMatch: false,
+                          ),
                           withNavBar: false,
                         );
                       }
