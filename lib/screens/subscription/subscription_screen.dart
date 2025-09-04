@@ -1,8 +1,11 @@
 import 'package:firstgenapp/common/gradient_btn.dart';
 import 'package:firstgenapp/constants/appColors.dart';
+import 'package:firstgenapp/viewmodels/firebase_subscription_provider.dart';
+import 'package:firstgenapp/viewmodels/inapp_subscription_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
 import 'package:hugeicons/hugeicons.dart';
+import 'package:provider/provider.dart';
 
 class SubscriptionScreen extends StatefulWidget {
   const SubscriptionScreen({super.key});
@@ -20,6 +23,8 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    // Get the subscription provider to check loading state
+    final subscriptionProvider = Provider.of<SubscriptionProvider>(context);
 
     return Scaffold(
       backgroundColor: AppColors.primaryBackground,
@@ -88,7 +93,56 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
               ],
             ),
             const SizedBox(height: 8),
-            GradientButton(text: 'Subscribe Now', onPressed: () {}),
+            GradientButton(
+              text: 'Subscribe Now',
+              child: subscriptionProvider.isLoading
+                  ? const Center(
+                      child: SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.0,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.white,
+                          ),
+                        ),
+                      ),
+                    )
+                  : null,
+              onPressed: subscriptionProvider.isLoading
+                  ? null
+                  : () {
+                      // Determine the selected plan as a string
+                      final plan = _selectedPlan == SubscriptionPlan.monthly
+                          ? 'monthly'
+                          : 'weekly';
+
+                      // Call the purchasePackage method from the provider
+                      Provider.of<SubscriptionProvider>(
+                        context,
+                        listen: false,
+                      ).purchasePackage(plan).then((success) {
+                        if (success && mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Subscription successful!'),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                          Navigator.of(context).pop();
+                        } else if (!success && mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Subscription failed. Please try again.',
+                              ),
+                              backgroundColor: AppColors.error,
+                            ),
+                          );
+                        }
+                      });
+                    },
+            ),
             Center(
               child: TextButton(
                 onPressed: () {},
@@ -123,10 +177,10 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
               TextSpan(
                 text: '$title – ',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
-                    height: 1.3,
-                    color: AppColors.primaryRed
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                  height: 1.3,
+                  color: AppColors.primaryRed,
                 ),
                 children: [
                   TextSpan(
@@ -169,8 +223,8 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
             decoration: BoxDecoration(
               gradient: isSelected
                   ? const LinearGradient(
-                colors: [AppColors.primaryOrange, AppColors.primaryRed],
-              )
+                      colors: [AppColors.primaryOrange, AppColors.primaryRed],
+                    )
                   : null,
               color: isSelected ? null : Colors.grey.shade300, // Border color
               borderRadius: BorderRadius.circular(16),
@@ -190,7 +244,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                         Text(
                           '88% off',
                           style: textTheme.labelLarge?.copyWith(
-                              color: AppColors.primaryRed
+                            color: AppColors.primaryRed,
                           ),
                         ),
                         const SizedBox(height: 2),
@@ -260,8 +314,8 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
         decoration: BoxDecoration(
           gradient: isSelected
               ? const LinearGradient(
-            colors: [AppColors.primaryOrange, AppColors.primaryRed],
-          )
+                  colors: [AppColors.primaryOrange, AppColors.primaryRed],
+                )
               : null,
           color: isSelected ? null : Colors.grey.shade300,
           borderRadius: BorderRadius.circular(16),
@@ -281,7 +335,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                     Text(
                       '88% off',
                       style: textTheme.labelLarge?.copyWith(
-                          color: AppColors.primaryRed
+                        color: AppColors.primaryRed,
                       ),
                     ),
                     const SizedBox(height: 2),

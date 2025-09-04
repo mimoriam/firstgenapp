@@ -237,6 +237,64 @@ class FirebaseService {
     }
   }
 
+  /// START: Manual Subscription Logic
+  /// This stream now returns a map containing the subscription status, plan, and end date.
+  /// This provides a single source of truth for all subscription-related UI.
+  Stream<Map<String, dynamic>?> getSubscriptionStatusStream() {
+    final user = _auth.currentUser;
+    if (user == null) {
+      return Stream.value(null); // No user, no subscription status.
+    }
+    return _firestore.collection(userCollection).doc(user.uid).snapshots().map((
+      snapshot,
+    ) {
+      if (!snapshot.exists) return {'isSubscribed': false};
+      final data = snapshot.data()!;
+      if (data.containsKey('subscriptionEndDate') &&
+          data['subscriptionEndDate'] is Timestamp) {
+        final endDate = (data['subscriptionEndDate'] as Timestamp).toDate();
+        final isSubscribed = endDate.isAfter(DateTime.now());
+        // Return a map with all necessary subscription details.
+        return {
+          'isSubscribed': isSubscribed,
+          'plan': data['subscriptionPlan'],
+          'endDate': endDate,
+        };
+      }
+      return {
+        'isSubscribed': false,
+      }; // Default to not subscribed if fields are missing.
+    });
+  }
+
+  /// Updates the user's document in Firestore to reflect a new subscription.
+  /// This is a simulation of a purchase.
+  Future<void> subscribeUser(String plan) async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+
+    DateTime endDate;
+    // Calculate the end date based on the selected plan
+    if (plan == 'monthly') {
+      endDate = DateTime.now().add(const Duration(days: 30));
+    } else if (plan == 'weekly') {
+      endDate = DateTime.now().add(const Duration(days: 7));
+    } else {
+      return; // Invalid plan, do nothing
+    }
+
+    // Update the user's document with the plan and end date
+    await _firestore.collection(userCollection).doc(user.uid).set(
+      {
+        'subscriptionPlan': plan,
+        'subscriptionEndDate': Timestamp.fromDate(endDate),
+      },
+      SetOptions(merge: true),
+    ); // Use merge to avoid overwriting other user data
+  }
+
+  /// END: Manual Subscription Logic
+
   Future<String> uploadProfileImage(String userId, File image) async {
     try {
       final ref = _storage.ref().child('profile_images').child('$userId.jpg');

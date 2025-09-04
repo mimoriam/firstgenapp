@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firstgenapp/constants/appVersion.dart';
 import 'package:firstgenapp/screens/dashboard/navbar_content/profile/profile_inner/profile_inner_screen.dart';
@@ -5,6 +6,7 @@ import 'package:firstgenapp/screens/subscription/subscription_screen.dart';
 import 'package:firstgenapp/services/firebase_service.dart';
 import 'package:firstgenapp/services/notification_service.dart';
 import 'package:firstgenapp/viewmodels/community_viewmodel.dart';
+import 'package:firstgenapp/viewmodels/firebase_subscription_provider.dart';
 import 'package:firstgenapp/viewmodels/inapp_subscription_provider.dart';
 import 'package:firstgenapp/viewmodels/profile_provider.dart';
 import 'package:flutter/material.dart';
@@ -13,6 +15,7 @@ import 'package:iconly/iconly.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -96,6 +99,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
               const SizedBox(height: 10),
               if (!subscriptionProvider.isPremium) ...[
                 _buildUpgradeCard(),
+                const SizedBox(height: 10),
+              ] else ...[
+                _buildSubscribedCard(userData, textTheme),
                 const SizedBox(height: 10),
               ],
               _buildConnectionPreferences(userData, firebaseService),
@@ -233,6 +239,63 @@ class _ProfileScreenState extends State<ProfileScreen> {
             const Icon(Icons.arrow_forward_ios, color: Colors.white, size: 16),
           ],
         ),
+      ),
+    );
+  }
+
+  /// New widget to display when the user is subscribed.
+  /// It shows their premium status and subscription end date.
+  Widget _buildSubscribedCard(
+    Map<String, dynamic> userData,
+    TextTheme textTheme,
+  ) {
+    // Safely get the subscription plan, defaulting to 'Premium'.
+    final plan =
+        (userData['subscriptionPlan'] as String?)?.capitalize() ?? 'Premium';
+
+    // Safely get and format the subscription end date.
+    final endDateTimestamp = userData['subscriptionEndDate'] as Timestamp?;
+    String endDate = 'N/A';
+    if (endDateTimestamp != null) {
+      endDate = DateFormat('MMMM d, yyyy').format(endDateTimestamp.toDate());
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            Colors.green.shade600,
+            Colors.green.shade400,
+          ], // Green for active subscription
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        children: [
+          const Icon(IconlyBold.shield_done, color: Colors.white, size: 32),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'You are a Premium Member!',
+                  style: textTheme.titleLarge?.copyWith(color: Colors.white),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Your $plan plan is active until $endDate.',
+                  style: textTheme.bodySmall?.copyWith(
+                    color: Colors.white.withOpacity(0.9),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -878,5 +941,11 @@ class _TitledChipInputState extends State<_TitledChipInput> {
         ),
       ],
     );
+  }
+}
+
+extension StringExtension on String {
+  String capitalize() {
+    return "${this[0].toUpperCase()}${substring(1).toLowerCase()}";
   }
 }
