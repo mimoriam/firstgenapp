@@ -1,9 +1,11 @@
+import 'dart:io';
+import 'package:firstgenapp/constants/appColors.dart';
 import 'package:firstgenapp/models/chat_models.dart';
 import 'package:firstgenapp/services/firebase_service.dart';
 import 'package:firstgenapp/utils/time_ago.dart';
 import 'package:flutter/material.dart';
-import 'package:firstgenapp/constants/appColors.dart';
 import 'package:iconly/iconly.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 class ConversationScreen extends StatefulWidget {
@@ -25,6 +27,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
   bool _isUserAtBottom = true;
   int _messageCount = 0;
   late Future<Conversation> _conversationFuture;
+  File? _imageFile;
+  bool _isSending = false;
 
   @override
   void initState() {
@@ -34,7 +38,6 @@ class _ConversationScreenState extends State<ConversationScreen> {
       listen: false,
     );
 
-    // Initialize the conversation future based on what was passed in.
     if (widget.conversation != null) {
       _conversationFuture = Future.value(widget.conversation);
       firebaseService.markAsRead(widget.conversation!.id);
@@ -44,7 +47,6 @@ class _ConversationScreenState extends State<ConversationScreen> {
       );
     }
 
-    // Add listeners for smart scrolling behavior.
     _scrollController.addListener(_scrollListener);
     _focusNode.addListener(_onFocusChange);
 
@@ -57,14 +59,12 @@ class _ConversationScreenState extends State<ConversationScreen> {
   void dispose() {
     _messageController.dispose();
     _scrollController.removeListener(_scrollListener);
-    // Remove the focus node listener.
     _focusNode.removeListener(_onFocusChange);
     _scrollController.dispose();
     _focusNode.dispose();
     super.dispose();
   }
 
-  // This listener updates whether the user is at the bottom of the list.
   void _scrollListener() {
     if (_scrollController.hasClients) {
       if (_scrollController.position.atEdge) {
@@ -78,11 +78,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
     }
   }
 
-  // **HERE IS THE MISSING METHOD**
-  // This method scrolls to the bottom when the user focuses the text field.
   void _onFocusChange() {
     if (_focusNode.hasFocus) {
-      // Delay helps ensure the keyboard is up before scrolling.
       Future.delayed(
         const Duration(milliseconds: 300),
         () => _scrollToBottom(),
@@ -91,7 +88,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
   }
 
   void _scrollToBottom({bool animated = true}) {
-    if (_scrollController.hasClients) {
+    if (_scrollController.hasClients &&
+        _scrollController.position.maxScrollExtent > 0) {
       final position = _scrollController.position.maxScrollExtent;
       if (animated) {
         _scrollController.animateTo(
@@ -105,23 +103,58 @@ class _ConversationScreenState extends State<ConversationScreen> {
     }
   }
 
-  void _sendMessage(String conversationId) {
+  Future<void> _pickImage() async {
+    final pickedFile = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+    );
+    if (pickedFile != null) {
+      setState(() {
+        _imageFile = File(pickedFile.path);
+      });
+    }
+  }
+
+  void _sendMessage(String conversationId) async {
     final text = _messageController.text.trim();
-    if (text.isNotEmpty) {
+    if (text.isEmpty && _imageFile == null) return;
+
+    setState(() {
+      _isSending = true;
+    });
+
+    try {
       final firebaseService = Provider.of<FirebaseService>(
         context,
         listen: false,
       );
-      firebaseService.sendMessage(conversationId, text);
+      await firebaseService.sendMessage(
+        conversationId,
+        text: text.isNotEmpty ? text : null,
+        image: _imageFile,
+      );
       _messageController.clear();
+      setState(() {
+        _imageFile = null;
+      });
       _scrollToBottom();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to send message.')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSending = false;
+        });
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final firebaseService = Provider.of<FirebaseService>(context);
-    // Use the name from whichever object was passed in for the initial AppBar title.
     final initialAppBarTitle =
         widget.conversation?.otherUser.name ?? widget.otherUser?.name ?? 'Chat';
 
@@ -206,6 +239,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
                   },
                 ),
               ),
+              if (_imageFile != null) _buildImagePreview(),
               _buildMessageComposer(() => _sendMessage(conversation.id)),
             ],
           );
@@ -232,20 +266,20 @@ class _ConversationScreenState extends State<ConversationScreen> {
         ),
       ),
       centerTitle: false,
-      // actions: [
-      //   IconButton(
-      //     onPressed: () {},
-      //     icon: const Icon(IconlyLight.video, color: AppColors.textSecondary),
-      //   ),
-      //   IconButton(
-      //     onPressed: () {},
-      //     icon: const Icon(IconlyLight.calling, color: AppColors.textSecondary),
-      //   ),
-      //   IconButton(
-      //     onPressed: () {},
-      //     icon: const Icon(Icons.more_vert, color: AppColors.textSecondary),
-      //   ),
-      // ],
+      actions: [
+        IconButton(
+          onPressed: () {},
+          icon: const Icon(IconlyLight.video, color: AppColors.textSecondary),
+        ),
+        IconButton(
+          onPressed: () {},
+          icon: const Icon(IconlyLight.calling, color: AppColors.textSecondary),
+        ),
+        IconButton(
+          onPressed: () {},
+          icon: const Icon(Icons.more_vert, color: AppColors.textSecondary),
+        ),
+      ],
     );
   }
 
@@ -300,12 +334,48 @@ class _ConversationScreenState extends State<ConversationScreen> {
             constraints: BoxConstraints(
               maxWidth: MediaQuery.of(context).size.width * 0.7,
             ),
-            padding: const EdgeInsets.all(12.0),
+            padding: const EdgeInsets.all(4.0),
             margin: const EdgeInsets.symmetric(vertical: 4.0),
             decoration: BoxDecoration(color: color, borderRadius: borderRadius),
-            child: Text(
-              message.text,
-              style: TextStyle(color: textColor, fontSize: 15, height: 1.4),
+            child: ClipRRect(
+              borderRadius: borderRadius,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (message.imageUrl != null)
+                    Image.network(
+                      message.imageUrl!,
+                      height: 200,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return Container(
+                          height: 200,
+                          alignment: Alignment.center,
+                          child: CircularProgressIndicator(
+                            value: loadingProgress.expectedTotalBytes != null
+                                ? loadingProgress.cumulativeBytesLoaded /
+                                      loadingProgress.expectedTotalBytes!
+                                : null,
+                          ),
+                        );
+                      },
+                    ),
+                  if (message.text != null && message.text!.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(8, 8, 8, 4),
+                      child: Text(
+                        message.text!,
+                        style: TextStyle(
+                          color: textColor,
+                          fontSize: 15,
+                          height: 1.4,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 4),
@@ -338,6 +408,34 @@ class _ConversationScreenState extends State<ConversationScreen> {
     );
   }
 
+  Widget _buildImagePreview() {
+    return Container(
+      padding: const EdgeInsets.all(8.0),
+      color: Colors.white,
+      child: Row(
+        children: [
+          Stack(
+            children: [
+              Image.file(_imageFile!, height: 60, width: 60, fit: BoxFit.cover),
+              Positioned(
+                top: -10,
+                right: -10,
+                child: IconButton(
+                  icon: const Icon(
+                    Icons.cancel,
+                    color: Colors.black54,
+                    size: 20,
+                  ),
+                  onPressed: () => setState(() => _imageFile = null),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildMessageComposer(VoidCallback onSend) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 12.0),
@@ -351,7 +449,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
                 color: AppColors.textSecondary,
                 size: 28,
               ),
-              onPressed: () {},
+              onPressed: _pickImage,
             ),
             Expanded(
               child: Container(
@@ -374,12 +472,18 @@ class _ConversationScreenState extends State<ConversationScreen> {
               ),
             ),
             IconButton(
-              icon: const Icon(
-                Icons.send,
-                color: AppColors.primaryRed,
-                size: 28,
-              ),
-              onPressed: onSend,
+              icon: _isSending
+                  ? const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(
+                      Icons.send,
+                      color: AppColors.primaryRed,
+                      size: 28,
+                    ),
+              onPressed: _isSending ? null : onSend,
             ),
           ],
         ),

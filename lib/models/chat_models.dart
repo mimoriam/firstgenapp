@@ -1,3 +1,5 @@
+import 'dart:io';
+
 class ChatUser {
   final String uid;
   final String name;
@@ -21,25 +23,28 @@ class ChatUser {
 
 class ChatMessage {
   final String id;
-  final String text;
+  final String? text;
   final String senderId;
   final String timestamp;
+  final String? imageUrl;
   final String status;
 
   ChatMessage({
     required this.id,
-    required this.text,
+    this.text,
     required this.senderId,
     required this.timestamp,
+    this.imageUrl,
     this.status = 'sent',
   });
 
   factory ChatMessage.fromJson(Map<String, dynamic> json, String id) {
     return ChatMessage(
       id: id,
-      text: json['text'] ?? '',
+      text: json['text'],
       senderId: json['senderId'] ?? '',
       timestamp: json['timestamp'] ?? DateTime.now().toUtc().toIso8601String(),
+      imageUrl: json['imageUrl'],
       status: json['status'] ?? 'sent',
     );
   }
@@ -49,6 +54,7 @@ class ChatMessage {
       'text': text,
       'senderId': senderId,
       'timestamp': timestamp,
+      'imageUrl': imageUrl,
       'status': status,
     };
   }

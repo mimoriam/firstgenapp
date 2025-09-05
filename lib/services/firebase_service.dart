@@ -907,18 +907,29 @@ class FirebaseService {
         });
   }
 
-  Future<void> sendMessage(String conversationId, String text) async {
+  Future<void> sendMessage(
+    String conversationId, {
+    String? text,
+    File? image,
+  }) async {
     final currentUser = _auth.currentUser;
     if (currentUser == null) return;
+    if (text == null && image == null) return;
 
     final messageId = _database.ref().push().key;
     final now = DateTime.now().toUtc().toIso8601String();
+    String? imageUrl;
+
+    if (image != null) {
+      imageUrl = await uploadChatImage(conversationId, messageId!, image);
+    }
 
     final message = ChatMessage(
       id: messageId!,
       text: text,
       senderId: currentUser.uid,
       timestamp: now,
+      imageUrl: imageUrl,
     );
 
     await _database
@@ -936,8 +947,9 @@ class FirebaseService {
         (id) => id != currentUser.uid,
       );
 
+      final lastMessage = image != null ? 'Photo' : text!;
       conversationRef.update({
-        'lastMessage': text,
+        'lastMessage': lastMessage,
         'lastMessageTimestamp': now,
         'lastMessageSenderId': currentUser.uid,
       });
@@ -945,7 +957,31 @@ class FirebaseService {
           .child('unreadCount/$otherUserId')
           .set(ServerValue.increment(1));
 
-      _sendNotification(otherUserId, text);
+      _sendNotification(otherUserId, lastMessage);
+    }
+  }
+
+  Future<String> uploadChatImage(
+    String conversationId,
+    String messageId,
+    File image,
+  ) async {
+    try {
+      final ref = _storage
+          .ref()
+          .child('chat_images')
+          .child(conversationId)
+          .child('$messageId.jpg');
+      await ref.putFile(image);
+      return await ref.getDownloadURL();
+    } on FirebaseException catch (e) {
+      log('FirebaseException in uploadChatImage: ${e.code}', error: e);
+      throw Exception('Failed to upload chat image.');
+    } catch (e) {
+      log('An unexpected error occurred in uploadChatImage', error: e);
+      throw Exception(
+        'An unexpected error occurred while uploading your image.',
+      );
     }
   }
 
