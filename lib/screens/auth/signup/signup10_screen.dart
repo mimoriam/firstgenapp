@@ -76,33 +76,23 @@ class _Signup10ScreenState extends State<Signup10Screen> {
     );
 
     if (image != null) {
-      // _formKey.currentState?.fields['profile_image']?.didChange(
-      //   File(image.path),
-      // );
-
-      // **MODIFICATION START: Add cropping step**
       final croppedFile = await ImageCropper().cropImage(
         sourcePath: image.path,
         maxWidth: 720,
         maxHeight: 1280,
-        // aspectRatio: CropAspectRatio(ratioX: 9.0, ratioY: 16.0),
         uiSettings: [
           AndroidUiSettings(
             toolbarTitle: 'Crop Image',
             toolbarColor: AppColors.primaryRed,
             toolbarWidgetColor: Colors.white,
             initAspectRatio: CropAspectRatioPreset.original,
-            aspectRatioPresets: [
-              CropAspectRatioPreset.original // Enforce a square aspect ratio
-            ],
-            lockAspectRatio: true, // User cannot change the aspect ratio
+            aspectRatioPresets: [CropAspectRatioPreset.original],
+            lockAspectRatio: true,
           ),
           IOSUiSettings(
             title: 'Crop Image',
             aspectRatioLockEnabled: true,
-            aspectRatioPresets: [
-              CropAspectRatioPreset.square, // Enforce a square aspect ratio
-            ],
+            aspectRatioPresets: [CropAspectRatioPreset.square],
           ),
         ],
       );
@@ -133,13 +123,6 @@ class _Signup10ScreenState extends State<Signup10Screen> {
           ).recheckUserProfile();
 
           viewModel.reset();
-          // FIX: Navigate directly to DashboardScreen instead of AuthGate.
-          // This ensures the user lands on the correct screen and
-          // rebuilds the navigation stack properly.
-          // Navigator.of(context).pushAndRemoveUntil(
-          //   MaterialPageRoute(builder: (context) => const DashboardScreen()),
-          //   (Route<dynamic> route) => false,
-          // );
           if (mounted) {
             Navigator.of(context).pushAndRemoveUntil(
               MaterialPageRoute(builder: (context) => const AuthGate()),
@@ -173,7 +156,6 @@ class _Signup10ScreenState extends State<Signup10Screen> {
     final textTheme = Theme.of(context).textTheme;
     final viewModel = context.watch<SignUpViewModel>();
 
-    // MODIFICATION: Changed dismissOnCapturedTaps to false.
     return KeyboardDismissOnTap(
       dismissOnCapturedTaps: false,
       child: Scaffold(
@@ -239,10 +221,7 @@ class _Signup10ScreenState extends State<Signup10Screen> {
                           ),
                           const SizedBox(height: 12),
                           _buildProfessionInput(),
-                          // MODIFICATION: Reduced top and bottom padding.
-                          // const SizedBox(height: 10),
                           _buildTermsAndConditions(),
-                          // const SizedBox(height: 10),
                         ],
                       ),
                     ),
@@ -440,18 +419,32 @@ class _Signup10ScreenState extends State<Signup10Screen> {
   }
 
   Widget _buildDobInput() {
+    final now = DateTime.now();
+    final eighteenYearsAgo = DateTime(now.year - 18, now.month, now.day);
+
     return FormBuilderDateTimePicker(
       name: 'dob',
       inputType: InputType.date,
       format: DateFormat('MM-dd-yyyy'),
+      initialDate: eighteenYearsAgo,
+      lastDate: now,
       decoration: const InputDecoration(
         hintText: '12-25-1995',
         hintStyle: TextStyle(fontSize: 14, color: AppColors.textSecondary),
         suffixIcon: Icon(IconlyLight.calendar, color: AppColors.textSecondary),
       ),
-      validator: FormBuilderValidators.required(
-        errorText: 'Please select your date of birth',
-      ),
+      validator: FormBuilderValidators.compose([
+        FormBuilderValidators.required(
+          errorText: 'Please select your date of birth',
+        ),
+        (val) {
+          if (val == null) return null;
+          if (val.isAfter(eighteenYearsAgo)) {
+            return 'You must be at least 18 years old to create an account.';
+          }
+          return null;
+        },
+      ]),
     );
   }
 
