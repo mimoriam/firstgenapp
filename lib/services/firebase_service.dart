@@ -1156,6 +1156,53 @@ class FirebaseService {
     });
   }
 
+  Future<void> superLikeUser(String likedUserId) async {
+    final currentUser = _auth.currentUser;
+    if (currentUser == null) return;
+
+    final currentUserRef = _firestore
+        .collection(userCollection)
+        .doc(currentUser.uid);
+    final likedUserRef = _firestore.collection(userCollection).doc(likedUserId);
+
+    await _firestore.runTransaction((transaction) async {
+      final currentUserSnapshot = await transaction.get(currentUserRef);
+      final likedUserSnapshot = await transaction.get(likedUserRef);
+
+      if (!currentUserSnapshot.exists || !likedUserSnapshot.exists) {
+        throw Exception("User document not found!");
+      }
+
+      final currentUserData =
+          currentUserSnapshot.data() as Map<String, dynamic>;
+      final likedUserData = likedUserSnapshot.data() as Map<String, dynamic>;
+
+      // Directly create a match for both users
+      transaction.update(currentUserRef, {'matches.$likedUserId': true});
+      transaction.update(likedUserRef, {'matches.${currentUser.uid}': true});
+
+      // Also add to liked users for consistency, if you have logic that depends on it
+      transaction.update(currentUserRef, {'likedUsers.$likedUserId': true});
+
+      // Add 'match' activity for both users
+      await _addActivity(
+        userId: likedUserId,
+        type: ActivityType.matched,
+        fromUser: currentUser,
+        fromUserData: currentUserData,
+      );
+      await _addActivity(
+        userId: currentUser.uid,
+        type: ActivityType.matched,
+        fromUser: likedUserSnapshot,
+        fromUserData: likedUserData,
+      );
+    });
+
+    // Add to recent matches for the current user
+    await addRecentUser(likedUserId);
+  }
+
   Future<void> _addActivity({
     required String userId,
     required ActivityType type,

@@ -5,9 +5,11 @@ import 'package:firstgenapp/constants/appColors.dart';
 import 'package:firstgenapp/models/chat_models.dart';
 import 'package:firstgenapp/screens/dashboard/navbar_content/chats/conversation/conversation_screen.dart';
 import 'package:firstgenapp/services/firebase_service.dart';
+import 'package:firstgenapp/viewmodels/firebase_subscription_provider.dart';
 import 'package:firstgenapp/viewmodels/profile_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_card_swiper/flutter_card_swiper.dart';
+import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 import 'package:provider/provider.dart';
@@ -26,6 +28,7 @@ class _SearchScreenState extends State<SearchScreen> {
   List<Map<String, dynamic>> _users = [];
   int _currentIndex = 0;
   bool _isFinished = false;
+  bool _isSuperLiking = false;
 
   @override
   void didChangeDependencies() {
@@ -462,6 +465,11 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   Widget _buildActionButtons(int index) {
+    final subscriptionProvider = Provider.of<SubscriptionProvider>(context);
+    final firebaseService = Provider.of<FirebaseService>(
+      context,
+      listen: false,
+    );
     return Positioned(
       bottom: 30,
       left: 0,
@@ -482,21 +490,93 @@ class _SearchScreenState extends State<SearchScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   _buildCircleButton(
-                    icon: Icons.close,
-                    bgColor: AppColors.primaryBackground,
-                    iconColor: AppColors.textSecondary,
-                    size: 52,
                     onPressed: () =>
                         _swiperController.swipe(CardSwiperDirection.left),
+                    size: 52,
+                    bgColor: AppColors.primaryBackground,
+                    child: const Icon(
+                      Icons.close,
+                      color: AppColors.textSecondary,
+                      size: 52 * 0.5,
+                    ),
                   ),
                   const SizedBox(width: 12),
+                  if (subscriptionProvider.isPremium) ...[
+                    _buildCircleButton(
+                      size: 52,
+                      isGradient: true,
+                      onPressed: _isSuperLiking
+                          ? null
+                          : () async {
+                              setState(() {
+                                _isSuperLiking = true;
+                              });
+                              final user = _users[index];
+                              try {
+                                await firebaseService.superLikeUser(
+                                  user['uid'],
+                                );
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        "Super Like! It's a Match!",
+                                      ),
+                                      backgroundColor: Colors.green,
+                                    ),
+                                  );
+                                  _swiperController.swipe(
+                                    CardSwiperDirection.right,
+                                  );
+                                }
+                              } catch (e) {
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        "Super Like failed: ${e.toString()}",
+                                      ),
+                                      backgroundColor: AppColors.error,
+                                    ),
+                                  );
+                                }
+                              } finally {
+                                if (mounted) {
+                                  setState(() {
+                                    _isSuperLiking = false;
+                                  });
+                                }
+                              }
+                            },
+                      child: _isSuperLiking
+                          ? const SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.5,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Colors.white,
+                                ),
+                              ),
+                            )
+                          : const Icon(
+                              TablerIcons.sparkles,
+                              color: AppColors.primaryBackground,
+                              size: 52 * 0.5,
+                            ),
+                    ),
+                    const SizedBox(width: 12),
+                  ],
                   _buildCircleButton(
-                    icon: Icons.favorite,
+                    size: 62,
                     isGradient: true,
-                    iconColor: AppColors.primaryBackground,
-                    size: 62, // Make like button bigger
                     onPressed: () =>
                         _swiperController.swipe(CardSwiperDirection.right),
+                    child: const Icon(
+                      Icons.favorite,
+                      color: AppColors.primaryBackground,
+                      size: 62 * 0.5,
+                    ),
                   ),
                 ],
               ),
@@ -508,12 +588,11 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   Widget _buildCircleButton({
-    required IconData icon,
+    required Widget child,
     Color? bgColor,
     bool isGradient = false,
-    required Color iconColor,
     required double size,
-    required VoidCallback onPressed,
+    required VoidCallback? onPressed,
   }) {
     return GestureDetector(
       onTap: onPressed,
@@ -531,7 +610,7 @@ class _SearchScreenState extends State<SearchScreen> {
           color: bgColor,
           shape: BoxShape.circle,
         ),
-        child: Icon(icon, color: iconColor, size: size * 0.5),
+        child: Center(child: child),
       ),
     );
   }

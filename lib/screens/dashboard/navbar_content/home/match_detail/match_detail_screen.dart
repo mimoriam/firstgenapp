@@ -1,14 +1,19 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firstgenapp/models/chat_models.dart';
 import 'package:firstgenapp/screens/dashboard/navbar_content/chats/conversation/conversation_screen.dart';
+import 'package:firstgenapp/services/firebase_service.dart';
+import 'package:firstgenapp/viewmodels/firebase_subscription_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:firstgenapp/constants/appColors.dart';
+import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
 import 'package:iconly/iconly.dart';
 import 'dart:ui';
 import 'package:country_picker/country_picker.dart';
 import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
+import 'package:provider/provider.dart';
 
-class MatchDetailScreen extends StatelessWidget {
+class MatchDetailScreen extends StatefulWidget {
   final Map<String, dynamic> userProfile;
   final bool isMatch;
 
@@ -19,16 +24,23 @@ class MatchDetailScreen extends StatelessWidget {
   });
 
   @override
+  State<MatchDetailScreen> createState() => _MatchDetailScreenState();
+}
+
+class _MatchDetailScreenState extends State<MatchDetailScreen> {
+  bool _isNowMatched = false;
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.secondaryBackground,
       body: Stack(
         children: [
-          _buildBackgroundImage(userProfile['imageUrl']),
+          _buildBackgroundImage(widget.userProfile['imageUrl']),
           _buildBottomInfoCard(context),
           _buildOverlayContent(context),
           _buildTopBar(context),
-          _buildActionButtons(context),
+          _buildActionButtonsWrapper(context),
         ],
       ),
     );
@@ -56,7 +68,7 @@ class MatchDetailScreen extends StatelessWidget {
                   ),
                   const SizedBox(width: 4),
                   Text(
-                    '${userProfile['distance'] ?? 2.5} km',
+                    '${widget.userProfile['distance'] ?? 2.5} km',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: Colors.white,
                       fontWeight: FontWeight.w600,
@@ -115,17 +127,17 @@ class MatchDetailScreen extends StatelessWidget {
                 _buildSectionTitle('About', context),
                 const SizedBox(height: 8),
                 Text(
-                  userProfile['about'] ?? 'No bio yet.',
+                  widget.userProfile['about'] ?? 'No bio yet.',
                   style: textTheme.bodySmall,
                 ),
                 const SizedBox(height: 20),
                 _buildSectionTitle('Languages', context),
                 const SizedBox(height: 12),
-                _buildChipGroup(userProfile['languages'] ?? [], context),
+                _buildChipGroup(widget.userProfile['languages'] ?? [], context),
                 const SizedBox(height: 20),
                 _buildSectionTitle('Interest', context),
                 const SizedBox(height: 12),
-                _buildChipGroup(userProfile['interests'] ?? [], context),
+                _buildChipGroup(widget.userProfile['interests'] ?? [], context),
               ],
             ),
           ),
@@ -136,7 +148,7 @@ class MatchDetailScreen extends StatelessWidget {
 
   Widget _buildOverlayContent(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    final country = Country.tryParse(userProfile['countryCode'] ?? '');
+    final country = Country.tryParse(widget.userProfile['countryCode'] ?? '');
 
     return Positioned(
       bottom: MediaQuery.of(context).size.height * 0.43,
@@ -145,7 +157,7 @@ class MatchDetailScreen extends StatelessWidget {
       child: Column(
         children: [
           Text(
-            '${userProfile['name'] ?? 'N/A'}, ${userProfile['age'] ?? 'N/A'}',
+            '${widget.userProfile['name'] ?? 'N/A'}, ${widget.userProfile['age'] ?? 'N/A'}',
             textAlign: TextAlign.center,
             style: textTheme.headlineLarge?.copyWith(
               color: Colors.white,
@@ -154,7 +166,7 @@ class MatchDetailScreen extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            '${userProfile['profession'] ?? 'N/A'}  |  ${country?.flagEmoji ?? ''} ${country?.name ?? 'N/A'}',
+            '${widget.userProfile['profession'] ?? 'N/A'}  |  ${country?.flagEmoji ?? ''} ${country?.name ?? 'N/A'}',
             style: textTheme.bodyMedium?.copyWith(
               color: Colors.white.withOpacity(0.8),
             ),
@@ -169,7 +181,7 @@ class MatchDetailScreen extends StatelessWidget {
 
   Widget _buildMatchIndicator(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    final matchPercentage = userProfile['matchPercentage'] ?? 0.80;
+    final matchPercentage = widget.userProfile['matchPercentage'] ?? 0.80;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
@@ -220,7 +232,48 @@ class MatchDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildActionButtons(BuildContext context) {
+  Widget _buildActionButtonsWrapper(BuildContext context) {
+    final firebaseService = Provider.of<FirebaseService>(
+      context,
+      listen: false,
+    );
+    return FutureBuilder<DocumentSnapshot<Map<String, dynamic>>?>(
+      future: firebaseService.getUserProfile(),
+      builder: (context, snapshot) {
+        // Show a loader while fetching the profile, unless we already know it's a match
+        // from a super like or the incoming widget property.
+        if (snapshot.connectionState == ConnectionState.waiting &&
+            !_isNowMatched &&
+            !widget.isMatch) {
+          return const Positioned(
+            bottom: 30,
+            left: 0,
+            right: 0,
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        // Determine match status from all possible sources
+        final matches =
+            snapshot.data?.data()?['matches'] as Map<String, dynamic>? ?? {};
+        final bool isActuallyMatched = matches.containsKey(
+          widget.userProfile['uid'],
+        );
+        final bool isMatched =
+            widget.isMatch || _isNowMatched || isActuallyMatched;
+
+        return _buildActionButtons(context, isMatched: isMatched);
+      },
+    );
+  }
+
+  Widget _buildActionButtons(BuildContext context, {required bool isMatched}) {
+    final subscriptionProvider = Provider.of<SubscriptionProvider>(context);
+    final firebaseService = Provider.of<FirebaseService>(
+      context,
+      listen: false,
+    );
+
     return Positioned(
       bottom: 30,
       left: 0,
@@ -240,34 +293,93 @@ class MatchDetailScreen extends StatelessWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  _buildCircleButton(
-                    icon: Icons.close,
-                    bgColor: AppColors.primaryBackground,
-                    iconColor: AppColors.textSecondary,
-                    size: 52,
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
-                  const SizedBox(width: 12),
-                  _buildCircleButton(
-                    icon: IconlyBold.message,
-                    bgColor: AppColors.textPrimary,
-                    iconColor: AppColors.primaryBackground,
-                    size: 62,
-                    onPressed: () {
-                      final otherUser = ChatUser(
-                        uid: userProfile['uid'],
-                        name: userProfile['name'] ?? 'No Name',
-                        avatarUrl:
-                            userProfile['imageUrl'] ??
-                            'https://picsum.photos/seed/error/200/200',
-                      );
-                      PersistentNavBarNavigator.pushNewScreen(
-                        context,
-                        screen: ConversationScreen(otherUser: otherUser),
-                        withNavBar: false,
-                      );
-                    },
-                  ),
+                  if (!isMatched) ...[
+                    _buildCircleButton(
+                      icon: Icons.close,
+                      bgColor: AppColors.primaryBackground,
+                      iconColor: AppColors.textSecondary,
+                      size: 62,
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                    const SizedBox(width: 12),
+                  ],
+                  if (isMatched)
+                    _buildCircleButton(
+                      icon: IconlyBold.message,
+                      bgColor: AppColors.textPrimary,
+                      iconColor: AppColors.primaryBackground,
+                      size: 62,
+                      onPressed: () {
+                        final otherUser = ChatUser(
+                          uid: widget.userProfile['uid'],
+                          name: widget.userProfile['name'] ?? 'No Name',
+                          avatarUrl:
+                              widget.userProfile['imageUrl'] ??
+                              'https://picsum.photos/seed/error/200/200',
+                        );
+                        PersistentNavBarNavigator.pushNewScreen(
+                          context,
+                          screen: ConversationScreen(otherUser: otherUser),
+                          withNavBar: false,
+                        );
+                      },
+                    )
+                  else ...[
+                    if (subscriptionProvider.isPremium) ...[
+                      _buildCircleButton(
+                        icon: TablerIcons.sparkles,
+                        isGradient: true,
+                        iconColor: AppColors.primaryBackground,
+                        size: 62,
+                        onPressed: () async {
+                          try {
+                            await firebaseService.superLikeUser(
+                              widget.userProfile['uid'],
+                            );
+                            if (mounted) {
+                              setState(() => _isNowMatched = true);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    "It's a Match! You can now message them.",
+                                  ),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    "Super Like failed: ${e.toString()}",
+                                  ),
+                                  backgroundColor: AppColors.error,
+                                ),
+                              );
+                            }
+                          }
+                        },
+                      ),
+                      const SizedBox(width: 12),
+                    ],
+                    _buildCircleButton(
+                      icon: Icons.favorite,
+                      isGradient: true,
+                      iconColor: AppColors.primaryBackground,
+                      size: 62, // Make like button bigger
+                      onPressed: () {
+                        firebaseService.likeUser(widget.userProfile['uid']);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text("Liked!"),
+                            duration: Duration(seconds: 1),
+                          ),
+                        );
+                        Navigator.of(context).pop();
+                      },
+                    ),
+                  ],
                 ],
               ),
             ),
