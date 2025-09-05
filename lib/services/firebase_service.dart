@@ -345,6 +345,24 @@ class FirebaseService {
     return _firestore.collection(userCollection).doc(user.uid).snapshots();
   }
 
+  Future<DocumentSnapshot<Map<String, dynamic>>?> getUserDocument(
+    String userId,
+  ) async {
+    try {
+      final docSnapshot = await _firestore
+          .collection(userCollection)
+          .doc(userId)
+          .get();
+      if (docSnapshot.exists) {
+        return docSnapshot;
+      }
+      return null;
+    } catch (e) {
+      log('Error getting user document for $userId: $e');
+      return null;
+    }
+  }
+
   Future<void> updateUserProfile(Map<String, dynamic> data) async {
     final user = _auth.currentUser;
     if (user == null) return;
@@ -1423,6 +1441,29 @@ class FirebaseService {
         .collection(userCollection)
         .doc(userId)
         .get();
+    final List<String> joinedCommunityIds = List<String>.from(
+      userDoc.data()?['joinedCommunities'] ?? [],
+    );
+
+    if (joinedCommunityIds.isEmpty) {
+      return [];
+    }
+
+    final snapshot = await _firestore
+        .collection(communityCollection)
+        .where(FieldPath.documentId, whereIn: joinedCommunityIds)
+        .get();
+    return snapshot.docs.map((doc) => Community.fromFirestore(doc)).toList();
+  }
+
+  Future<List<Community>> getJoinedCommunitiesForUser(String userId) async {
+    final userDoc = await _firestore
+        .collection(userCollection)
+        .doc(userId)
+        .get();
+    if (!userDoc.exists) {
+      return [];
+    }
     final List<String> joinedCommunityIds = List<String>.from(
       userDoc.data()?['joinedCommunities'] ?? [],
     );

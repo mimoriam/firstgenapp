@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firstgenapp/models/chat_models.dart';
 import 'package:firstgenapp/screens/dashboard/navbar_content/chats/conversation/conversation_screen.dart';
+import 'package:firstgenapp/screens/dashboard/navbar_content/home/match_detail/user_communities_screen/user_communities_screen.dart';
 import 'package:firstgenapp/services/firebase_service.dart';
 import 'package:firstgenapp/viewmodels/firebase_subscription_provider.dart';
 import 'package:flutter/material.dart';
@@ -29,48 +30,141 @@ class MatchDetailScreen extends StatefulWidget {
 
 class _MatchDetailScreenState extends State<MatchDetailScreen> {
   bool _isNowMatched = false;
+  late Future<
+    (
+      DocumentSnapshot<Map<String, dynamic>>?,
+      DocumentSnapshot<Map<String, dynamic>>?,
+    )
+  >
+  _profilesFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    final firebaseService = Provider.of<FirebaseService>(
+      context,
+      listen: false,
+    );
+    _profilesFuture = Future.wait([
+      firebaseService.getUserDocument(
+        widget.userProfile['uid'],
+      ), // The user being viewed
+      firebaseService.getUserProfile(), // The current user (for match status)
+    ]).then((results) => (results[0], results[1]));
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.secondaryBackground,
-      body: Stack(
-        children: [
-          _buildBackgroundImage(widget.userProfile['imageUrl']),
-          _buildBottomInfoCard(context),
-          _buildOverlayContent(context),
-          _buildTopBar(context),
-          _buildActionButtonsWrapper(context),
-        ],
-      ),
+      body:
+          FutureBuilder<
+            (
+              DocumentSnapshot<Map<String, dynamic>>?,
+              DocumentSnapshot<Map<String, dynamic>>?,
+            )
+          >(
+            future: _profilesFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (snapshot.hasError || !snapshot.hasData) {
+                return const Center(
+                  child: Text('Could not load user profile.'),
+                );
+              }
+
+              final viewedUserProfileDoc = snapshot.data!.$1;
+              final currentUserProfileDoc = snapshot.data!.$2;
+
+              if (viewedUserProfileDoc == null ||
+                  !viewedUserProfileDoc.exists ||
+                  currentUserProfileDoc == null ||
+                  !currentUserProfileDoc.exists) {
+                return const Center(child: Text('User profile not found.'));
+              }
+
+              final viewedUserData = viewedUserProfileDoc.data()!;
+              final currentUserData = currentUserProfileDoc.data()!;
+
+              // Determine the true match status
+              final matches =
+                  currentUserData['matches'] as Map<String, dynamic>? ?? {};
+              final isActuallyMatched = matches.containsKey(
+                widget.userProfile['uid'],
+              );
+              final isMatched =
+                  widget.isMatch || _isNowMatched || isActuallyMatched;
+
+              return Stack(
+                children: [
+                  _buildBackgroundImage(widget.userProfile['imageUrl']),
+                  _buildBottomInfoCard(context),
+                  _buildOverlayContent(context),
+                  _buildTopBar(context, viewedUserData, isMatched: isMatched),
+                  _buildActionButtons(context, isMatched: isMatched),
+                ],
+              );
+            },
+          ),
     );
   }
 
-  Widget _buildTopBar(BuildContext context) {
+  Widget _buildTopBar(
+    BuildContext context,
+    Map<String, dynamic> detailedUserData, {
+    required bool isMatched,
+  }) {
+    if (!isMatched) {
+      return const SizedBox.shrink();
+    }
+
+    final bool canShowCommunities =
+        detailedUserData['showJoinedCommunities'] ?? false;
+
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.end,
           children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(20),
+            ElevatedButton(
+              onPressed: canShowCommunities
+                  ? () {
+                      PersistentNavBarNavigator.pushNewScreen(
+                        context,
+                        screen: JoinedCommunitiesListScreen(
+                          userId: widget.userProfile['uid'],
+                          userName: widget.userProfile['name'] ?? 'User',
+                        ),
+                        withNavBar: false,
+                      );
+                    }
+                  : null, // Button is disabled if privacy setting is off
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primaryRed,
+                disabledBackgroundColor: Colors.black.withOpacity(0.0),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
               ),
               child: Row(
                 children: [
-                  const Icon(
-                    Iconsax.send_2_copy,
-                    color: Colors.white,
+                  Icon(
+                    Iconsax.people_copy,
+                    color: canShowCommunities ? Colors.white : Colors.white54.withOpacity(0.0),
                     size: 14,
                   ),
-                  const SizedBox(width: 4),
+                  const SizedBox(width: 6),
                   Text(
-                    '${widget.userProfile['distance'] ?? 2.5} km',
+                    'Communities',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Colors.white,
+                      color: canShowCommunities ? Colors.white : Colors.white54.withOpacity(0.0),
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -185,7 +279,7 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.4),
+        color: Colors.black.withOpacity(0.5),
         borderRadius: BorderRadius.circular(30),
         border: Border.all(color: AppColors.primaryRed.withOpacity(0.5)),
       ),
@@ -229,41 +323,6 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildActionButtonsWrapper(BuildContext context) {
-    final firebaseService = Provider.of<FirebaseService>(
-      context,
-      listen: false,
-    );
-    return FutureBuilder<DocumentSnapshot<Map<String, dynamic>>?>(
-      future: firebaseService.getUserProfile(),
-      builder: (context, snapshot) {
-        // Show a loader while fetching the profile, unless we already know it's a match
-        // from a super like or the incoming widget property.
-        if (snapshot.connectionState == ConnectionState.waiting &&
-            !_isNowMatched &&
-            !widget.isMatch) {
-          return const Positioned(
-            bottom: 30,
-            left: 0,
-            right: 0,
-            child: Center(child: CircularProgressIndicator()),
-          );
-        }
-
-        // Determine match status from all possible sources
-        final matches =
-            snapshot.data?.data()?['matches'] as Map<String, dynamic>? ?? {};
-        final bool isActuallyMatched = matches.containsKey(
-          widget.userProfile['uid'],
-        );
-        final bool isMatched =
-            widget.isMatch || _isNowMatched || isActuallyMatched;
-
-        return _buildActionButtons(context, isMatched: isMatched);
-      },
     );
   }
 

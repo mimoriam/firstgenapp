@@ -81,7 +81,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               userData['appNotificationsEnabled'] ?? true;
           final bool eventReminders =
               userData['eventRemindersEnabled'] ?? false;
-          _showJoinedCommunities = userData['showJoinedCommunities'] ?? true;
+          final bool showJoinedCommunities =
+              userData['showJoinedCommunities'] ?? true;
 
           return ListView(
             padding: const EdgeInsets.symmetric(
@@ -107,7 +108,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               const SizedBox(height: 10),
               _buildNotificationSettings(appNotifications, eventReminders),
               const SizedBox(height: 10),
-              _buildPrivacyControls(),
+              _buildPrivacyControls(showJoinedCommunities),
               const SizedBox(height: 10),
               _buildAboutApp(firebaseService),
               const SizedBox(height: 10),
@@ -587,7 +588,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildPrivacyControls() {
+  Widget _buildPrivacyControls(bool showJoinedCommunities) {
     return _buildSectionCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -599,9 +600,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const SizedBox(height: 8),
           _buildSwitchTile(
             'Show joined communities on profile',
-            _showJoinedCommunities,
+            showJoinedCommunities,
             (value) {
-              setState(() => _showJoinedCommunities = value);
+              Provider.of<UserProfileViewModel>(
+                context,
+                listen: false,
+              ).updateLocalProfileData({'showJoinedCommunities': value});
               Provider.of<FirebaseService>(
                 context,
                 listen: false,
