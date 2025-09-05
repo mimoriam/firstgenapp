@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firstgenapp/common/gradient_btn.dart';
 import 'package:firstgenapp/constants/appColors.dart';
 import 'package:firstgenapp/viewmodels/firebase_subscription_provider.dart';
@@ -121,15 +123,18 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                         context,
                         listen: false,
                       ).purchasePackage(plan).then((success) {
-                        if (success && mounted) {
+                        if (success && context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
+                            SnackBar(
+                              // duration: Duration(milliseconds: 500),
                               content: Text('Subscription successful!'),
                               backgroundColor: Colors.green,
                             ),
                           );
+                          // Timer(const Duration(milliseconds: 300), () {
+                          // });
                           Navigator.of(context).pop();
-                        } else if (!success && mounted) {
+                        } else if (!success && context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
                               content: Text(

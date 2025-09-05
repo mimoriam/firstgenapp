@@ -1,6 +1,9 @@
+import 'dart:ui';
+
 import 'package:firstgenapp/models/activity_model.dart';
 import 'package:firstgenapp/services/firebase_service.dart';
 import 'package:firstgenapp/utils/time_ago.dart';
+import 'package:firstgenapp/viewmodels/firebase_subscription_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:firstgenapp/constants/appColors.dart';
 import 'package:provider/provider.dart';
@@ -71,51 +74,76 @@ class _RecentActivitiesScreenState extends State<RecentActivitiesScreen> {
   }
 
   Widget _buildActivityItem(Activity activity, TextTheme textTheme) {
-    String text = '';
-    switch (activity.type) {
-      case ActivityType.liked:
-        text = '${activity.fromUserName} liked your profile';
-        break;
-      case ActivityType.matched:
-        text = 'You matched with ${activity.fromUserName}';
-        break;
-    }
+    return Consumer<SubscriptionProvider>(
+      builder: (context, subscriptionProvider, child) {
+        final isPremium = subscriptionProvider.isPremium;
+        String text = '';
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.inputBorder.withOpacity(0.7)),
-      ),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 22,
-            backgroundImage: NetworkImage(activity.fromUserAvatar),
+        if (isPremium) {
+          switch (activity.type) {
+            case ActivityType.liked:
+              text = '${activity.fromUserName} liked your profile';
+              break;
+            case ActivityType.matched:
+              text = 'You matched with ${activity.fromUserName}';
+              break;
+          }
+        } else {
+          switch (activity.type) {
+            case ActivityType.liked:
+              text = 'Someone liked your profile';
+              break;
+            case ActivityType.matched:
+              text = 'You have a new match';
+              break;
+          }
+        }
+
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.inputBorder.withOpacity(0.7)),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  text,
-                  style: textTheme.labelLarge?.copyWith(
-                    color: AppColors.textPrimary,
-                    fontWeight: FontWeight.w700,
-                  ),
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 22,
+                backgroundImage: NetworkImage(activity.fromUserAvatar),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    ImageFiltered(
+                      imageFilter: ImageFilter.blur(
+                        sigmaX: isPremium ? 0 : 9,
+                        sigmaY: isPremium ? 0 : 9,
+                      ),
+                      child: Text(
+                        text,
+                        style: textTheme.labelLarge?.copyWith(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      TimeAgo.format(
+                        activity.timestamp.toDate().toIso8601String(),
+                      ),
+                      style: textTheme.bodySmall,
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  TimeAgo.format(activity.timestamp.toDate().toIso8601String()),
-                  style: textTheme.bodySmall,
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

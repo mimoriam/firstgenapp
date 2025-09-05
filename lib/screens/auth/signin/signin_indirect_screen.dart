@@ -427,10 +427,10 @@ class _SigninIndirectScreenState extends State<SigninIndirectScreen> {
           _isGoogleLoading ? null : _handleGoogleSignIn,
           isLoading: _isGoogleLoading,
         ),
-        const SizedBox(width: 20),
-        _buildSocialIconButton('images/icons/apple.svg', () {}),
-        const SizedBox(width: 20),
-        _buildSocialIconButton('images/icons/facebook.svg', () {}),
+        // const SizedBox(width: 20),
+        // _buildSocialIconButton('images/icons/apple.svg', () {}),
+        // const SizedBox(width: 20),
+        // _buildSocialIconButton('images/icons/facebook.svg', () {}),
       ],
     );
   }

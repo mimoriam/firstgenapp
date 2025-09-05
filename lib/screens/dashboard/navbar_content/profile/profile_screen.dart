@@ -100,7 +100,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 _buildUpgradeCard(),
                 const SizedBox(height: 10),
               ] else ...[
-                _buildSubscribedCard(userData, textTheme),
+                _buildSubscribedCard(subscriptionProvider, textTheme),
                 const SizedBox(height: 10),
               ],
               _buildConnectionPreferences(userData, firebaseService),
@@ -250,18 +250,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
   /// New widget to display when the user is subscribed.
   /// It shows their premium status and subscription end date.
   Widget _buildSubscribedCard(
-    Map<String, dynamic> userData,
+    SubscriptionProvider subscriptionProvider,
     TextTheme textTheme,
   ) {
     // Safely get the subscription plan, defaulting to 'Premium'.
     final plan =
-        (userData['subscriptionPlan'] as String?)?.capitalize() ?? 'Premium';
+        subscriptionProvider.subscriptionPlan?.capitalize() ?? 'Premium';
 
     // Safely get and format the subscription end date.
-    final endDateTimestamp = userData['subscriptionEndDate'] as Timestamp?;
+    final endDateValue = subscriptionProvider.subscriptionEndDate;
     String endDate = 'N/A';
-    if (endDateTimestamp != null) {
-      endDate = DateFormat('MMMM d, yyyy').format(endDateTimestamp.toDate());
+    if (endDateValue != null) {
+      endDate = DateFormat('MMMM d, yyyy').format(endDateValue);
     }
 
     return Container(
