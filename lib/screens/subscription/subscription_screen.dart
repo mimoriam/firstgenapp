@@ -1,7 +1,6 @@
 import 'package:firstgenapp/common/gradient_btn.dart';
 import 'package:firstgenapp/constants/appColors.dart';
 import 'package:firstgenapp/viewmodels/firebase_subscription_provider.dart';
-import 'package:firstgenapp/viewmodels/inapp_subscription_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
 import 'package:hugeicons/hugeicons.dart';

@@ -232,20 +232,20 @@ class _ConversationScreenState extends State<ConversationScreen> {
         ),
       ),
       centerTitle: false,
-      actions: [
-        IconButton(
-          onPressed: () {},
-          icon: const Icon(IconlyLight.video, color: AppColors.textSecondary),
-        ),
-        IconButton(
-          onPressed: () {},
-          icon: const Icon(IconlyLight.calling, color: AppColors.textSecondary),
-        ),
-        IconButton(
-          onPressed: () {},
-          icon: const Icon(Icons.more_vert, color: AppColors.textSecondary),
-        ),
-      ],
+      // actions: [
+      //   IconButton(
+      //     onPressed: () {},
+      //     icon: const Icon(IconlyLight.video, color: AppColors.textSecondary),
+      //   ),
+      //   IconButton(
+      //     onPressed: () {},
+      //     icon: const Icon(IconlyLight.calling, color: AppColors.textSecondary),
+      //   ),
+      //   IconButton(
+      //     onPressed: () {},
+      //     icon: const Icon(Icons.more_vert, color: AppColors.textSecondary),
+      //   ),
+      // ],
     );
   }
 

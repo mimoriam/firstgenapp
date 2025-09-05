@@ -7,7 +7,6 @@ import 'package:firstgenapp/services/firebase_service.dart';
 import 'package:firstgenapp/services/notification_service.dart';
 import 'package:firstgenapp/viewmodels/community_viewmodel.dart';
 import 'package:firstgenapp/viewmodels/firebase_subscription_provider.dart';
-import 'package:firstgenapp/viewmodels/inapp_subscription_provider.dart';
 import 'package:firstgenapp/viewmodels/profile_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:firstgenapp/constants/appColors.dart';
@@ -621,8 +620,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         children: [
           Text('About App', style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 8),
-          _buildInfoRow('Privacy Policy', onTap: () {}),
-          _buildInfoRow('Contact Support', onTap: () {}),
+          // _buildInfoRow('Privacy Policy', onTap: () {}),
+          // _buildInfoRow('Contact Support', onTap: () {}),
           _buildInfoRow(
             'Log Out',
             onTap: () async {
