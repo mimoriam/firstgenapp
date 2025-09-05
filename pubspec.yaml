@@ -41,7 +41,7 @@ dependencies:
   emoji_picker_flutter: ^4.3.0
   flutter_form_builder: ^10.2.0
   flutter_native_splash: ^2.4.6
-  flutter_svg: ^2.2.0
+  flutter_svg: ^2.2.1
   flutter_svg_provider: ^1.0.7
   form_builder_validators: ^11.2.0
   flutter_keyboard_visibility: ^6.0.0
