@@ -591,6 +591,7 @@ class __CreatePostSectionState extends State<_CreatePostSection> {
                       )
                           .then((_) {
                         _formKey.currentState?.reset();
+                        _postContentController.clear();
                         setState(() {
                           _image = null;
                           _isPosting = false;
