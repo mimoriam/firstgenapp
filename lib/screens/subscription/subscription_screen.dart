@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:firstgenapp/common/gradient_btn.dart';
 import 'package:firstgenapp/constants/appColors.dart';
 import 'package:firstgenapp/viewmodels/firebase_subscription_provider.dart';

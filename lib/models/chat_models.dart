@@ -1,4 +1,3 @@
-import 'dart:io';
 
 class ChatUser {
   final String uid;

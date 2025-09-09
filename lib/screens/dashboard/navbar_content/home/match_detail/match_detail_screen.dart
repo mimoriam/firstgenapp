@@ -99,15 +99,109 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
 
               return Stack(
                 children: [
-                  _buildBackgroundImage(widget.userProfile['imageUrl']),
-                  _buildBottomInfoCard(context),
-                  _buildOverlayContent(context),
+                  _buildBackgroundImage(
+                    widget.userProfile['imageUrl'] ??
+                        widget.userProfile['profileImageUrl'],
+                  ),
+                  // _buildBottomInfoCard(context),
+                  // _buildOverlayContent(context),
+                  _buildBottomInfoCard2(context, viewedUserData),
+                  _buildOverlayContent2(context, viewedUserData),
                   _buildTopBar(context, viewedUserData, isMatched: isMatched),
                   _buildActionButtons(context, isMatched: isMatched),
                 ],
               );
             },
           ),
+    );
+  }
+
+  Widget _buildBottomInfoCard2(
+    BuildContext context,
+    Map<String, dynamic> userData,
+  ) {
+    final textTheme = Theme.of(context).textTheme;
+    return Align(
+      alignment: Alignment.bottomCenter,
+      child: Container(
+        height: MediaQuery.of(context).size.height * 0.43,
+        width: double.infinity,
+        decoration: const BoxDecoration(
+          color: AppColors.primaryBackground,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24.0, 32.0, 24.0, 100.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildSectionTitle('About', context),
+                const SizedBox(height: 8),
+                Text(
+                  userData['bio'] ?? 'No bio yet.',
+                  style: textTheme.bodySmall,
+                ),
+                const SizedBox(height: 20),
+                _buildSectionTitle('Languages', context),
+                const SizedBox(height: 12),
+                _buildChipGroup(userData['languages'] ?? [], context),
+                const SizedBox(height: 20),
+                _buildSectionTitle('Interest', context),
+                const SizedBox(height: 12),
+                _buildChipGroup(
+                  (userData['hobbies'] as String?)
+                          ?.split(',')
+                          .map((e) => e.trim())
+                          .toList() ??
+                      [],
+                  context,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOverlayContent2(
+    BuildContext context,
+    Map<String, dynamic> userData,
+  ) {
+    final textTheme = Theme.of(context).textTheme;
+    final country = Country.tryParse(userData['culturalHeritage'] ?? '');
+    final dob = (userData['dateOfBirth'] as Timestamp?)?.toDate();
+    final age = dob != null
+        ? (DateTime.now().difference(dob).inDays / 365).floor()
+        : 'N/A';
+
+    return Positioned(
+      bottom: MediaQuery.of(context).size.height * 0.43,
+      left: 24,
+      right: 24,
+      child: Column(
+        children: [
+          Text(
+            '${userData['fullName'] ?? 'N/A'}, $age',
+            textAlign: TextAlign.center,
+            style: textTheme.headlineLarge?.copyWith(
+              color: Colors.white,
+              fontSize: 22,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '${userData['profession'] ?? 'N/A'}  |  ${country?.flagEmoji ?? ''} ${country?.name ?? 'N/A'}',
+            style: textTheme.bodyMedium?.copyWith(
+              color: Colors.white.withOpacity(0.8),
+            ),
+          ),
+          const SizedBox(height: 16),
+          _buildMatchIndicator2(context, userData),
+          const SizedBox(height: 20),
+        ],
+      ),
     );
   }
 
@@ -157,14 +251,18 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
                 children: [
                   Icon(
                     Iconsax.people_copy,
-                    color: canShowCommunities ? Colors.white : Colors.white54.withOpacity(0.0),
+                    color: canShowCommunities
+                        ? Colors.white
+                        : Colors.white54.withOpacity(0.0),
                     size: 14,
                   ),
                   const SizedBox(width: 6),
                   Text(
                     'Communities',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: canShowCommunities ? Colors.white : Colors.white54.withOpacity(0.0),
+                      color: canShowCommunities
+                          ? Colors.white
+                          : Colors.white54.withOpacity(0.0),
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -273,6 +371,62 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
     );
   }
 
+  Widget _buildMatchIndicator2(
+    BuildContext context,
+    Map<String, dynamic> userData,
+  ) {
+    final textTheme = Theme.of(context).textTheme;
+    final matchPercentage = userData['matchPercentage'] ?? 0.80;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.5),
+        borderRadius: BorderRadius.circular(30),
+        border: Border.all(color: AppColors.primaryRed.withOpacity(0.5)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            width: 36,
+            height: 36,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                CircularProgressIndicator(
+                  value: matchPercentage,
+                  strokeWidth: 3,
+                  backgroundColor: Colors.white.withOpacity(0.2),
+                  valueColor: const AlwaysStoppedAnimation<Color>(
+                    AppColors.primaryRed,
+                  ),
+                ),
+                Center(
+                  child: Text(
+                    '${(matchPercentage * 100).toInt()}%',
+                    style: textTheme.bodySmall?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 10,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            'Match',
+            style: textTheme.titleLarge?.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildMatchIndicator(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final matchPercentage = widget.userProfile['matchPercentage'] ?? 0.80;
@@ -374,6 +528,7 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
                           name: widget.userProfile['name'] ?? 'No Name',
                           avatarUrl:
                               widget.userProfile['imageUrl'] ??
+                              widget.userProfile["profileImageUrl"] ??
                               'https://picsum.photos/seed/error/200/200',
                         );
                         PersistentNavBarNavigator.pushNewScreen(

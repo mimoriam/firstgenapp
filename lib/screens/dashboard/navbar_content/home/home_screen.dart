@@ -18,6 +18,7 @@ import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 import 'package:provider/provider.dart';
+import 'package:tap_debouncer/tap_debouncer.dart';
 
 import '../../../../../common/gradient_btn.dart';
 
@@ -623,49 +624,83 @@ class _RecentActivityListState extends State<RecentActivityList> {
           }
         }
 
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.grey.shade200, width: 1),
-          ),
-          child: Row(
-            children: [
-              CircleAvatar(
-                radius: 22,
-                backgroundImage: NetworkImage(activity.fromUserAvatar),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+        return TapDebouncer(
+          cooldown: const Duration(milliseconds: 1000),
+          onTap: () async {
+            if (isPremium) {
+              final firebaseService = Provider.of<FirebaseService>(
+                context,
+                listen: false,
+              );
+              final userDoc = await firebaseService.getUserDocument(
+                activity.fromUserId,
+              );
+              if (userDoc != null && userDoc.exists) {
+                final userData = userDoc.data();
+                if (userData != null && context.mounted) {
+                  print(userData);
+                  PersistentNavBarNavigator.pushNewScreen(
+                    context,
+                    screen: MatchDetailScreen(userProfile: userData),
+                    withNavBar: false,
+                  );
+                }
+              }
+            }
+          },
+          builder: (BuildContext context, TapDebouncerFunc? onTap) {
+            return GestureDetector(
+              onTap: onTap,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.grey.shade200, width: 1),
+                ),
+                child: Row(
                   children: [
-                    ImageFiltered(
-                      imageFilter: ImageFilter.blur(
-                        sigmaX: isPremium ? 0 : 9,
-                        sigmaY: isPremium ? 0 : 9,
-                      ),
-                      child: Text(
-                        text,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: AppColors.textPrimary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+                    CircleAvatar(
+                      radius: 22,
+                      backgroundImage: NetworkImage(activity.fromUserAvatar),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      TimeAgo.format(
-                        activity.timestamp.toDate().toIso8601String(),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          ImageFiltered(
+                            imageFilter: ImageFilter.blur(
+                              sigmaX: isPremium ? 0 : 9,
+                              sigmaY: isPremium ? 0 : 9,
+                            ),
+                            child: Text(
+                              text,
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(
+                                    color: AppColors.textPrimary,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            TimeAgo.format(
+                              activity.timestamp.toDate().toIso8601String(),
+                            ),
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ],
                       ),
-                      style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ],
                 ),
               ),
-            ],
-          ),
+            );
+          },
         );
       },
     );

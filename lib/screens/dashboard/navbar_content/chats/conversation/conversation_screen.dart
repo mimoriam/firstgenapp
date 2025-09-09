@@ -5,7 +5,6 @@ import 'package:firstgenapp/models/chat_models.dart';
 import 'package:firstgenapp/services/firebase_service.dart';
 import 'package:firstgenapp/utils/time_ago.dart';
 import 'package:flutter/material.dart';
-import 'package:iconly/iconly.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 

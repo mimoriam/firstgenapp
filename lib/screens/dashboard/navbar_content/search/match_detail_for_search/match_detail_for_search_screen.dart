@@ -6,7 +6,6 @@ import 'package:firstgenapp/constants/appColors.dart';
 import 'package:flutter_card_swiper/flutter_card_swiper.dart';
 import 'package:iconly/iconly.dart';
 import 'dart:ui';
-import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:provider/provider.dart';
 
 class MatchDetailForSearchScreen extends StatefulWidget {
