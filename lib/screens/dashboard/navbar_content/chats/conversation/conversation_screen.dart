@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:firstgenapp/common/expanded_image_view.dart';
 import 'package:firstgenapp/constants/appColors.dart';
 import 'package:firstgenapp/models/chat_models.dart';
 import 'package:firstgenapp/services/firebase_service.dart';
@@ -23,6 +24,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final FocusNode _focusNode = FocusNode();
+
+  bool _scrollTriggered = false;
 
   bool _isUserAtBottom = true;
   int _messageCount = 0;
@@ -81,26 +84,29 @@ class _ConversationScreenState extends State<ConversationScreen> {
   void _onFocusChange() {
     if (_focusNode.hasFocus) {
       Future.delayed(
-        const Duration(milliseconds: 300),
+        const Duration(milliseconds: 500),
         () => _scrollToBottom(),
       );
     }
   }
 
   void _scrollToBottom({bool animated = true}) {
-    if (_scrollController.hasClients &&
-        _scrollController.position.maxScrollExtent > 0) {
-      final position = _scrollController.position.maxScrollExtent;
-      if (animated) {
-        _scrollController.animateTo(
-          position,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
-      } else {
-        _scrollController.jumpTo(position);
+    // Wait until the end of the frame to ensure the new message is rendered
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients &&
+          _scrollController.position.maxScrollExtent > 0) {
+        final position = _scrollController.position.maxScrollExtent;
+        if (animated) {
+          _scrollController.animateTo(
+            position,
+            duration: const Duration(milliseconds: 500),
+            curve: Curves.easeOut,
+          );
+        } else {
+          _scrollController.jumpTo(position);
+        }
       }
-    }
+    });
   }
 
   Future<void> _pickImage() async {
@@ -136,7 +142,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
       setState(() {
         _imageFile = null;
       });
-      _scrollToBottom();
+      // _scrollToBottom();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -200,11 +206,20 @@ class _ConversationScreenState extends State<ConversationScreen> {
 
                     final messages = messageSnapshot.data!;
 
+                    // if (messages.length > _messageCount) {
+                    //   if (_isUserAtBottom) {
+                    //     WidgetsBinding.instance.addPostFrameCallback(
+                    //       (_) => _scrollToBottom(),
+                    //     );
+                    //   }
+                    // }
+                    // _messageCount = messages.length;
+
                     if (messages.length > _messageCount) {
-                      if (_isUserAtBottom) {
-                        WidgetsBinding.instance.addPostFrameCallback(
-                          (_) => _scrollToBottom(),
-                        );
+                      final lastMessage = messages.last;
+                      // Only auto-scroll for new TEXT messages. Images will trigger their own scroll.
+                      if (_isUserAtBottom && lastMessage.imageUrl == null) {
+                        _scrollToBottom();
                       }
                     }
                     _messageCount = messages.length;
@@ -231,7 +246,18 @@ class _ConversationScreenState extends State<ConversationScreen> {
                               _buildDateSeparator(
                                 TimeAgo.formatDateSeparator(message.timestamp),
                               ),
-                            _buildMessageBubble(message),
+                            // _buildMessageBubble(message),
+                            MessageBubble(
+                              message: message,
+                              onImageLoaded: message.imageUrl != null
+                                  ? () {
+                                      // --- THIS IS THE FIX ---
+                                      if (_isUserAtBottom) {
+                                        _scrollToBottom(animated: true);
+                                      }
+                                    }
+                                  : null,
+                            ),
                           ],
                         );
                       },
@@ -266,20 +292,20 @@ class _ConversationScreenState extends State<ConversationScreen> {
         ),
       ),
       centerTitle: false,
-      actions: [
-        IconButton(
-          onPressed: () {},
-          icon: const Icon(IconlyLight.video, color: AppColors.textSecondary),
-        ),
-        IconButton(
-          onPressed: () {},
-          icon: const Icon(IconlyLight.calling, color: AppColors.textSecondary),
-        ),
-        IconButton(
-          onPressed: () {},
-          icon: const Icon(Icons.more_vert, color: AppColors.textSecondary),
-        ),
-      ],
+      // actions: [
+      //   IconButton(
+      //     onPressed: () {},
+      //     icon: const Icon(IconlyLight.video, color: AppColors.textSecondary),
+      //   ),
+      //   IconButton(
+      //     onPressed: () {},
+      //     icon: const Icon(IconlyLight.calling, color: AppColors.textSecondary),
+      //   ),
+      //   IconButton(
+      //     onPressed: () {},
+      //     icon: const Icon(Icons.more_vert, color: AppColors.textSecondary),
+      //   ),
+      // ],
     );
   }
 
@@ -488,6 +514,160 @@ class _ConversationScreenState extends State<ConversationScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class MessageBubble extends StatefulWidget {
+  final ChatMessage message;
+  final VoidCallback? onImageLoaded;
+
+  const MessageBubble({super.key, required this.message, this.onImageLoaded});
+
+  @override
+  State<MessageBubble> createState() => _MessageBubbleState();
+}
+
+class _MessageBubbleState extends State<MessageBubble> {
+  bool _hasTriggeredScroll = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final firebaseService = Provider.of<FirebaseService>(
+      context,
+      listen: false,
+    );
+    final isSender =
+        widget.message.senderId == firebaseService.currentUser?.uid;
+    final alignment = isSender ? Alignment.centerRight : Alignment.centerLeft;
+    final color = isSender ? AppColors.primaryRed : Colors.white;
+    final textColor = isSender ? Colors.white : AppColors.textPrimary;
+    final borderRadius = isSender
+        ? const BorderRadius.only(
+            topLeft: Radius.circular(20),
+            topRight: Radius.circular(20),
+            bottomLeft: Radius.circular(20),
+          )
+        : const BorderRadius.only(
+            topLeft: Radius.circular(20),
+            topRight: Radius.circular(20),
+            bottomRight: Radius.circular(20),
+          );
+
+    return Align(
+      alignment: alignment,
+      child: Column(
+        crossAxisAlignment: isSender
+            ? CrossAxisAlignment.end
+            : CrossAxisAlignment.start,
+        children: [
+          Container(
+            constraints: BoxConstraints(
+              maxWidth: MediaQuery.of(context).size.width * 0.7,
+            ),
+            padding: const EdgeInsets.all(4.0),
+            margin: const EdgeInsets.symmetric(vertical: 4.0),
+            decoration: BoxDecoration(color: color, borderRadius: borderRadius),
+            child: ClipRRect(
+              borderRadius: borderRadius,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (widget.message.imageUrl != null)
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => ExpandedImageViewScreen(
+                              imageUrl: widget.message.imageUrl!,
+                              // Use a unique tag, the image URL is a good choice.
+                              heroTag: widget.message.imageUrl!,
+                            ),
+                          ),
+                        );
+                      },
+                      child: Hero(
+                        // This tag MUST match the one in ExpandedImageViewScreen
+                        tag: widget.message.imageUrl!,
+                        child: Image.network(
+                          widget.message.imageUrl!,
+                          height: 200,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) {
+                              if (widget.onImageLoaded != null &&
+                                  !_hasTriggeredScroll) {
+                                WidgetsBinding.instance.addPostFrameCallback((
+                                  _,
+                                ) {
+                                  widget.onImageLoaded!();
+                                });
+                                _hasTriggeredScroll = true;
+                              }
+                              return child;
+                            }
+                            return Container(
+                              height: 200,
+                              alignment: Alignment.center,
+                              child: CircularProgressIndicator(
+                                value:
+                                    loadingProgress.expectedTotalBytes != null
+                                    ? loadingProgress.cumulativeBytesLoaded /
+                                          loadingProgress.expectedTotalBytes!
+                                    : null,
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  if (widget.message.text != null &&
+                      widget.message.text!.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(8, 8, 8, 4),
+                      child: Text(
+                        widget.message.text!,
+                        style: TextStyle(
+                          color: textColor,
+                          fontSize: 15,
+                          height: 1.4,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 4),
+          _buildTimestampAndStatus(widget.message, isSender),
+          const SizedBox(height: 12),
+        ],
+      ),
+    );
+  }
+
+  // Moved this function inside the new widget's state
+  Widget _buildTimestampAndStatus(ChatMessage message, bool isSender) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          TimeAgo.formatTimestamp(message.timestamp),
+          style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+        ),
+        if (isSender) ...[
+          const SizedBox(width: 4),
+          Text(
+            '· Read',
+            style: const TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ],
     );
   }
 }
