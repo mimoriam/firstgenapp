@@ -25,7 +25,8 @@ class TimeAgo {
 
   static String formatTimestamp(String isoString) {
     try {
-      final messageTime = DateTime.parse(isoString);
+      // final messageTime = DateTime.parse(isoString);
+      final messageTime = DateTime.parse(isoString).toLocal();
       return DateFormat('HH:mm').format(messageTime);
     } catch (e) {
       return '';
