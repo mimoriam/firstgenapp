@@ -458,22 +458,34 @@ class _SearchScreenState extends State<SearchScreen> {
                   _buildCircleButton(
                     onPressed: () =>
                         _swiperController.swipe(CardSwiperDirection.left),
-                    size: 52,
+                    size: 50,
                     bgColor: AppColors.primaryBackground,
                     child: const Icon(
                       Icons.close,
                       color: AppColors.textSecondary,
-                      size: 52 * 0.5,
+                      size: 60 * 0.5,
                     ),
                   ),
                   const SizedBox(width: 12),
-                  if (subscriptionProvider.isPremium) ...[
                     _buildCircleButton(
-                      size: 52,
+                      size: 50,
                       isGradient: true,
                       onPressed: _isSuperLiking
                           ? null
                           : () async {
+                              if (!subscriptionProvider.isPremium) {
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        "You must be a Premium member to Super Like.",
+                                      ),
+                                      backgroundColor: AppColors.error,
+                                    ),
+                                  );
+                                }
+                                return;
+                              }
                               setState(() {
                                 _isSuperLiking = true;
                               });
@@ -516,8 +528,8 @@ class _SearchScreenState extends State<SearchScreen> {
                             },
                       child: _isSuperLiking
                           ? const SizedBox(
-                              width: 24,
-                              height: 24,
+                              width: 50,
+                              height: 50,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2.5,
                                 valueColor: AlwaysStoppedAnimation<Color>(
@@ -528,20 +540,19 @@ class _SearchScreenState extends State<SearchScreen> {
                           : const Icon(
                               TablerIcons.sparkles,
                               color: AppColors.primaryBackground,
-                              size: 52 * 0.5,
+                              size: 60 * 0.5,
                             ),
                     ),
                     const SizedBox(width: 12),
-                  ],
                   _buildCircleButton(
-                    size: 62,
+                    size: 50,
                     isGradient: true,
                     onPressed: () =>
                         _swiperController.swipe(CardSwiperDirection.right),
                     child: const Icon(
                       Icons.favorite,
                       color: AppColors.primaryBackground,
-                      size: 62 * 0.5,
+                      size: 60 * 0.5,
                     ),
                   ),
                 ],

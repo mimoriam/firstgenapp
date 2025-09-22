@@ -539,17 +539,19 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
                       },
                     )
                   else ...[
-                    if (subscriptionProvider.isPremium) ...[
-                      _buildCircleButton(
-                        icon: TablerIcons.sparkles,
-                        isGradient: true,
-                        iconColor: AppColors.primaryBackground,
-                        size: 62,
-                        onPressed: () async {
-                          try {
+                    // if (subscriptionProvider.isPremium) ...
+                    _buildCircleButton(
+                      icon: TablerIcons.sparkles,
+                      isGradient: true,
+                      iconColor: AppColors.primaryBackground,
+                      size: 62,
+                      onPressed: () async {
+                        try {
+                          if (subscriptionProvider.isPremium) {
                             await firebaseService.superLikeUser(
                               widget.userProfile['uid'],
                             );
+
                             if (mounted) {
                               setState(() => _isNowMatched = true);
                               ScaffoldMessenger.of(context).showSnackBar(
@@ -561,22 +563,34 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
                                 ),
                               );
                             }
-                          } catch (e) {
+                          } else {
                             if (mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
+                                const SnackBar(
                                   content: Text(
-                                    "Super Like failed: ${e.toString()}",
+                                    "You can't Super Like without a Premium subscription.",
                                   ),
                                   backgroundColor: AppColors.error,
                                 ),
                               );
                             }
                           }
-                        },
-                      ),
-                      const SizedBox(width: 12),
-                    ],
+                        } catch (e) {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  "Super Like failed: ${e.toString()}",
+                                ),
+                                backgroundColor: AppColors.error,
+                              ),
+                            );
+                          }
+                        }
+                      },
+                    ),
+                    const SizedBox(width: 12),
+
                     _buildCircleButton(
                       icon: Icons.favorite,
                       isGradient: true,

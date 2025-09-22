@@ -435,7 +435,7 @@ class _MatchDetailForSearchScreenState
                     icon: Icons.close,
                     bgColor: AppColors.primaryBackground,
                     iconColor: AppColors.textSecondary,
-                    size: 52,
+                    size: 60,
                     onPressed: () =>
                         _swiperController.swipe(CardSwiperDirection.left),
                   ),
@@ -444,7 +444,7 @@ class _MatchDetailForSearchScreenState
                     icon: IconlyBold.message,
                     bgColor: AppColors.textPrimary,
                     iconColor: AppColors.primaryBackground,
-                    size: 62,
+                    size: 60,
                     onPressed: () => _onMessage(index),
                   ),
                   const SizedBox(width: 12),
@@ -452,7 +452,7 @@ class _MatchDetailForSearchScreenState
                     icon: Icons.favorite,
                     isGradient: true,
                     iconColor: AppColors.primaryBackground,
-                    size: 52,
+                    size: 60,
                     onPressed: () =>
                         _swiperController.swipe(CardSwiperDirection.right),
                   ),
