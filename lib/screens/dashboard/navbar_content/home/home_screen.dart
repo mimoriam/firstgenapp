@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'dart:ui';
 
 import 'package:country_picker/country_picker.dart';
@@ -354,9 +353,7 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               Text(
                 "Hi, $name 👋",
-                style: Platform.isIOS
-                    ? textTheme.bodyMedium
-                    : textTheme.headlineSmall,
+                style:  textTheme.bodyMedium
               ),
               const SizedBox(height: 2),
               Text(
@@ -463,8 +460,8 @@ class _HomeScreenState extends State<HomeScreen> {
     return Column(
       children: [
         Container(
-          width: Platform.isIOS ? 60 : 80,
-          height: Platform.isIOS ? 40 : 60,
+          width: 80,
+          height: 50,
           decoration: BoxDecoration(
             color: bgColor,
             borderRadius: BorderRadius.circular(14),
@@ -473,7 +470,7 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Text(
               count,
               style: TextStyle(
-                fontSize: Platform.isIOS ? 16 : 24,
+                fontSize: 16,
                 fontWeight: FontWeight.bold,
                 color: textColor,
               ),
@@ -497,9 +494,7 @@ class _HomeScreenState extends State<HomeScreen> {
       children: [
         Text(
           title,
-          style: Platform.isIOS
-              ? Theme.of(context).textTheme.bodyLarge
-              : Theme.of(context).textTheme.titleLarge,
+          style: Theme.of(context).textTheme.bodyLarge,
         ),
         TextButton(
           onPressed: () {
@@ -526,7 +521,7 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Text(
             "See All",
             style: Theme.of(context).textTheme.labelLarge?.copyWith(
-              fontSize: Platform.isIOS ? 10 : 14,
+              fontSize: 10,
               fontWeight: FontWeight.w600,
               color: AppColors.primaryRed,
             ),
