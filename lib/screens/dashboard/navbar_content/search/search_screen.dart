@@ -82,14 +82,36 @@ class _SearchScreenState extends State<SearchScreen> {
     );
   }
 
-  void _handleLike(int index) {
+  void _handleLike(int index) async {
     final user = _users[index];
-    debugPrint("Liked ${user['fullName']}");
     final firebaseService = Provider.of<FirebaseService>(
       context,
       listen: false,
     );
-    firebaseService.likeUser(user['uid']);
+
+    final result = await firebaseService.likeUser(user['uid']);
+    if (!mounted) return;
+
+    if (result == LikeStatus.success) {
+      debugPrint("Liked ${user['fullName']}");
+      _swiperController.swipe(CardSwiperDirection.right);
+    } else if (result == LikeStatus.limitReached) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            "Daily like limit reached for free users. Upgrade to Premium for unlimited likes!",
+          ),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Failed to like user. Please try again."),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    }
   }
 
   void _handleDiscard(int index) {
@@ -436,6 +458,7 @@ class _SearchScreenState extends State<SearchScreen> {
       context,
       listen: false,
     );
+
     return Positioned(
       bottom: 30,
       left: 0,
@@ -467,88 +490,87 @@ class _SearchScreenState extends State<SearchScreen> {
                     ),
                   ),
                   const SizedBox(width: 12),
-                    _buildCircleButton(
-                      size: 50,
-                      isGradient: true,
-                      onPressed: _isSuperLiking
-                          ? null
-                          : () async {
-                              if (!subscriptionProvider.isPremium) {
-                                if (mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text(
-                                        "You must be a Premium member to Super Like.",
-                                      ),
-                                      backgroundColor: AppColors.error,
-                                    ),
-                                  );
-                                }
-                                return;
-                              }
-                              setState(() {
-                                _isSuperLiking = true;
-                              });
-                              final user = _users[index];
-                              try {
-                                await firebaseService.superLikeUser(
-                                  user['uid'],
-                                );
-                                if (mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text(
-                                        "Super Like! It's a Match!",
-                                      ),
-                                      backgroundColor: Colors.green,
-                                    ),
-                                  );
-                                  _swiperController.swipe(
-                                    CardSwiperDirection.right,
-                                  );
-                                }
-                              } catch (e) {
-                                if (mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        "Super Like failed: ${e.toString()}",
-                                      ),
-                                      backgroundColor: AppColors.error,
-                                    ),
-                                  );
-                                }
-                              } finally {
-                                if (mounted) {
-                                  setState(() {
-                                    _isSuperLiking = false;
-                                  });
-                                }
-                              }
-                            },
-                      child: _isSuperLiking
-                          ? const SizedBox(
-                              width: 50,
-                              height: 50,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2.5,
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                  Colors.white,
-                                ),
-                              ),
-                            )
-                          : const Icon(
-                              TablerIcons.sparkles,
-                              color: AppColors.primaryBackground,
-                              size: 60 * 0.5,
-                            ),
-                    ),
-                    const SizedBox(width: 12),
                   _buildCircleButton(
                     size: 50,
                     isGradient: true,
-                    onPressed: () =>
-                        _swiperController.swipe(CardSwiperDirection.right),
+                    onPressed: _isSuperLiking
+                        ? null
+                        : () async {
+                            if (!subscriptionProvider.isPremium) {
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      "You must be a Premium member to Super Like.",
+                                    ),
+                                    backgroundColor: AppColors.error,
+                                  ),
+                                );
+                              }
+                              return;
+                            }
+                            setState(() {
+                              _isSuperLiking = true;
+                            });
+                            final user = _users[index];
+                            try {
+                              await firebaseService.superLikeUser(
+                                user['uid'],
+                              );
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      "Super Like! It's a Match!",
+                                    ),
+                                    backgroundColor: Colors.green,
+                                  ),
+                                );
+                                _swiperController.swipe(
+                                  CardSwiperDirection.right,
+                                );
+                              }
+                            } catch (e) {
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      "Super Like failed: ${e.toString()}",
+                                    ),
+                                    backgroundColor: AppColors.error,
+                                  ),
+                                );
+                              }
+                            } finally {
+                              if (mounted) {
+                                setState(() {
+                                  _isSuperLiking = false;
+                                });
+                              }
+                            }
+                          },
+                    child: _isSuperLiking
+                        ? const SizedBox(
+                            width: 50,
+                            height: 50,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.5,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
+                            ),
+                          )
+                        : const Icon(
+                            TablerIcons.sparkles,
+                            color: AppColors.primaryBackground,
+                            size: 60 * 0.5,
+                          ),
+                  ),
+                  const SizedBox(width: 12),
+                  _buildCircleButton(
+                    size: 50,
+                    isGradient: true,
+                    onPressed: () => _handleLike(index),
                     child: const Icon(
                       Icons.favorite,
                       color: AppColors.primaryBackground,

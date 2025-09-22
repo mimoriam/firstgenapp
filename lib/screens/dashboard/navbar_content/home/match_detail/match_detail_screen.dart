@@ -539,73 +539,120 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
                       },
                     )
                   else ...[
-                    // if (subscriptionProvider.isPremium) ...
-                    _buildCircleButton(
-                      icon: TablerIcons.sparkles,
-                      isGradient: true,
-                      iconColor: AppColors.primaryBackground,
-                      size: 62,
-                      onPressed: () async {
-                        try {
-                          if (subscriptionProvider.isPremium) {
-                            await firebaseService.superLikeUser(
-                              widget.userProfile['uid'],
-                            );
+                    // Simplified actions: Super Like + Like button.
+                    // Removed UI that displayed daily like counts and limit.
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _buildCircleButton(
+                          icon: TablerIcons.sparkles,
+                          isGradient: true,
+                          iconColor: AppColors.primaryBackground,
+                          size: 62,
+                          onPressed: () async {
+                            try {
+                              if (subscriptionProvider.isPremium) {
+                                await firebaseService.superLikeUser(
+                                  widget.userProfile['uid'],
+                                );
 
-                            if (mounted) {
-                              setState(() => _isNowMatched = true);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    "It's a Match! You can now message them.",
+                                if (mounted) {
+                                  setState(() => _isNowMatched = true);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        "It's a Match! You can now message them.",
+                                      ),
+                                      backgroundColor: Colors.green,
+                                    ),
+                                  );
+                                }
+                              } else {
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        "You can't Super Like without a Premium subscription.",
+                                      ),
+                                      backgroundColor: AppColors.error,
+                                    ),
+                                  );
+                                }
+                              }
+                            } catch (e) {
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      "Super Like failed: ${e.toString()}",
+                                    ),
+                                    backgroundColor: AppColors.error,
                                   ),
-                                  backgroundColor: Colors.green,
-                                ),
-                              );
+                                );
+                              }
                             }
-                          } else {
-                            if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    "You can't Super Like without a Premium subscription.",
-                                  ),
-                                  backgroundColor: AppColors.error,
-                                ),
-                              );
-                            }
-                          }
-                        } catch (e) {
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  "Super Like failed: ${e.toString()}",
-                                ),
-                                backgroundColor: AppColors.error,
-                              ),
-                            );
-                          }
-                        }
-                      },
-                    ),
-                    const SizedBox(width: 12),
+                          },
+                        ),
+                        const SizedBox(width: 12),
 
-                    _buildCircleButton(
-                      icon: Icons.favorite,
-                      isGradient: true,
-                      iconColor: AppColors.primaryBackground,
-                      size: 62, // Make like button bigger
-                      onPressed: () {
-                        firebaseService.likeUser(widget.userProfile['uid']);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text("Liked!"),
-                            duration: Duration(seconds: 1),
-                          ),
-                        );
-                        Navigator.of(context).pop();
-                      },
+                        _buildCircleButton(
+                          icon: Icons.favorite,
+                          isGradient: true,
+                          iconColor: AppColors.primaryBackground,
+                          size: 62,
+                          onPressed: () async {
+                            try {
+                              final LikeStatus status = await firebaseService
+                                  .likeUser(widget.userProfile['uid']);
+
+                              if (!mounted) return;
+
+                              switch (status) {
+                                case LikeStatus.success:
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text("Liked!"),
+                                      duration: Duration(seconds: 1),
+                                    ),
+                                  );
+                                  Navigator.of(context).pop();
+                                  break;
+                                case LikeStatus.limitReached:
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        "Daily like limit reached for free users. Upgrade to Premium for unlimited likes!",
+                                      ),
+                                      backgroundColor: AppColors.error,
+                                    ),
+                                  );
+                                  break;
+                                case LikeStatus.error:
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        "Failed to like user. Please try again.",
+                                      ),
+                                      backgroundColor: AppColors.error,
+                                    ),
+                                  );
+                                  break;
+                              }
+                            } catch (e) {
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      "Failed to like user. Please try again.",
+                                    ),
+                                    backgroundColor: AppColors.error,
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                        ),
+                      ],
                     ),
                   ],
                 ],

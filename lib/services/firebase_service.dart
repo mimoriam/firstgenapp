@@ -16,7 +16,10 @@ import 'package:firstgenapp/services/continent_service.dart';
 import 'package:firstgenapp/utils/authException.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:rxdart/rxdart.dart';
-
+ 
+/// Like operation status
+enum LikeStatus { success, limitReached, error }
+ 
 class FirebaseService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn();
@@ -1118,60 +1121,133 @@ class FirebaseService {
     return Conversation.fromJson(data, conversationId, currentUser.uid);
   }
 
-  Future<void> likeUser(String likedUserId) async {
-    final currentUser = _auth.currentUser;
-    if (currentUser == null) return;
+  Future<LikeStatus> likeUser(String likedUserId) async {
+    try {
+      final currentUser = _auth.currentUser;
+      if (currentUser == null) return LikeStatus.error;
 
-    final currentUserRef = _firestore
-        .collection(userCollection)
-        .doc(currentUser.uid);
-    final likedUserRef = _firestore.collection(userCollection).doc(likedUserId);
+      final currentUserRef =
+          _firestore.collection(userCollection).doc(currentUser.uid);
+      final likedUserRef = _firestore.collection(userCollection).doc(likedUserId);
 
-    await _firestore.runTransaction((transaction) async {
-      DocumentSnapshot currentUserSnapshot = await transaction.get(
-        currentUserRef,
-      );
-      DocumentSnapshot likedUserSnapshot = await transaction.get(likedUserRef);
+      // 1) Retrieve User Data before transaction
+      final currentUserDoc = await currentUserRef.get();
+      if (!currentUserDoc.exists) {
+        log('likeUser: current user document not found for uid: ${currentUser.uid}');
+        return LikeStatus.error;
+      }
+      final Map<String, dynamic> preData = currentUserDoc.data()!;
 
-      if (!currentUserSnapshot.exists || !likedUserSnapshot.exists) {
-        throw Exception("User document not found!");
+      final String? subscriptionPlan = preData['subscriptionPlan'] as String?;
+      final dynamic likesField = preData['dailyLikesCount'];
+      int dailyLikesCount = likesField is int
+          ? likesField
+          : int.tryParse('${likesField ?? 0}') ?? 0;
+
+      // Normalize lastLikeResetDate to DateTime with a safe default far in the past
+      final dynamic lastLikeResetField = preData['lastLikeResetDate'];
+      DateTime lastLikeResetDate;
+      if (lastLikeResetField is Timestamp) {
+        lastLikeResetDate = lastLikeResetField.toDate();
+      } else if (lastLikeResetField is String) {
+        lastLikeResetDate =
+            DateTime.tryParse(lastLikeResetField) ?? DateTime(2000, 1, 1);
+      } else if (lastLikeResetField is DateTime) {
+        lastLikeResetDate = lastLikeResetField;
+      } else {
+        lastLikeResetDate = DateTime(2000, 1, 1);
       }
 
-      final currentUserData =
-          currentUserSnapshot.data() as Map<String, dynamic>;
-      final likedUserData = likedUserSnapshot.data() as Map<String, dynamic>;
+      final DateTime now = DateTime.now();
+      final DateTime today = DateTime(now.year, now.month, now.day);
 
-      // Add 'like' activity for the liked user
-      await _addActivity(
-        userId: likedUserId,
-        type: ActivityType.liked,
-        fromUser: currentUser,
-        fromUserData: currentUserData,
-      );
+      // 2) Check Premium Status
+      final bool isPremium = (subscriptionPlan == 'premium' ||
+          subscriptionPlan == 'monthly' ||
+          subscriptionPlan == 'weekly');
 
-      transaction.update(currentUserRef, {'likedUsers.$likedUserId': true});
+      // 3) Implement Free User Limit
+      if (!isPremium) {
+        // If lastLikeResetDate is not today, reset count and update date
+        if (!(lastLikeResetDate.year == today.year &&
+            lastLikeResetDate.month == today.month &&
+            lastLikeResetDate.day == today.day)) {
+          dailyLikesCount = 0;
+          lastLikeResetDate = today;
+        }
 
-      if (likedUserData['likedUsers'] != null &&
-          likedUserData['likedUsers'][currentUser.uid] == true) {
-        transaction.update(currentUserRef, {'matches.$likedUserId': true});
-        transaction.update(likedUserRef, {'matches.${currentUser.uid}': true});
-        await addRecentMatch(likedUserId);
+        // Enforce limit: free users can like up to 10 times per day
+        const int freeDailyLimit = 10;
+        if (dailyLikesCount >= freeDailyLimit) {
+          return LikeStatus.limitReached;
+        }
 
-        // Add 'match' activity for both users
+        // Increment local counter (will be persisted inside transaction)
+        dailyLikesCount += 1;
+      }
+
+      // 4) Run transaction and update user document fields inside it
+      await _firestore.runTransaction((transaction) async {
+        DocumentSnapshot currentUserSnapshot =
+            await transaction.get(currentUserRef);
+        DocumentSnapshot likedUserSnapshot = await transaction.get(likedUserRef);
+
+        if (!currentUserSnapshot.exists || !likedUserSnapshot.exists) {
+          throw Exception("User document not found!");
+        }
+
+        final currentUserData =
+            currentUserSnapshot.data() as Map<String, dynamic>;
+        final likedUserData = likedUserSnapshot.data() as Map<String, dynamic>;
+
+        // Add 'like' activity for the liked user
         await _addActivity(
           userId: likedUserId,
-          type: ActivityType.matched,
+          type: ActivityType.liked,
           fromUser: currentUser,
           fromUserData: currentUserData,
         );
-        await _addActivity(
-          userId: currentUser.uid,
-          type: ActivityType.matched,
-          fromUser: likedUserSnapshot,
-          fromUserData: likedUserData,
-        );
-      }
-    });
+
+        // Update likedUsers map
+        transaction.update(currentUserRef, {'likedUsers.$likedUserId': true});
+
+        // If the user is not premium, also persist the updated dailyLikesCount and lastLikeResetDate
+        if (!isPremium) {
+          transaction.update(currentUserRef, {
+            'dailyLikesCount': dailyLikesCount,
+            'lastLikeResetDate': Timestamp.fromDate(lastLikeResetDate),
+          });
+        }
+
+        // Handle mutual like -> match
+        if (likedUserData['likedUsers'] != null &&
+            likedUserData['likedUsers'][currentUser.uid] == true) {
+          transaction.update(currentUserRef, {'matches.$likedUserId': true});
+          transaction.update(likedUserRef, {'matches.${currentUser.uid}': true});
+          await addRecentMatch(likedUserId);
+
+          // Add 'match' activity for both users
+          await _addActivity(
+            userId: likedUserId,
+            type: ActivityType.matched,
+            fromUser: currentUser,
+            fromUserData: currentUserData,
+          );
+          await _addActivity(
+            userId: currentUser.uid,
+            type: ActivityType.matched,
+            fromUser: likedUserSnapshot,
+            fromUserData: likedUserData,
+          );
+        }
+      });
+
+      // Success path
+      return LikeStatus.success;
+    } catch (e, st) {
+      log('Error in likeUser: $e', error: e, stackTrace: st);
+      return LikeStatus.error;
+    }
   }
 
   Future<void> superLikeUser(String likedUserId) async {

@@ -103,7 +103,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 _buildSubscribedCard(subscriptionProvider, textTheme),
                 const SizedBox(height: 10),
               ],
-              _buildConnectionPreferences(userData, firebaseService),
+              _buildConnectionPreferences(userData, firebaseService, subscriptionProvider.isPremium),
               const SizedBox(height: 10),
               _buildNotificationSettings(appNotifications, eventReminders),
               const SizedBox(height: 10),
@@ -307,6 +307,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget _buildConnectionPreferences(
     Map<String, dynamic> userData,
     FirebaseService firebaseService,
+    bool isPremium,
   ) {
     return _buildSectionCard(
       child: Column(
@@ -319,15 +320,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 'Connection Preferences',
                 style: Theme.of(context).textTheme.titleLarge,
               ),
-              TextButton(
-                onPressed: () => _showAdvancedFilters(userData),
-                child: const Row(
-                  children: [
-                    Text('More ', style: TextStyle(fontSize: 14)),
-                    Icon(Icons.arrow_forward_ios, size: 14),
-                  ],
+              if (isPremium)
+                TextButton(
+                  onPressed: () => _showAdvancedFilters(userData),
+                  child: const Row(
+                    children: [
+                      Text('More ', style: TextStyle(fontSize: 14)),
+                      Icon(Icons.arrow_forward_ios, size: 14),
+                    ],
+                  ),
                 ),
-              ),
             ],
           ),
           const SizedBox(height: 4),
