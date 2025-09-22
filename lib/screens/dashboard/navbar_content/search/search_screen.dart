@@ -28,6 +28,7 @@ class _SearchScreenState extends State<SearchScreen> {
   int _currentIndex = 0;
   bool _isFinished = false;
   bool _isSuperLiking = false;
+  bool _isLiking = false;
 
   @override
   void didChangeDependencies() {
@@ -89,34 +90,71 @@ class _SearchScreenState extends State<SearchScreen> {
       listen: false,
     );
 
-    final result = await firebaseService.likeUser(user['uid']);
-    if (!mounted) return;
+    setState(() {
+      _isLiking = true;
+    });
 
-    if (result == LikeStatus.success) {
-      debugPrint("Liked ${user['fullName']}");
-      _swiperController.swipe(CardSwiperDirection.right);
-    } else if (result == LikeStatus.limitReached) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            "Daily like limit reached for free users. Upgrade to Premium for unlimited likes!",
+    try {
+      final result = await firebaseService.likeUser(user['uid']);
+      if (!mounted) return;
+
+      if (result == LikeStatus.success) {
+        debugPrint("Liked ${user['fullName']}");
+        _swiperController.swipe(CardSwiperDirection.right);
+      } else if (result == LikeStatus.limitReached) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              "Daily like limit reached for free users. Upgrade to Premium for unlimited likes!",
+            ),
+            backgroundColor: AppColors.error,
           ),
-          backgroundColor: AppColors.error,
-        ),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Failed to like user. Please try again."),
-          backgroundColor: AppColors.error,
-        ),
-      );
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Failed to like user. Please try again."),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLiking = false;
+        });
+      }
     }
   }
 
-  void _handleDiscard(int index) {
+  void _handleDiscard(int index) async {
     final user = _users[index];
-    debugPrint("Discarded ${user['fullName']}");
+    final firebaseService = Provider.of<FirebaseService>(
+      context,
+      listen: false,
+    );
+    try {
+      await firebaseService.discardUser(user['uid']);
+      debugPrint("Discarded ${user['fullName']}");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('User discarded.'),
+            duration: Duration(seconds: 1),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint("Discard failed: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Failed to discard user."),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
   }
 
   void _onMessage(int index) async {
@@ -570,12 +608,23 @@ class _SearchScreenState extends State<SearchScreen> {
                   _buildCircleButton(
                     size: 50,
                     isGradient: true,
-                    onPressed: () => _handleLike(index),
-                    child: const Icon(
-                      Icons.favorite,
-                      color: AppColors.primaryBackground,
-                      size: 60 * 0.5,
-                    ),
+                    onPressed: _isLiking ? null : () => _handleLike(index),
+                    child: _isLiking
+                        ? const SizedBox(
+                            width: 50,
+                            height: 50,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.5,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
+                            ),
+                          )
+                        : const Icon(
+                            Icons.favorite,
+                            color: AppColors.primaryBackground,
+                            size: 60 * 0.5,
+                          ),
                   ),
                 ],
               ),

@@ -568,12 +568,15 @@ class FirebaseService {
 
     final currentUserData = currentUserDoc.data()!;
 
-    // Get users that the current user has already liked or matched with to exclude them.
+    // Get users that the current user has already liked, matched with, or discarded to exclude them.
     final likedUserIds =
         (currentUserData['likedUsers'] as Map?)?.keys.toList() ?? [];
     final matchedUserIds =
         (currentUserData['matches'] as Map?)?.keys.toList() ?? [];
-    final usersToExclude = [...likedUserIds, ...matchedUserIds, user.uid];
+    final discardedUserIds =
+        (currentUserData['discardedUsers'] as Map?)?.keys.toList() ?? [];
+    final usersToExclude =
+        [...likedUserIds, ...matchedUserIds, ...discardedUserIds, user.uid];
 
     // Get users who have liked the current user to prioritize them.
     final likedByUsersSnapshot = await _firestore
@@ -1295,6 +1298,26 @@ class FirebaseService {
 
     // Add to recent matches for the current user
     await addRecentUser(likedUserId);
+  }
+
+  /// Mark a user as discarded so they are excluded from future searches for the current user.
+  Future<void> discardUser(String discardedUserId) async {
+    final currentUser = _auth.currentUser;
+    if (currentUser == null) return;
+    final currentUserRef =
+        _firestore.collection(userCollection).doc(currentUser.uid);
+    try {
+      await _firestore.runTransaction((transaction) async {
+        final snapshot = await transaction.get(currentUserRef);
+        if (!snapshot.exists) throw Exception("User document not found!");
+        transaction.update(currentUserRef, {
+          'discardedUsers.$discardedUserId': true,
+        });
+      });
+    } catch (e) {
+      log('Error discarding user $discardedUserId: $e');
+      rethrow;
+    }
   }
 
   Future<void> _addActivity({
