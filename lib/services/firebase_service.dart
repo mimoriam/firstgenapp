@@ -1446,6 +1446,18 @@ class FirebaseService {
     return snapshot.docs.map((doc) => Community.fromFirestore(doc)).toList();
   }
 
+  // Real-time stream for all communities (used by the compact "All Communities" section).
+  Stream<List<Community>> getAllCommunitiesStream({String searchQuery = '', int limit = 10}) {
+    Query query = _firestore.collection(communityCollection).orderBy('createdAt', descending: true);
+    if (searchQuery.isNotEmpty) {
+      query = query
+        .where('name_lowercase', isGreaterThanOrEqualTo: searchQuery)
+        .where('name_lowercase', isLessThanOrEqualTo: '$searchQuery\uf8ff');
+    }
+    query = query.limit(limit);
+    return query.snapshots().map((snap) => snap.docs.map((d) => Community.fromFirestore(d)).toList());
+  }
+
   Future<List<Post>> getFeedForUser(
     String userId, {
     DocumentSnapshot? startAfter,

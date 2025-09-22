@@ -19,16 +19,21 @@ class CommunityViewModel extends ChangeNotifier {
   // --- END PERFORMANCE & REAL-TIME FIX ---
 
   StreamSubscription? _eventsSubscription;
+  StreamSubscription<List<Community>>? _allCommunitiesSubscription;
   bool _isDisposed = false;
 
   CommunityViewModel(this._firebaseService, this._userId) {
     _fetchInitialData();
+    // Start real-time subscription for the compact "All Communities" section.
+    // This keeps the UI updated without manual refreshes.
+    subscribeToAllCommunities(limit: 10);
   }
 
   @override
   void dispose() {
     _isDisposed = true;
     _eventsSubscription?.cancel();
+    _allCommunitiesSubscription?.cancel();
     _userStreamCache.clear();
     super.dispose();
   }
@@ -102,6 +107,18 @@ class CommunityViewModel extends ChangeNotifier {
     return _userStreamCache[userId]!;
   }
   // --- END PERFORMANCE & REAL-TIME FIX ---
+
+  /// Subscribe to real-time updates for "All Communities".
+  /// Cancels any previous subscription before attaching a new one.
+  void subscribeToAllCommunities({String searchQuery = '', int limit = 10}) {
+    _allCommunitiesSubscription?.cancel();
+    _allCommunitiesSubscription = _firebaseService
+        .getAllCommunitiesStream(searchQuery: searchQuery, limit: limit)
+        .listen((communities) {
+      _allCommunities = communities;
+      _safeNotifyListeners();
+    });
+  }
 
   Future<void> fetchUpcomingEvents() async {
     _isLoadingEvents = true;

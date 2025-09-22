@@ -101,11 +101,6 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
           isInviteOnly: formData['isInviteOnly'] ?? false,
         );
         if (mounted) {
-          // FIX: Call the new refresh method to update all community data
-          await Provider.of<CommunityViewModel>(
-            context,
-            listen: false,
-          ).refreshAllData();
           Navigator.of(context).pop();
         }
       } catch (e) {

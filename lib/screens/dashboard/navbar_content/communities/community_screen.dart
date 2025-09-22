@@ -41,6 +41,10 @@ class _CommunityScreenState extends State<CommunityScreen>
       vsync: this,
       initialIndex: widget.initialIndex ?? 0,
     );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Ensure the CommunityViewModel starts the real-time subscription once the widget tree is ready.
+      Provider.of<CommunityViewModel>(context, listen: false).subscribeToAllCommunities(limit: 10);
+    });
   }
 
   @override
@@ -92,7 +96,6 @@ class _CommunityScreenState extends State<CommunityScreen>
                     ),
                     withNavBar: false,
                   );
-                  await viewModel.refreshAllData();
                 }
               },
               child: Container(
