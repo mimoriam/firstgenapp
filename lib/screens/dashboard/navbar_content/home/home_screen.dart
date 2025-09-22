@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:ui';
 
 import 'package:country_picker/country_picker.dart';
@@ -101,7 +102,7 @@ class _NewMatchesListState extends State<NewMatchesList> {
         }
       },
       child: Container(
-        width: 116,
+        width: 124,
         margin: const EdgeInsets.only(right: 6),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(20),
@@ -351,7 +352,12 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text("Hi, $name 👋", style: textTheme.headlineSmall),
+              Text(
+                "Hi, $name 👋",
+                style: Platform.isIOS
+                    ? textTheme.bodyMedium
+                    : textTheme.headlineSmall,
+              ),
               const SizedBox(height: 2),
               Text(
                 "Here's what's happening in your world today.",
@@ -457,8 +463,8 @@ class _HomeScreenState extends State<HomeScreen> {
     return Column(
       children: [
         Container(
-          width: 80,
-          height: 60,
+          width: Platform.isIOS ? 60 : 80,
+          height: Platform.isIOS ? 40 : 60,
           decoration: BoxDecoration(
             color: bgColor,
             borderRadius: BorderRadius.circular(14),
@@ -467,7 +473,7 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Text(
               count,
               style: TextStyle(
-                fontSize: 24,
+                fontSize: Platform.isIOS ? 16 : 24,
                 fontWeight: FontWeight.bold,
                 color: textColor,
               ),
@@ -489,7 +495,12 @@ class _HomeScreenState extends State<HomeScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(title, style: Theme.of(context).textTheme.titleLarge),
+        Text(
+          title,
+          style: Platform.isIOS
+              ? Theme.of(context).textTheme.bodyLarge
+              : Theme.of(context).textTheme.titleLarge,
+        ),
         TextButton(
           onPressed: () {
             if (context.mounted) {
@@ -515,6 +526,7 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Text(
             "See All",
             style: Theme.of(context).textTheme.labelLarge?.copyWith(
+              fontSize: Platform.isIOS ? 10 : 14,
               fontWeight: FontWeight.w600,
               color: AppColors.primaryRed,
             ),
