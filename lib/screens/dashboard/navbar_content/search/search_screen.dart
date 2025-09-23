@@ -83,7 +83,7 @@ class _SearchScreenState extends State<SearchScreen> {
     );
   }
 
-  void _handleLike(int index) async {
+  Future<bool> _handleLike(int index) async {
     final user = _users[index];
     final firebaseService = Provider.of<FirebaseService>(
       context,
@@ -96,11 +96,11 @@ class _SearchScreenState extends State<SearchScreen> {
 
     try {
       final result = await firebaseService.likeUser(user['uid']);
-      if (!mounted) return;
+      if (!mounted) return false;
 
       if (result == LikeStatus.success) {
         debugPrint("Liked ${user['fullName']}");
-        _swiperController.swipe(CardSwiperDirection.right);
+        return true;
       } else if (result == LikeStatus.limitReached) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -110,6 +110,7 @@ class _SearchScreenState extends State<SearchScreen> {
             backgroundColor: AppColors.error,
           ),
         );
+        return false;
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -117,6 +118,7 @@ class _SearchScreenState extends State<SearchScreen> {
             backgroundColor: AppColors.error,
           ),
         );
+        return false;
       }
     } finally {
       if (mounted) {
@@ -194,11 +196,12 @@ class _SearchScreenState extends State<SearchScreen> {
       }
     });
 
-    if (direction == CardSwiperDirection.right) {
-      _handleLike(previousIndex);
-    } else if (direction == CardSwiperDirection.left) {
+    // Only handle the swipe actions if this is a manual swipe (not triggered by like button)
+    if (direction == CardSwiperDirection.left) {
       _handleDiscard(previousIndex);
     }
+    // Note: We no longer automatically call _handleLike for right swipes
+    // since the like button now handles this explicitly
     return true;
   }
 
@@ -608,7 +611,12 @@ class _SearchScreenState extends State<SearchScreen> {
                   _buildCircleButton(
                     size: 50,
                     isGradient: true,
-                    onPressed: _isLiking ? null : () => _handleLike(index),
+                    onPressed: _isLiking ? null : () async {
+                      final success = await _handleLike(index);
+                      if (success) {
+                        _swiperController.swipe(CardSwiperDirection.right);
+                      }
+                    },
                     child: _isLiking
                         ? const SizedBox(
                             width: 50,

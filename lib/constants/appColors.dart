@@ -6,6 +6,10 @@ class AppColors {
   static const Color primaryRed = Color(0xFFCB3839);
   static const Color primaryOrange = Color(0xFFE96F3C);
 
+  // Blues used for the Free plan gradient
+  static const Color primaryBlue = Color(0xFF2D8CF0);
+  static const Color secondaryBlue = Color(0xFF6EC1FF);
+
   // Background Colors
   static const Color primaryBackground = Color(0xFFFFFFFF);
   static const Color secondaryBackground = Color(0xFFFDF1F1);

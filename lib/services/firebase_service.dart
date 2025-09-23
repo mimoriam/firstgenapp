@@ -276,24 +276,40 @@ class FirebaseService {
     final user = _auth.currentUser;
     if (user == null) return;
 
-    DateTime endDate;
-    // Calculate the end date based on the selected plan
-    if (plan == 'monthly') {
+    // Normalize plan ids to support both legacy ('monthly','weekly') and new ids ('free','premium','vip')
+    // 'free' will set the plan but remove any subscriptionEndDate (not subscribed).
+    DateTime? endDate;
+
+    if (plan == 'monthly' || plan == 'premium') {
       endDate = DateTime.now().add(const Duration(days: 30));
     } else if (plan == 'weekly') {
       endDate = DateTime.now().add(const Duration(days: 7));
+    } else if (plan == 'vip') {
+      // VIP treated as an extended subscription (90 days)
+      endDate = DateTime.now().add(const Duration(days: 90));
+    } else if (plan == 'free') {
+      // Free plan — explicitly remove any subscription end date so user is not marked subscribed.
+      await _firestore.collection(userCollection).doc(user.uid).set(
+        {
+          'subscriptionPlan': 'free',
+          'subscriptionEndDate': FieldValue.delete(),
+        },
+        SetOptions(merge: true),
+      );
+      return;
     } else {
-      return; // Invalid plan, do nothing
+      // Unknown plan id — do nothing
+      return;
     }
 
-    // Update the user's document with the plan and end date
+    // Update Firestore with the selected plan and calculated end date.
     await _firestore.collection(userCollection).doc(user.uid).set(
       {
         'subscriptionPlan': plan,
-        'subscriptionEndDate': Timestamp.fromDate(endDate),
+        'subscriptionEndDate': Timestamp.fromDate(endDate!),
       },
       SetOptions(merge: true),
-    ); // Use merge to avoid overwriting other user data
+    );
   }
 
   /// END: Manual Subscription Logic
@@ -547,6 +563,21 @@ class FirebaseService {
 
   // lib/services/firebase_service.dart
 
+  /// Helper function to get subscription priority for sorting
+  int _getSubscriptionPriority(QueryDocumentSnapshot<Map<String, dynamic>> userDoc) {
+    final userData = userDoc.data();
+    final plan = (userData['subscriptionPlan'] as String?) ?? 'free';
+    
+    switch (plan) {
+      case 'vip':
+        return 0;
+      case 'premium':
+        return 1;
+      default:
+        return 2;
+    }
+  }
+
   Future<List<QueryDocumentSnapshot<Map<String, dynamic>>>> searchUsersStrict({
     String? continent,
     List<String>? languages,
@@ -696,6 +727,10 @@ class FirebaseService {
       final otherUsers = results
           .where((doc) => !likedByUserIds.contains(doc.id))
           .toList();
+
+      // Sort both lists by subscription priority (vip, premium, free)
+      likedByUsers.sort((a, b) => _getSubscriptionPriority(a).compareTo(_getSubscriptionPriority(b)));
+      otherUsers.sort((a, b) => _getSubscriptionPriority(a).compareTo(_getSubscriptionPriority(b)));
 
       return [...likedByUsers, ...otherUsers];
     } catch (e) {
@@ -1165,9 +1200,8 @@ class FirebaseService {
       final DateTime today = DateTime(now.year, now.month, now.day);
 
       // 2) Check Premium Status
-      final bool isPremium = (subscriptionPlan == 'premium' ||
-          subscriptionPlan == 'monthly' ||
-          subscriptionPlan == 'weekly');
+      final bool isPremium =
+          (subscriptionPlan == 'premium' || subscriptionPlan == 'vip');
 
       // 3) Implement Free User Limit
       if (!isPremium) {
@@ -1257,10 +1291,55 @@ class FirebaseService {
     final currentUser = _auth.currentUser;
     if (currentUser == null) return;
 
-    final currentUserRef = _firestore
-        .collection(userCollection)
-        .doc(currentUser.uid);
-    final likedUserRef = _firestore.collection(userCollection).doc(likedUserId);
+    final currentUserRef =
+        _firestore.collection(userCollection).doc(currentUser.uid);
+    final likedUserRef =
+        _firestore.collection(userCollection).doc(likedUserId);
+
+    // Enforce VIP-only access and monthly limits (5 per 30 days)
+    final currentUserDoc = await currentUserRef.get();
+    if (!currentUserDoc.exists) return;
+
+    final Map<String, dynamic> preData = currentUserDoc.data()!;
+    final String? subscriptionPlan = preData['subscriptionPlan'] as String?;
+
+    // Only VIP users can use Super Like
+    if (subscriptionPlan != 'vip') {
+      log('superLikeUser blocked: non-VIP user ${currentUser.uid}');
+      return;
+    }
+
+    // Resolve counters safely
+    final dynamic countField = preData['superLikeCount'];
+    int superLikeCount =
+        countField is int ? countField : int.tryParse('${countField ?? 0}') ?? 0;
+
+    // Handle last reset date
+    final dynamic lastResetField = preData['lastSuperLikeResetDate'];
+    DateTime lastSuperLikeResetDate;
+    if (lastResetField is Timestamp) {
+      lastSuperLikeResetDate = lastResetField.toDate();
+    } else if (lastResetField is String) {
+      lastSuperLikeResetDate =
+          DateTime.tryParse(lastResetField) ?? DateTime(2000, 1, 1);
+    } else if (lastResetField is DateTime) {
+      lastSuperLikeResetDate = lastResetField;
+    } else {
+      lastSuperLikeResetDate = DateTime(2000, 1, 1);
+    }
+
+    final DateTime now = DateTime.now();
+    // Reset every 30 days
+    if (now.difference(lastSuperLikeResetDate) >= const Duration(days: 30)) {
+      superLikeCount = 0;
+      lastSuperLikeResetDate = now;
+    }
+
+    const int vipMonthlyLimit = 5;
+    if (superLikeCount >= vipMonthlyLimit) {
+      log('superLikeUser limit reached for user ${currentUser.uid}');
+      return;
+    }
 
     await _firestore.runTransaction((transaction) async {
       final currentUserSnapshot = await transaction.get(currentUserRef);
@@ -1274,12 +1353,18 @@ class FirebaseService {
           currentUserSnapshot.data() as Map<String, dynamic>;
       final likedUserData = likedUserSnapshot.data() as Map<String, dynamic>;
 
-      // Directly create a match for both users
+      // Create a match for both users
       transaction.update(currentUserRef, {'matches.$likedUserId': true});
       transaction.update(likedUserRef, {'matches.${currentUser.uid}': true});
 
-      // Also add to liked users for consistency, if you have logic that depends on it
+      // Keep likedUsers consistent
       transaction.update(currentUserRef, {'likedUsers.$likedUserId': true});
+
+      // Persist super like counters atomically
+      transaction.update(currentUserRef, {
+        'superLikeCount': superLikeCount + 1,
+        'lastSuperLikeResetDate': Timestamp.fromDate(lastSuperLikeResetDate),
+      });
 
       // Add 'match' activity for both users
       await _addActivity(

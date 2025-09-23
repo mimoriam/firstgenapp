@@ -5,16 +5,16 @@ class GradientButton extends StatelessWidget {
   final String text;
   final VoidCallback? onPressed;
   final Widget? child;
-
+  final LinearGradient? gradient;
   final double? insets;
-
   final double? fontSize;
-
+ 
   const GradientButton({
     super.key,
     required this.text,
     required this.onPressed,
     this.child,
+    this.gradient,
     this.insets,
     this.fontSize,
   });
@@ -33,11 +33,12 @@ class GradientButton extends StatelessWidget {
         padding: EdgeInsets.symmetric(vertical: insets ?? 14),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
-          gradient: const LinearGradient(
-            colors: [AppColors.primaryRed, AppColors.primaryOrange],
-            begin: Alignment.centerLeft,
-            end: Alignment.centerRight,
-          ),
+          gradient: gradient ??
+              const LinearGradient(
+                colors: [AppColors.primaryRed, AppColors.primaryOrange],
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
+              ),
         ),
         child:
             child ??
