@@ -366,18 +366,6 @@ class __CreatePostSectionState extends State<_CreatePostSection> {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    final viewModel = Provider.of<CommunityViewModel>(context, listen: false);
-
-    // --- FIX FOR DUPLICATE COMMUNITY ENTRIES ---
-    final allCommunities = [
-      ...viewModel.joinedCommunities,
-      ...viewModel.createdCommunities
-    ];
-    final uniqueCommunityIds = <String>{};
-    final uniqueCommunities = allCommunities.where((community) {
-      return uniqueCommunityIds.add(community.id);
-    }).toList();
-    // --- END OF FIX ---
 
     final postContentField = _formKey.currentState?.fields['post_content'];
     final hasError = postContentField?.hasError ?? false;
@@ -538,101 +526,120 @@ class __CreatePostSectionState extends State<_CreatePostSection> {
                   size: 20,
                 ),
                 const SizedBox(width: 4),
-                DropdownButton<String>(
-                  value: _selectedCommunityId,
-                  hint: Text('Post to...', style: textTheme.labelLarge),
-                  underline: const SizedBox(),
-                  items: [
-                    const DropdownMenuItem(value: null, child: Text('My Feed')),
-                    ...uniqueCommunities.map((community) {
-                      return DropdownMenuItem(
-                        value: community.id,
-                        child: SizedBox(
-                          width: 100,
-                          child: Text(
-                            community.name,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      );
-                    }),
-                  ],
-                  onChanged: (value) {
-                    setState(() {
-                      _selectedCommunityId = value;
-                    });
+                Consumer<CommunityViewModel>(
+                  builder: (context, viewModel, child) {
+                    // --- FIX FOR DUPLICATE COMMUNITY ENTRIES ---
+                    final allCommunities = [
+                      ...viewModel.joinedCommunities,
+                      ...viewModel.createdCommunities
+                    ];
+                    final uniqueCommunityIds = <String>{};
+                    final uniqueCommunities = allCommunities.where((community) {
+                      return uniqueCommunityIds.add(community.id);
+                    }).toList();
+                    // --- END OF FIX ---
+
+                    return DropdownButton<String>(
+                      value: _selectedCommunityId,
+                      hint: Text('Post to...', style: textTheme.labelLarge),
+                      underline: const SizedBox(),
+                      items: [
+                        const DropdownMenuItem(value: null, child: Text('My Feed')),
+                        ...uniqueCommunities.map((community) {
+                          return DropdownMenuItem(
+                            value: community.id,
+                            child: SizedBox(
+                              width: 100,
+                              child: Text(
+                                community.name,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          );
+                        }),
+                      ],
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedCommunityId = value;
+                        });
+                      },
+                    );
                   },
                 ),
                 const Spacer(),
-                ElevatedButton.icon(
-                  onPressed: _isPosting
-                      ? null
-                      : () {
-                    if (_formKey.currentState?.saveAndValidate() ??
-                        false) {
-                      setState(() {
-                        _isPosting = true;
-                      });
-                      final postContent =
-                          _formKey.currentState?.value['post_content'] ??
-                              '';
-                      viewModel
-                          .createPost(
-                        content: postContent,
-                        communityId: _selectedCommunityId,
-                        image: _image,
-                        link: _link,
-                        emojis: _postContentController.text.characters
-                            .where(
-                              (char) => char.contains(
-                            RegExp(
-                              r'(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])',
-                            ),
-                          ),
-                        )
-                            .toList(),
-                      )
-                          .then((_) {
-                        _formKey.currentState?.reset();
-                        _postContentController.clear();
-                        setState(() {
-                          _image = null;
-                          _isPosting = false;
-                          _link = null;
-                        });
-                        if (context.mounted) {
-                          FocusScope.of(context).unfocus();
+                Consumer<CommunityViewModel>(
+                  builder: (context, viewModel, child) {
+                    return ElevatedButton.icon(
+                      onPressed: _isPosting
+                          ? null
+                          : () {
+                        if (_formKey.currentState?.saveAndValidate() ??
+                            false) {
+                          setState(() {
+                            _isPosting = true;
+                          });
+                          final postContent =
+                              _formKey.currentState?.value['post_content'] ??
+                                  '';
+                          viewModel
+                              .createPost(
+                            content: postContent,
+                            communityId: _selectedCommunityId,
+                            image: _image,
+                            link: _link,
+                            emojis: _postContentController.text.characters
+                                .where(
+                                  (char) => char.contains(
+                                RegExp(
+                                  r'(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])',
+                                ),
+                              ),
+                            )
+                                .toList(),
+                          )
+                              .then((_) {
+                            _formKey.currentState?.reset();
+                            _postContentController.clear();
+                            setState(() {
+                              _image = null;
+                              _isPosting = false;
+                              _link = null;
+                            });
+                            if (context.mounted) {
+                              FocusScope.of(context).unfocus();
+                            }
+                          });
                         }
-                      });
-                    }
-                  },
-                  icon: _isPosting
-                      ? Container(
-                    width: 20,
-                    height: 20,
-                    padding: const EdgeInsets.all(2.0),
-                    child: const CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        Colors.white,
+                      },
+                      icon: _isPosting
+                          ? Container(
+                        width: 20,
+                        height: 20,
+                        padding: const EdgeInsets.all(2.0),
+                        child: const CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.white,
+                          ),
+                        ),
+                      )
+                          : const Icon(IconlyLight.send, size: 18),
+                      label: _isPosting
+                          ? const SizedBox.shrink()
+                          : const Text('Post Now'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primaryRed,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 12,
+                        ),
                       ),
-                    ),
-                  )
-                      : const Icon(IconlyLight.send, size: 18),
-                  label: _isPosting
-                      ? const SizedBox.shrink()
-                      : const Text('Post Now'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primaryRed,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 12,
-                    ),
-                  ),
+                    );
+                  },
                 ),
               ],
             ),

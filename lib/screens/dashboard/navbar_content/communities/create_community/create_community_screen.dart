@@ -101,6 +101,8 @@ class _CreateCommunityScreenState extends State<CreateCommunityScreen> {
           isInviteOnly: formData['isInviteOnly'] ?? false,
         );
         if (mounted) {
+          final communityViewModel = Provider.of<CommunityViewModel>(context, listen: false);
+          await communityViewModel.fetchMyCommunities();
           Navigator.of(context).pop();
         }
       } catch (e) {
