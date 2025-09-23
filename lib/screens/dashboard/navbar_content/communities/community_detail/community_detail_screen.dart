@@ -118,7 +118,11 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
                 preferredSize: const Size.fromHeight(200),
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(12, 0, 12, 0),
-                  child: _buildHeaderCard(),
+                  child: Consumer<CommunityViewModel>(
+                    builder: (context, viewModel, child) {
+                      return _buildHeaderCard(viewModel);
+                    },
+                  ),
                 ),
               ),
             ),
@@ -161,22 +165,29 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
     );
   }
 
-  Widget _buildHeaderCard() {
+  Widget _buildHeaderCard(CommunityViewModel viewModel) {
     final textTheme = Theme.of(context).textTheme;
     final firebaseService = Provider.of<FirebaseService>(
       context,
       listen: false,
     );
     final userId = firebaseService.currentUser?.uid;
-    final isMember = widget.community.members.contains(userId);
-    final isCreator = widget.community.creatorId == userId;
+    
+    // Get the updated community data from the viewModel
+    final community = viewModel.allCommunities.firstWhere(
+      (c) => c.id == widget.community.id,
+      orElse: () => widget.community,
+    );
+    
+    final isMember = community.members.contains(userId);
+    final isCreator = community.creatorId == userId;
 
     return Container(
       height: 200,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
         image: DecorationImage(
-          image: NetworkImage(widget.community.imageUrl),
+          image: NetworkImage(community.imageUrl),
           fit: BoxFit.cover,
         ),
       ),
@@ -202,7 +213,7 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
             children: [
               const Spacer(),
               Text(
-                widget.community.name,
+                community.name,
                 style: textTheme.headlineSmall?.copyWith(color: Colors.white),
               ),
               const SizedBox(height: 8),
@@ -211,14 +222,14 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
                   const Icon(Icons.star, color: Colors.amber, size: 18),
                   const SizedBox(width: 6),
                   Text(
-                    '${widget.community.members.length} members',
+                    '${community.members.length} members',
                     style: textTheme.bodyMedium?.copyWith(color: Colors.white),
                   ),
                 ],
               ),
               const SizedBox(height: 8),
               Text(
-                widget.community.description,
+                community.description,
                 style: textTheme.bodySmall?.copyWith(
                   color: Colors.white.withAlpha(230),
                 ),
@@ -230,12 +241,8 @@ class _CommunityDetailScreenState extends State<CommunityDetailScreen>
                 visible: !isMember && !isCreator,
                 child: ElevatedButton(
                   onPressed: () {
-                    final viewModel = Provider.of<CommunityViewModel>(
-                      context,
-                      listen: false,
-                    );
                     firebaseService
-                        .joinCommunity(widget.community.id, userId!)
+                        .joinCommunity(community.id, userId!)
                         .then((_) => viewModel.refreshAllData());
                   },
                   style: ElevatedButton.styleFrom(

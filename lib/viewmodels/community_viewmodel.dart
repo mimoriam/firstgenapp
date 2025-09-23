@@ -84,8 +84,10 @@ class CommunityViewModel extends ChangeNotifier {
     await _eventsSubscription?.cancel();
     _userStreamCache.clear(); // Clear stream cache on refresh
 
+    // Refresh the all communities list by restarting the stream
+    subscribeToAllCommunities(limit: 10);
+
     await Future.wait([
-      fetchAllCommunities(isInitial: true),
       fetchMyFeed(isInitial: true),
       fetchMyCommunities(),
       fetchUpcomingEvents(),
