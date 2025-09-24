@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firstgenapp/constants/appColors.dart';
 import 'package:firstgenapp/models/chat_models.dart';
 import 'package:firstgenapp/screens/dashboard/navbar_content/chats/conversation/conversation_screen.dart';
+import 'package:firstgenapp/screens/subscription/subscription_screen.dart';
 import 'package:firstgenapp/services/firebase_service.dart';
 import 'package:firstgenapp/viewmodels/firebase_subscription_provider.dart';
 import 'package:firstgenapp/viewmodels/profile_provider.dart';
@@ -103,14 +104,14 @@ class _SearchScreenState extends State<SearchScreen> {
         debugPrint("Liked ${user['fullName']}");
         return true;
       } else if (result == LikeStatus.limitReached) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              "Daily like limit reached for free users. Upgrade to Premium for unlimited likes!",
-            ),
-            backgroundColor: AppColors.error,
-          ),
-        );
+        // Navigate free users who exceeded likes to the subscription page so they can subscribe or wait.
+        if (mounted) {
+          await PersistentNavBarNavigator.pushNewScreen(
+            context,
+            screen: const SubscriptionScreen(initialPage: 1),
+            withNavBar: false,
+          );
+        }
         return false;
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -551,28 +552,30 @@ class _SearchScreenState extends State<SearchScreen> {
                     onPressed: _isSuperLiking
                         ? null
                         : () async {
+                            // If the user is not premium, send them to the subscription screen
                             if (!subscriptionProvider.isPremium) {
                               if (mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                      "You must be a Premium member to Super Like.",
-                                    ),
-                                    backgroundColor: AppColors.error,
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => const SubscriptionScreen(),
                                   ),
                                 );
                               }
                               return;
                             }
+
                             setState(() {
                               _isSuperLiking = true;
                             });
                             final user = _users[index];
                             try {
-                              await firebaseService.superLikeUser(
+                              final bool success = await firebaseService.superLikeUser(
                                 user['uid'],
                               );
-                              if (mounted) {
+
+                              if (!mounted) return;
+
+                              if (success) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
                                     content: Text(
@@ -583,6 +586,15 @@ class _SearchScreenState extends State<SearchScreen> {
                                 );
                                 _swiperController.swipe(
                                   CardSwiperDirection.right,
+                                );
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      "Super Like failed. Please try again.",
+                                    ),
+                                    backgroundColor: AppColors.error,
+                                  ),
                                 );
                               }
                             } catch (e) {

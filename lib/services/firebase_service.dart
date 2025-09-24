@@ -1134,12 +1134,67 @@ class FirebaseService {
     }
   }
 
+  /// Mark a single message as delivered if it is still in the sent state.
+  Future<void> markMessageDelivered(String conversationId, String messageId) async {
+    try {
+      final msgRef = _database.ref('messages/$conversationId/$messageId');
+      final snapshot = await msgRef.get();
+      if (!snapshot.exists || snapshot.value == null) return;
+
+      final data = Map<String, dynamic>.from(snapshot.value as Map);
+      final currentStatus = data['status'] as String? ?? 'sent';
+
+      if (currentStatus == 'sent') {
+        await msgRef.update({'status': 'delivered'});
+      }
+    } catch (e) {
+      log('Error marking message delivered for $messageId: $e');
+    }
+  }
+
   Future<void> markAsRead(String conversationId) async {
     final currentUser = _auth.currentUser;
     if (currentUser == null) return;
-    await _database
-        .ref('conversations/$conversationId/unreadCount/${currentUser.uid}')
-        .set(0);
+
+    // 1) Clear unread count for this user
+    try {
+      await _database
+          .ref('conversations/$conversationId/unreadCount/${currentUser.uid}')
+          .set(0);
+    } catch (e) {
+      log('Error clearing unread count for $conversationId: $e');
+    }
+
+    // 2) Update incoming messages status to read and set readTimestamp
+    try {
+      final messagesRef = _database.ref('messages/$conversationId');
+      final snapshot = await messagesRef.get();
+      if (!snapshot.exists || snapshot.value == null) return;
+
+      final nowIso = DateTime.now().toUtc().toIso8601String();
+      final messagesMap = Map<String, dynamic>.from(snapshot.value as Map);
+
+      for (final entry in messagesMap.entries) {
+        final messageId = entry.key.toString();
+        final messageData = Map<String, dynamic>.from(entry.value as Map);
+        final senderId = messageData['senderId'] as String? ?? '';
+        final currentStatus = messageData['status'] as String? ?? 'sent';
+
+        // Only mark messages sent by the other user as read
+        if (senderId != currentUser.uid && currentStatus != 'read') {
+          try {
+            await messagesRef.child(messageId).update({
+              'status': 'read',
+              'readTimestamp': nowIso,
+            });
+          } catch (e) {
+            log('Failed to mark message $messageId as read: $e');
+          }
+        }
+      }
+    } catch (e) {
+      log('Error updating messages to read for $conversationId: $e');
+    }
   }
 
   Future<ChatUser?> getCurrentChatUser() async {
@@ -1378,102 +1433,138 @@ class FirebaseService {
     }
   }
 
-  Future<void> superLikeUser(String likedUserId) async {
+  Future<bool> superLikeUser(String likedUserId) async {
     final currentUser = _auth.currentUser;
-    if (currentUser == null) return;
+    if (currentUser == null) return false;
 
     final currentUserRef =
         _firestore.collection(userCollection).doc(currentUser.uid);
     final likedUserRef =
         _firestore.collection(userCollection).doc(likedUserId);
 
-    // Enforce VIP-only access and monthly limits (5 per 30 days)
+    // Fetch both documents up-front to perform fast pre-checks and to build ChatUser later.
     final currentUserDoc = await currentUserRef.get();
-    if (!currentUserDoc.exists) return;
+    final likedUserDoc = await likedUserRef.get();
+    if (!currentUserDoc.exists || !likedUserDoc.exists) return false;
 
     final Map<String, dynamic> preData = currentUserDoc.data()!;
     final String? subscriptionPlan = preData['subscriptionPlan'] as String?;
 
-    // Only VIP users can use Super Like
-    if (subscriptionPlan != 'vip') {
-      log('superLikeUser blocked: non-VIP user ${currentUser.uid}');
-      return;
+    // Allow both 'premium' and 'vip' users to use Super Like
+    if (!(subscriptionPlan == 'vip' || subscriptionPlan == 'premium')) {
+      log('superLikeUser blocked: non-premium/vip user ${currentUser.uid}');
+      return false;
     }
 
-    // Resolve counters safely
-    final dynamic countField = preData['superLikeCount'];
-    int superLikeCount =
-        countField is int ? countField : int.tryParse('${countField ?? 0}') ?? 0;
+    try {
+      // We'll validate/compute counters inside the transaction as well to avoid races.
+      await _firestore.runTransaction((transaction) async {
+        final currentUserSnapshot = await transaction.get(currentUserRef);
+        final likedUserSnapshot = await transaction.get(likedUserRef);
 
-    // Handle last reset date
-    final dynamic lastResetField = preData['lastSuperLikeResetDate'];
-    DateTime lastSuperLikeResetDate;
-    if (lastResetField is Timestamp) {
-      lastSuperLikeResetDate = lastResetField.toDate();
-    } else if (lastResetField is String) {
-      lastSuperLikeResetDate =
-          DateTime.tryParse(lastResetField) ?? DateTime(2000, 1, 1);
-    } else if (lastResetField is DateTime) {
-      lastSuperLikeResetDate = lastResetField;
-    } else {
-      lastSuperLikeResetDate = DateTime(2000, 1, 1);
-    }
+        if (!currentUserSnapshot.exists || !likedUserSnapshot.exists) {
+          throw Exception("User document not found!");
+        }
 
-    final DateTime now = DateTime.now();
-    // Reset every 30 days
-    if (now.difference(lastSuperLikeResetDate) >= const Duration(days: 30)) {
-      superLikeCount = 0;
-      lastSuperLikeResetDate = now;
-    }
+        final currentUserData =
+            currentUserSnapshot.data() as Map<String, dynamic>;
+        final likedUserData = likedUserSnapshot.data() as Map<String, dynamic>;
 
-    const int vipMonthlyLimit = 5;
-    if (superLikeCount >= vipMonthlyLimit) {
-      log('superLikeUser limit reached for user ${currentUser.uid}');
-      return;
-    }
+        // Resolve counters safely from the latest snapshot inside transaction
+        final dynamic countField = currentUserData['superLikeCount'];
+        int superLikeCount =
+            countField is int ? countField : int.tryParse('${countField ?? 0}') ?? 0;
 
-    await _firestore.runTransaction((transaction) async {
-      final currentUserSnapshot = await transaction.get(currentUserRef);
-      final likedUserSnapshot = await transaction.get(likedUserRef);
+        final dynamic lastResetField = currentUserData['lastSuperLikeResetDate'];
+        DateTime lastSuperLikeResetDate;
+        if (lastResetField is Timestamp) {
+          lastSuperLikeResetDate = lastResetField.toDate();
+        } else if (lastResetField is String) {
+          lastSuperLikeResetDate =
+              DateTime.tryParse(lastResetField) ?? DateTime(2000, 1, 1);
+        } else if (lastResetField is DateTime) {
+          lastSuperLikeResetDate = lastResetField;
+        } else {
+          lastSuperLikeResetDate = DateTime(2000, 1, 1);
+        }
 
-      if (!currentUserSnapshot.exists || !likedUserSnapshot.exists) {
-        throw Exception("User document not found!");
-      }
+        final DateTime now = DateTime.now();
+        // Reset every 30 days
+        if (now.difference(lastSuperLikeResetDate) >= const Duration(days: 30)) {
+          superLikeCount = 0;
+          lastSuperLikeResetDate = now;
+        }
 
-      final currentUserData =
-          currentUserSnapshot.data() as Map<String, dynamic>;
-      final likedUserData = likedUserSnapshot.data() as Map<String, dynamic>;
+        const int vipMonthlyLimit = 5;
+        if (superLikeCount >= vipMonthlyLimit) {
+          log('superLikeUser limit reached for user ${currentUser.uid}');
+          // Throw to abort transaction so no partial writes happen
+          throw Exception('Super like limit reached');
+        }
 
-      // Create a match for both users
-      transaction.update(currentUserRef, {'matches.$likedUserId': true});
-      transaction.update(likedUserRef, {'matches.${currentUser.uid}': true});
+        // Ensure matches are created immediately regardless of previous likes.
+        transaction.update(currentUserRef, {'matches.$likedUserId': true});
+        transaction.update(likedUserRef, {'matches.${currentUser.uid}': true});
 
-      // Keep likedUsers consistent
-      transaction.update(currentUserRef, {'likedUsers.$likedUserId': true});
+        // Keep likedUsers consistent for the super-liking user.
+        transaction.update(currentUserRef, {'likedUsers.$likedUserId': true});
 
-      // Persist super like counters atomically
-      transaction.update(currentUserRef, {
-        'superLikeCount': superLikeCount + 1,
-        'lastSuperLikeResetDate': Timestamp.fromDate(lastSuperLikeResetDate),
+        // Persist super like counters atomically based on transaction snapshot values.
+        transaction.update(currentUserRef, {
+          'superLikeCount': superLikeCount + 1,
+          'lastSuperLikeResetDate': Timestamp.fromDate(lastSuperLikeResetDate),
+        });
+
+        // Do not perform network I/O (like creating activity documents) inside the transaction.
+        // Activities will be added after the transaction commits.
       });
 
-      // Add 'match' activity for both users
+      // After committing Firestore changes, add activities and perform follow-ups.
+      final currentUserSnapshotPost = await currentUserRef.get();
+      final likedUserSnapshotPost = await likedUserRef.get();
+      final currentUserDataPost =
+          currentUserSnapshotPost.data() as Map<String, dynamic>? ?? {};
+      final likedUserDataPost =
+          likedUserSnapshotPost.data() as Map<String, dynamic>? ?? {};
+
+      // Add 'match' activity for both users now that transaction succeeded.
       await _addActivity(
         userId: likedUserId,
         type: ActivityType.matched,
         fromUser: currentUser,
-        fromUserData: currentUserData,
+        fromUserData: currentUserDataPost,
       );
       await _addActivity(
         userId: currentUser.uid,
         type: ActivityType.matched,
-        fromUser: likedUserSnapshot,
-        fromUserData: likedUserData,
+        fromUser: likedUserSnapshotPost,
+        fromUserData: likedUserDataPost,
       );
-    });
 
-    // Add to recent matches for the current user
-    await addRecentUser(likedUserId);
+      // Ensure a realtime chat/conversation exists and recent matches are updated.
+      try {
+        final otherUserData = likedUserSnapshotPost.data() ?? likedUserDoc.data()!;
+        final otherChatUser = ChatUser(
+          uid: likedUserId,
+          name: otherUserData['fullName'] ?? 'No Name',
+          avatarUrl: otherUserData['profileImageUrl'] ??
+              'https://picsum.photos/seed/$likedUserId/200/200',
+        );
+
+        // Create conversation only if it doesn't already exist (createChat handles that check).
+        await createChat(otherChatUser);
+      } catch (e) {
+        log('Error creating chat after superLike: $e');
+      }
+
+      // Update recent matches for both users.
+      await addRecentMatch(likedUserId);
+
+      return true;
+    } catch (e, st) {
+      log('Error in superLikeUser: $e', error: e, stackTrace: st);
+      return false;
+    }
   }
 
   /// Mark a user as discarded so they are excluded from future searches for the current user.

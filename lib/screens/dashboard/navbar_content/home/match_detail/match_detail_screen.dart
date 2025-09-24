@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firstgenapp/models/chat_models.dart';
 import 'package:firstgenapp/screens/dashboard/navbar_content/chats/conversation/conversation_screen.dart';
 import 'package:firstgenapp/screens/dashboard/navbar_content/home/match_detail/user_communities_screen/user_communities_screen.dart';
+import 'package:firstgenapp/screens/subscription/subscription_screen.dart';
 import 'package:firstgenapp/services/firebase_service.dart';
 import 'package:firstgenapp/viewmodels/firebase_subscription_provider.dart';
 import 'package:flutter/material.dart';
@@ -564,33 +565,43 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
                           size: 62,
                           onPressed: () async {
                             try {
-                              if (subscriptionProvider.isPremium) {
-                                await firebaseService.superLikeUser(
-                                  widget.userProfile['uid'],
+                              // If user is not premium, navigate to subscription screen
+                              if (!subscriptionProvider.isPremium) {
+                                if (mounted) {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (_) => const SubscriptionScreen(),
+                                    ),
+                                  );
+                                }
+                                return;
+                              }
+    
+                              final bool success = await firebaseService.superLikeUser(
+                                widget.userProfile['uid'],
+                              );
+    
+                              if (!mounted) return;
+    
+                              if (success) {
+                                setState(() => _isNowMatched = true);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      "It's a Match! You can now message them.",
+                                    ),
+                                    backgroundColor: Colors.green,
+                                  ),
                                 );
-
-                                if (mounted) {
-                                  setState(() => _isNowMatched = true);
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text(
-                                        "It's a Match! You can now message them.",
-                                      ),
-                                      backgroundColor: Colors.green,
-                                    ),
-                                  );
-                                }
                               } else {
-                                if (mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text(
-                                        "You can't Super Like without a Premium subscription.",
-                                      ),
-                                      backgroundColor: AppColors.error,
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      "Super Like failed. Please try again.",
                                     ),
-                                  );
-                                }
+                                    backgroundColor: AppColors.error,
+                                  ),
+                                );
                               }
                             } catch (e) {
                               if (mounted) {
@@ -631,14 +642,14 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
                                   Navigator.of(context).pop();
                                   break;
                                 case LikeStatus.limitReached:
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text(
-                                        "Daily like limit reached for free users. Upgrade to Premium for unlimited likes!",
-                                      ),
-                                      backgroundColor: AppColors.error,
-                                    ),
-                                  );
+                                  // Open subscription page so free users can choose to subscribe or wait.
+                                  if (mounted) {
+                                    await PersistentNavBarNavigator.pushNewScreen(
+                                      context,
+                                      screen: const SubscriptionScreen(initialPage: 1),
+                                      withNavBar: false,
+                                    );
+                                  }
                                   break;
                                 case LikeStatus.error:
                                   ScaffoldMessenger.of(context).showSnackBar(

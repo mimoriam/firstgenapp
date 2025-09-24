@@ -254,42 +254,64 @@ class _ProfileScreenState extends State<ProfileScreen> {
       endDate = DateFormat('MMMM d, yyyy').format(endDateValue);
     }
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            Colors.green.shade600,
-            Colors.green.shade400,
-          ], // Green for active subscription
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        children: [
-          const Icon(IconlyBold.shield_done, color: Colors.white, size: 32),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'You are a Premium Member!',
-                  style: textTheme.titleLarge?.copyWith(color: Colors.white),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Your $plan plan is active until $endDate.',
-                  style: textTheme.bodySmall?.copyWith(
-                    color: Colors.white.withOpacity(0.9),
-                  ),
-                ),
-              ],
-            ),
+    // Determine which page to open in the SubscriptionScreen based on current plan.
+    int initialPage = 1;
+    final currentPlan = (subscriptionProvider.subscriptionPlan ?? '').toLowerCase();
+    if (currentPlan == 'vip') {
+      initialPage = 2;
+    } else if (currentPlan == 'free') {
+      initialPage = 0;
+    } else {
+      initialPage = 1; // default to Premium page
+    }
+
+    return GestureDetector(
+      onTap: () {
+        if (context.mounted) {
+          PersistentNavBarNavigator.pushNewScreen(
+            context,
+            screen: SubscriptionScreen(initialPage: initialPage),
+            withNavBar: false,
+          );
+        }
+      },
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Colors.green.shade600,
+              Colors.green.shade400,
+            ], // Green for active subscription
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
           ),
-        ],
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          children: [
+            const Icon(IconlyBold.shield_done, color: Colors.white, size: 32),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'You are a Premium Member!',
+                    style: textTheme.titleLarge?.copyWith(color: Colors.white),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Your $plan plan is active until $endDate.',
+                    style: textTheme.bodySmall?.copyWith(
+                      color: Colors.white.withOpacity(0.9),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

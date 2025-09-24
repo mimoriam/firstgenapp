@@ -27,6 +27,7 @@ class ChatMessage {
   final String timestamp;
   final String? imageUrl;
   final String status;
+  final String? readTimestamp;
 
   ChatMessage({
     required this.id,
@@ -35,6 +36,7 @@ class ChatMessage {
     required this.timestamp,
     this.imageUrl,
     this.status = 'sent',
+    this.readTimestamp,
   });
 
   factory ChatMessage.fromJson(Map<String, dynamic> json, String id) {
@@ -45,6 +47,7 @@ class ChatMessage {
       timestamp: json['timestamp'] ?? DateTime.now().toUtc().toIso8601String(),
       imageUrl: json['imageUrl'],
       status: json['status'] ?? 'sent',
+      readTimestamp: json['readTimestamp'] as String?,
     );
   }
 
@@ -55,6 +58,7 @@ class ChatMessage {
       'timestamp': timestamp,
       'imageUrl': imageUrl,
       'status': status,
+      'readTimestamp': readTimestamp,
     };
   }
 }

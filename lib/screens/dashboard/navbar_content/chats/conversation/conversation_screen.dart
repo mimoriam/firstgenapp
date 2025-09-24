@@ -31,6 +31,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
   late Future<Conversation> _conversationFuture;
   File? _imageFile;
   bool _isSending = false;
+  bool _isVip = false;
 
   @override
   void initState() {
@@ -48,6 +49,21 @@ class _ConversationScreenState extends State<ConversationScreen> {
         widget.otherUser!,
       );
     }
+
+    // Determine if current user has VIP subscription so we can show read receipts
+    firebaseService.getUserProfile().then((profile) {
+      try {
+        final plan = profile?.data()?['subscriptionType'] as String? ??
+            profile?.data()?['subscriptionPlan'] as String?;
+        if (plan != null && plan == 'vip') {
+          setState(() => _isVip = true);
+        }
+      } catch (e) {
+        // ignore parsing errors
+      }
+    }).catchError((_) {
+      // ignore errors fetching profile
+    });
 
     _scrollController.addListener(_scrollListener);
     _focusNode.addListener(_onFocusChange);
@@ -205,14 +221,18 @@ class _ConversationScreenState extends State<ConversationScreen> {
 
                     final messages = messageSnapshot.data!;
 
-                    // if (messages.length > _messageCount) {
-                    //   if (_isUserAtBottom) {
-                    //     WidgetsBinding.instance.addPostFrameCallback(
-                    //       (_) => _scrollToBottom(),
-                    //     );
-                    //   }
-                    // }
-                    // _messageCount = messages.length;
+                    // Mark incoming messages as delivered when the recipient's device receives them.
+                    try {
+                      for (final m in messages) {
+                        if (m.senderId != firebaseService.currentUser?.uid &&
+                            (m.status == 'sent')) {
+                          // fire-and-forget; service handles idempotency
+                          firebaseService.markMessageDelivered(conversation.id, m.id);
+                        }
+                      }
+                    } catch (e) {
+                      // non-fatal
+                    }
 
                     if (messages.length > _messageCount) {
                       final lastMessage = messages.last;
@@ -256,6 +276,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
                                       }
                                     }
                                   : null,
+                              showReadReceipts: _isVip,
                             ),
                           ],
                         );
@@ -520,8 +541,14 @@ class _ConversationScreenState extends State<ConversationScreen> {
 class MessageBubble extends StatefulWidget {
   final ChatMessage message;
   final VoidCallback? onImageLoaded;
+  final bool showReadReceipts;
 
-  const MessageBubble({super.key, required this.message, this.onImageLoaded});
+  const MessageBubble({
+    super.key,
+    required this.message,
+    this.onImageLoaded,
+    this.showReadReceipts = false,
+  });
 
   @override
   State<MessageBubble> createState() => _MessageBubbleState();
@@ -657,14 +684,17 @@ class _MessageBubbleState extends State<MessageBubble> {
           style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
         ),
         if (isSender) ...[
-          const SizedBox(width: 4),
-          Text(
-            '· Read',
-            style: const TextStyle(
-              color: AppColors.textSecondary,
-              fontSize: 12,
-            ),
-          ),
+          const SizedBox(width: 8),
+          // Status icon: sent -> single tick, delivered -> double tick, read -> double tick (blue) only if showReadReceipts enabled
+          if (message.status == 'sent') ...[
+            const Icon(Icons.check, size: 16, color: AppColors.textSecondary)
+          ] else if (message.status == 'delivered') ...[
+            const Icon(Icons.done_all, size: 16, color: AppColors.textSecondary)
+          ] else if (message.status == 'read') ...[
+            widget.showReadReceipts
+                ? const Icon(Icons.done_all, size: 16, color: Colors.blue)
+                : const Icon(Icons.done_all, size: 16, color: AppColors.textSecondary)
+          ],
         ],
       ],
     );
