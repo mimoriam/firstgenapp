@@ -10,6 +10,7 @@ import 'package:firstgenapp/viewmodels/profile_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_card_swiper/flutter_card_swiper.dart';
 import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
+import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 import 'package:provider/provider.dart';
 
@@ -417,13 +418,26 @@ class _SearchScreenState extends State<SearchScreen> {
       right: 24,
       child: Column(
         children: [
-          Text(
-            '${userProfile['fullName'] ?? 'N/A'}, $age',
-            textAlign: TextAlign.center,
-            style: textTheme.headlineLarge?.copyWith(
-              color: Colors.white,
-              fontSize: 22,
-            ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (userProfile['subscriptionType'] == 'premium')
+                const Icon(Iconsax.star, color: Colors.white, size: 24),
+              if (userProfile['subscriptionType'] == 'vip')
+                const Icon(Iconsax.crown, color: Colors.white, size: 24),
+              if (userProfile['subscriptionType'] == 'premium' ||
+                  userProfile['subscriptionType'] == 'vip')
+                const SizedBox(width: 6),
+              Text(
+                '${userProfile['fullName'] ?? 'N/A'}, $age',
+                textAlign: TextAlign.center,
+                style: textTheme.headlineLarge?.copyWith(
+                  color: Colors.white,
+                  fontSize: 22,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 8),
           Text(

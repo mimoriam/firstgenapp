@@ -182,13 +182,26 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
       right: 24,
       child: Column(
         children: [
-          Text(
-            '${userData['fullName'] ?? 'N/A'}, $age',
-            textAlign: TextAlign.center,
-            style: textTheme.headlineLarge?.copyWith(
-              color: Colors.white,
-              fontSize: 22,
-            ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (userData['subscriptionType'] == 'premium')
+                const Icon(Iconsax.star, color: Colors.white, size: 24),
+              if (userData['subscriptionType'] == 'vip')
+                const Icon(Iconsax.crown, color: Colors.white, size: 24),
+              if (userData['subscriptionType'] == 'premium' ||
+                  userData['subscriptionType'] == 'vip')
+                const SizedBox(width: 6),
+              Text(
+                '${userData['fullName'] ?? 'N/A'}, $age',
+                textAlign: TextAlign.center,
+                style: textTheme.headlineLarge?.copyWith(
+                  color: Colors.white,
+                  fontSize: 22,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 8),
           Text(

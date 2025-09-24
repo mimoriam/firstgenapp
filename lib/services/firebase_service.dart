@@ -257,10 +257,12 @@ class FirebaseService {
           data['subscriptionEndDate'] is Timestamp) {
         final endDate = (data['subscriptionEndDate'] as Timestamp).toDate();
         final isSubscribed = endDate.isAfter(DateTime.now());
+        // Prefer the new 'subscriptionType' field but fall back to legacy 'subscriptionPlan'
+        final planValue = (data['subscriptionType'] as String?) ?? (data['subscriptionPlan'] as String?);
         // Return a map with all necessary subscription details.
         return {
           'isSubscribed': isSubscribed,
-          'plan': data['subscriptionPlan'],
+          'plan': planValue,
           'endDate': endDate,
         };
       }
@@ -275,23 +277,31 @@ class FirebaseService {
   Future<void> subscribeUser(String plan) async {
     final user = _auth.currentUser;
     if (user == null) return;
-
+  
     // Normalize plan ids to support both legacy ('monthly','weekly') and new ids ('free','premium','vip')
-    // 'free' will set the plan but remove any subscriptionEndDate (not subscribed).
+    // 'free' will set the plan/type but remove any subscriptionEndDate (not subscribed).
     DateTime? endDate;
-
-    if (plan == 'monthly' || plan == 'premium') {
-      endDate = DateTime.now().add(const Duration(days: 30));
-    } else if (plan == 'weekly') {
-      endDate = DateTime.now().add(const Duration(days: 7));
+    String subscriptionType = 'free';
+  
+    if (plan == 'monthly' || plan == 'premium' || plan == 'weekly') {
+      // Treat legacy monthly/weekly/premium identifiers as 'premium' tier
+      subscriptionType = 'premium';
+      // weekly was previously 7 days, monthly 30 days — preserve durations where possible
+      if (plan == 'weekly') {
+        endDate = DateTime.now().add(const Duration(days: 7));
+      } else {
+        endDate = DateTime.now().add(const Duration(days: 30));
+      }
     } else if (plan == 'vip') {
       // VIP treated as an extended subscription (90 days)
+      subscriptionType = 'vip';
       endDate = DateTime.now().add(const Duration(days: 90));
     } else if (plan == 'free') {
       // Free plan — explicitly remove any subscription end date so user is not marked subscribed.
       await _firestore.collection(userCollection).doc(user.uid).set(
         {
-          'subscriptionPlan': 'free',
+          'subscriptionPlan': 'free', // legacy field (kept for backward compatibility)
+          'subscriptionType': 'free', // new canonical field
           'subscriptionEndDate': FieldValue.delete(),
         },
         SetOptions(merge: true),
@@ -301,11 +311,13 @@ class FirebaseService {
       // Unknown plan id — do nothing
       return;
     }
-
-    // Update Firestore with the selected plan and calculated end date.
+  
+    // Update Firestore with the selected plan/type and calculated end date.
     await _firestore.collection(userCollection).doc(user.uid).set(
       {
+        // Keep legacy field for compatibility and also write the new canonical field.
         'subscriptionPlan': plan,
+        'subscriptionType': subscriptionType,
         'subscriptionEndDate': Timestamp.fromDate(endDate!),
       },
       SetOptions(merge: true),
@@ -566,7 +578,10 @@ class FirebaseService {
   /// Helper function to get subscription priority for sorting
   int _getSubscriptionPriority(QueryDocumentSnapshot<Map<String, dynamic>> userDoc) {
     final userData = userDoc.data();
-    final plan = (userData['subscriptionPlan'] as String?) ?? 'free';
+    // Prefer the new canonical 'subscriptionType' field; fall back to legacy 'subscriptionPlan'
+    final plan = (userData['subscriptionType'] as String?) ??
+        (userData['subscriptionPlan'] as String?) ??
+        'free';
     
     switch (plan) {
       case 'vip':

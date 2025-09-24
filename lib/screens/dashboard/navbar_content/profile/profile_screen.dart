@@ -10,6 +10,7 @@ import 'package:firstgenapp/viewmodels/profile_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:firstgenapp/constants/appColors.dart';
 import 'package:iconly/iconly.dart';
+import 'package:iconsax_flutter/iconsax_flutter.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:provider/provider.dart';
@@ -93,7 +94,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 userData,
                 user,
                 textTheme,
-                subscriptionProvider.isPremium,
+                subscriptionProvider,
               ),
               const SizedBox(height: 10),
               if (!subscriptionProvider.isPremium) ...[
@@ -123,7 +124,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     Map<String, dynamic> userData,
     User? user,
     TextTheme textTheme,
-    bool isPremium,
+    SubscriptionProvider subscriptionProvider,
   ) {
     final imageUrl = userData['profileImageUrl'];
     final hasPhoto = imageUrl != null && imageUrl.isNotEmpty;
@@ -155,23 +156,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 overflow: TextOverflow.ellipsis, // Add ellipsis for long names
               ),
             ),
-            if (isPremium) ...[
+            if (subscriptionProvider.subscriptionPlan?.toLowerCase() == 'premium') ...[
               const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: AppColors.primaryRed.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Text(
-                  'Premium',
-                  style: TextStyle(
-                    color: AppColors.primaryRed,
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
+              const Icon(Iconsax.star, color: AppColors.primaryRed, size: 18),
+            ] else if (subscriptionProvider.subscriptionPlan?.toLowerCase() == 'vip') ...[
+              const SizedBox(width: 8),
+              const Icon(Iconsax.crown, color: Colors.amber, size: 18),
             ],
           ],
         ),
