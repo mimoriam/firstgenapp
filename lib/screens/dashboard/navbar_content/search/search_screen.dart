@@ -423,9 +423,9 @@ class _SearchScreenState extends State<SearchScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               if (userProfile['subscriptionType'] == 'premium')
-                const Icon(Iconsax.star, color: Colors.white, size: 24),
+                const Icon(Iconsax.star, color: AppColors.primaryRed, size: 24),
               if (userProfile['subscriptionType'] == 'vip')
-                const Icon(Iconsax.crown, color: Colors.white, size: 24),
+                const Icon(Iconsax.crown, color: Colors.amber, size: 24),
               if (userProfile['subscriptionType'] == 'premium' ||
                   userProfile['subscriptionType'] == 'vip')
                 const SizedBox(width: 6),

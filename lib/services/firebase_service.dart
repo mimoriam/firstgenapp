@@ -624,6 +624,15 @@ class FirebaseService {
     final usersToExclude =
         [...likedUserIds, ...matchedUserIds, ...discardedUserIds, user.uid];
 
+    // LOG: Exclusion and community context for debugging visibility issues
+    try {
+      log('searchUsersStrict INIT: user=${user.uid} '
+          'likedUserIds=$likedUserIds matchedUserIds=$matchedUserIds '
+          'discardedUserIds=$discardedUserIds usersToExclude=$usersToExclude');
+    } catch (e) {
+      log('searchUsersStrict INIT: error logging exclusion lists: $e');
+    }
+
     // Get users who have liked the current user to prioritize them.
     final likedByUsersSnapshot = await _firestore
         .collection(userCollection)
@@ -653,30 +662,63 @@ class FirebaseService {
     try {
       final querySnapshot = await query.get();
 
-      List<QueryDocumentSnapshot<Map<String, dynamic>>> results = querySnapshot
-          .docs
-          .where((doc) {
-            if (usersToExclude.contains(doc.id)) {
-              return false;
-            }
+      // LOG: initial candidate ids from query
+      try {
+        log('searchUsersStrict: initialCandidates=${querySnapshot.docs.map((d) => d.id).toList()} '
+            'likedByUserIds=$likedByUserIds currentUserCommunities=$currentUserCommunities');
+      } catch (e) {
+        log('searchUsersStrict: error logging initial candidates: $e');
+      }
 
-            final userData = doc.data();
-            final seeProfile = userData['seeProfile'] as String? ?? 'Everyone';
+      // Build results with per-candidate logging to trace why users are included/excluded.
+      List<QueryDocumentSnapshot<Map<String, dynamic>>> results = [];
+      for (final doc in querySnapshot.docs) {
+        final docId = doc.id;
+        if (usersToExclude.contains(docId)) {
+          try {
+            log('searchUsersStrict: excluding $docId because in usersToExclude');
+          } catch (e) {
+            log('searchUsersStrict: error logging exclusion for $docId: $e');
+          }
+          continue;
+        }
 
-            if (seeProfile == 'No Body') {
-              return false;
-            } else if (seeProfile == 'Only Communities I\'m In') {
-              final List<String> otherUserCommunities = List<String>.from(
-                userData['joinedCommunities'] ?? [],
-              );
-              return currentUserCommunities.any(
-                (community) => otherUserCommunities.contains(community),
-              );
-            }
+        final userData = doc.data();
+        final seeProfile = userData['seeProfile'] as String? ?? 'Everyone';
+        final List<String> otherUserCommunities = List<String>.from(
+          userData['joinedCommunities'] ?? [],
+        );
 
-            return true;
-          })
-          .toList();
+        // LOG: per-user visibility and communities
+        try {
+          log('searchUsersStrict: candidate $docId seeProfile=$seeProfile joinedCommunities=$otherUserCommunities');
+        } catch (e) {
+          log('searchUsersStrict: error logging candidate $docId details: $e');
+        }
+
+        if (seeProfile == 'No Body') {
+          try {
+            log('searchUsersStrict: excluding $docId because seeProfile=No Body');
+          } catch (e) {}
+          continue;
+        } else if (seeProfile == 'Only Communities I\'m In') {
+          final bool hasOverlap = currentUserCommunities.any(
+            (community) => otherUserCommunities.contains(community),
+          );
+          try {
+            log('searchUsersStrict: $docId community overlap=$hasOverlap');
+          } catch (e) {}
+          if (!hasOverlap) {
+            try {
+              log('searchUsersStrict: excluding $docId due to community mismatch');
+            } catch (e) {}
+            continue;
+          }
+        }
+
+        // Passed visibility filters
+        results.add(doc);
+      }
 
       if (minAge != null && maxAge != null) {
         final now = DateTime.now();
@@ -1190,7 +1232,17 @@ class FirebaseService {
         return LikeStatus.error;
       }
       final Map<String, dynamic> preData = currentUserDoc.data()!;
-
+      
+      // LOG: Snapshot of current user's like/match/discard maps prior to transaction
+      try {
+        log('likeUser INIT: ${currentUser.uid} -> $likedUserId; '
+            'likedUsers=${(preData['likedUsers'] as Map?)?.keys.toList() ?? []}, '
+            'matches=${(preData['matches'] as Map?)?.keys.toList() ?? []}, '
+            'discarded=${(preData['discardedUsers'] as Map?)?.keys.toList() ?? []}');
+      } catch (e) {
+        log('likeUser INIT: error logging preData: $e');
+      }
+      
       final String? subscriptionPlan = preData['subscriptionPlan'] as String?;
       final dynamic likesField = preData['dailyLikesCount'];
       int dailyLikesCount = likesField is int
@@ -1244,10 +1296,29 @@ class FirebaseService {
             await transaction.get(currentUserRef);
         DocumentSnapshot likedUserSnapshot = await transaction.get(likedUserRef);
 
+        // LOG: Snapshot info inside transaction
+        try {
+          log('Transaction START for likeUser: ${currentUser.uid} -> $likedUserId');
+          log('Transaction: currentUserSnapshot exists=${currentUserSnapshot.exists}');
+          log('Transaction: likedUserSnapshot exists=${likedUserSnapshot.exists}');
+          final Map<String, dynamic>? curSnapshotData =
+              currentUserSnapshot.data() as Map<String, dynamic>?;
+          final Map<String, dynamic>? likedSnapshotData =
+              likedUserSnapshot.data() as Map<String, dynamic>?;
+          final curLikedKeys = (curSnapshotData?['likedUsers'] as Map?)?.keys.toList() ?? [];
+          final likedLikedKeys = (likedSnapshotData?['likedUsers'] as Map?)?.keys.toList() ?? [];
+          log('Transaction: currentUser likedUsers keys=$curLikedKeys');
+          log('Transaction: likedUser likedUsers keys=$likedLikedKeys');
+          final bool isMutualCheck = (likedSnapshotData?['likedUsers'] as Map?)?.containsKey(currentUser.uid) == true;
+          log('Transaction: mutual like present=${isMutualCheck}');
+        } catch (e) {
+          log('Transaction logging error in likeUser: $e');
+        }
+        
         if (!currentUserSnapshot.exists || !likedUserSnapshot.exists) {
           throw Exception("User document not found!");
         }
-
+        
         final currentUserData =
             currentUserSnapshot.data() as Map<String, dynamic>;
         final likedUserData = likedUserSnapshot.data() as Map<String, dynamic>;
@@ -1294,7 +1365,12 @@ class FirebaseService {
         }
       });
 
-      // Success path
+      // Success path - log the like operation completion
+      try {
+        log('likeUser SUCCESS: ${currentUser.uid} liked $likedUserId');
+      } catch (e) {
+        log('likeUser SUCCESS: error logging success: $e');
+      }
       return LikeStatus.success;
     } catch (e, st) {
       log('Error in likeUser: $e', error: e, stackTrace: st);

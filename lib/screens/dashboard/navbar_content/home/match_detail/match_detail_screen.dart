@@ -187,9 +187,9 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               if (userData['subscriptionType'] == 'premium')
-                const Icon(Iconsax.star, color: Colors.white, size: 24),
+                const Icon(Iconsax.star, color: AppColors.primaryRed, size: 24),
               if (userData['subscriptionType'] == 'vip')
-                const Icon(Iconsax.crown, color: Colors.white, size: 24),
+                const Icon(Iconsax.crown, color: Colors.amber, size: 24),
               if (userData['subscriptionType'] == 'premium' ||
                   userData['subscriptionType'] == 'vip')
                 const SizedBox(width: 6),
