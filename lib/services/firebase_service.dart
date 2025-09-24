@@ -1027,10 +1027,11 @@ class FirebaseService {
     String conversationId, {
     String? text,
     File? image,
+    String? stickerId,
   }) async {
     final currentUser = _auth.currentUser;
     if (currentUser == null) return;
-    if (text == null && image == null) return;
+    if (text == null && image == null && stickerId == null) return;
 
     final messageId = _database.ref().push().key;
     final now = DateTime.now().toUtc().toIso8601String();
@@ -1046,6 +1047,7 @@ class FirebaseService {
       senderId: currentUser.uid,
       timestamp: now,
       imageUrl: imageUrl,
+      stickerId: stickerId,
     );
 
     await _database
@@ -1063,7 +1065,15 @@ class FirebaseService {
         (id) => id != currentUser.uid,
       );
 
-      final lastMessage = image != null ? 'Photo' : text!;
+      String lastMessage;
+      if (stickerId != null) {
+        lastMessage = 'Sticker';
+      } else if (image != null) {
+        lastMessage = 'Photo';
+      } else {
+        lastMessage = text ?? '';
+      }
+
       conversationRef.update({
         'lastMessage': lastMessage,
         'lastMessageTimestamp': now,

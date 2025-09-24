@@ -33,6 +33,12 @@ class _ConversationScreenState extends State<ConversationScreen> {
   bool _isSending = false;
   bool _isVip = false;
 
+  // Predefined sticker identifiers. Place sticker assets at images/stickers/<id>.png
+  final List<String> _stickerIds = [
+    'FG_logo',
+    'Vector',
+  ];
+
   @override
   void initState() {
     super.initState();
@@ -133,6 +139,83 @@ class _ConversationScreenState extends State<ConversationScreen> {
         _imageFile = File(pickedFile.path);
       });
     }
+  }
+
+  Future<void> _showStickerPicker(String conversationId) async {
+    final firebaseService = Provider.of<FirebaseService>(
+      context,
+      listen: false,
+    );
+
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+          ),
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 8),
+              const Text(
+                'Send a Sticker',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+              const SizedBox(height: 12),
+              GridView.builder(
+                shrinkWrap: true,
+                itemCount: _stickerIds.length,
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 4,
+                  mainAxisSpacing: 8,
+                  crossAxisSpacing: 8,
+                ),
+                itemBuilder: (context, index) {
+                  final id = _stickerIds[index];
+                  final assetPath = 'images/stickers/$id.png';
+                  return GestureDetector(
+                    onTap: () async {
+                      Navigator.of(context).pop();
+                      try {
+                        await firebaseService.sendMessage(
+                          conversationId,
+                          stickerId: id,
+                        );
+                      } catch (e) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Failed to send sticker.')),
+                          );
+                        }
+                      }
+                    },
+                    child: Image.asset(
+                      assetPath,
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) {
+                        // Show a placeholder if asset missing
+                        return Container(
+                          color: Colors.grey.shade200,
+                          child: const Center(child: Icon(Icons.emoji_emotions)),
+                        );
+                      },
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 12),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   void _sendMessage(String conversationId) async {
@@ -286,7 +369,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
                 ),
               ),
               if (_imageFile != null) _buildImagePreview(),
-              _buildMessageComposer(() => _sendMessage(conversation.id)),
+              _buildMessageComposer(conversation.id, () => _sendMessage(conversation.id)),
             ],
           );
         },
@@ -407,6 +490,21 @@ class _ConversationScreenState extends State<ConversationScreen> {
                           ),
                         );
                       },
+                    )
+                  else if (message.stickerId != null)
+                    // Render stickers the same way as images to avoid quirks.
+                    Image.asset(
+                      'images/stickers/${message.stickerId}.png',
+                      height: 200,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          height: 200,
+                          color: Colors.grey.shade200,
+                          child: const Center(child: Icon(Icons.emoji_emotions)),
+                        );
+                      },
                     ),
                   if (message.text != null && message.text!.isNotEmpty)
                     Padding(
@@ -482,7 +580,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
     );
   }
 
-  Widget _buildMessageComposer(VoidCallback onSend) {
+  Widget _buildMessageComposer(String conversationId, VoidCallback onSend) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 12.0),
       color: Colors.white,
@@ -497,6 +595,16 @@ class _ConversationScreenState extends State<ConversationScreen> {
               ),
               onPressed: _pickImage,
             ),
+            if (_isVip) ...[
+              IconButton(
+                icon: const Icon(
+                  Icons.card_giftcard,
+                  color: AppColors.textSecondary,
+                  size: 26,
+                ),
+                onPressed: () => _showStickerPicker(conversationId),
+              ),
+            ],
             Expanded(
               child: Container(
                 decoration: BoxDecoration(
@@ -648,7 +756,35 @@ class _MessageBubbleState extends State<MessageBubble> {
                           },
                         ),
                       ),
-                    ),
+                    )
+                  else if (widget.message.stickerId != null)
+                    // Render stickers like images to ensure consistent behavior.
+                    Builder(builder: (context) {
+                      final assetPath =
+                          'images/stickers/${widget.message.stickerId}.png';
+                      // Use a sized container to match image behavior
+                      final image = Image.asset(
+                        assetPath,
+                        height: 200,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            height: 200,
+                            color: Colors.grey.shade200,
+                            child: const Center(child: Icon(Icons.emoji_emotions)),
+                          );
+                        },
+                      );
+                      // Trigger onImageLoaded after the frame so scrolling behaves same as images
+                      if (widget.onImageLoaded != null && !_hasTriggeredScroll) {
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          widget.onImageLoaded!();
+                        });
+                        _hasTriggeredScroll = true;
+                      }
+                      return image;
+                    }),
                   if (widget.message.text != null &&
                       widget.message.text!.isNotEmpty)
                     Padding(

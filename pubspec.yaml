@@ -56,7 +56,7 @@ dependencies:
   iconly: ^1.0.1
   iconsax_flutter: ^1.0.1
   image_picker: ^1.2.0
-  image_cropper: ^9.1.0
+  image_cropper: ^10.0.0
   marqueer: ^2.1.0
   persistent_bottom_nav_bar: ^6.2.1
   provider: ^6.1.5+1
@@ -109,6 +109,7 @@ flutter:
     - images/backgrounds/
     - images/icons/
     - images/launcher/
+    - images/stickers/
 #    - images/icons/insider
 
   # An image asset can refer to one or more resolution-specific "variants", see

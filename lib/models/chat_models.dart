@@ -26,6 +26,7 @@ class ChatMessage {
   final String senderId;
   final String timestamp;
   final String? imageUrl;
+  final String? stickerId; // New: pre-defined sticker identifier
   final String status;
   final String? readTimestamp;
 
@@ -35,6 +36,7 @@ class ChatMessage {
     required this.senderId,
     required this.timestamp,
     this.imageUrl,
+    this.stickerId,
     this.status = 'sent',
     this.readTimestamp,
   });
@@ -46,6 +48,7 @@ class ChatMessage {
       senderId: json['senderId'] ?? '',
       timestamp: json['timestamp'] ?? DateTime.now().toUtc().toIso8601String(),
       imageUrl: json['imageUrl'],
+      stickerId: json['stickerId'] as String?,
       status: json['status'] ?? 'sent',
       readTimestamp: json['readTimestamp'] as String?,
     );
@@ -57,6 +60,7 @@ class ChatMessage {
       'senderId': senderId,
       'timestamp': timestamp,
       'imageUrl': imageUrl,
+      'stickerId': stickerId,
       'status': status,
       'readTimestamp': readTimestamp,
     };
