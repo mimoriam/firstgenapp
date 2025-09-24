@@ -19,6 +19,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
 import 'package:provider/provider.dart';
 import 'package:tap_debouncer/tap_debouncer.dart';
+import 'package:firstgenapp/screens/subscription/subscription_screen.dart';
 
 import '../../../../../common/gradient_btn.dart';
 
@@ -509,12 +510,23 @@ class _HomeScreenState extends State<HomeScreen> {
                 if (context.mounted) {
                   widget.onSwitchTab(3, communitySubTabIndex: 2);
                 }
-              } else {
-                PersistentNavBarNavigator.pushNewScreen(
-                  context,
-                  screen: const RecentActivitiesScreen(),
-                  withNavBar: false,
-                );
+              } else if (title == "Recent Activity") {
+                final isPremium =
+                    Provider.of<SubscriptionProvider>(context, listen: false)
+                        .isPremium;
+                if (isPremium) {
+                  PersistentNavBarNavigator.pushNewScreen(
+                    context,
+                    screen: const RecentActivitiesScreen(),
+                    withNavBar: false,
+                  );
+                } else {
+                  PersistentNavBarNavigator.pushNewScreen(
+                    context,
+                    screen: const SubscriptionScreen(initialPage: 1),
+                    withNavBar: false,
+                  );
+                }
               }
             }
           },
@@ -653,6 +665,14 @@ class _RecentActivityListState extends State<RecentActivityList> {
                   );
                 }
               }
+            } else {
+              if (context.mounted) {
+                PersistentNavBarNavigator.pushNewScreen(
+                  context,
+                  screen: const SubscriptionScreen(initialPage: 1),
+                  withNavBar: false,
+                );
+              }
             }
           },
           builder: (BuildContext context, TapDebouncerFunc? onTap) {
@@ -670,9 +690,15 @@ class _RecentActivityListState extends State<RecentActivityList> {
                 ),
                 child: Row(
                   children: [
-                    CircleAvatar(
-                      radius: 22,
-                      backgroundImage: NetworkImage(activity.fromUserAvatar),
+                    ImageFiltered(
+                      imageFilter: ImageFilter.blur(
+                              sigmaX: isPremium ? 0 : 9,
+                              sigmaY: isPremium ? 0 : 9,
+                            ),
+                      child: CircleAvatar(
+                        radius: 22,
+                        backgroundImage: NetworkImage(activity.fromUserAvatar),
+                      ),
                     ),
                     const SizedBox(width: 16),
                     Expanded(
@@ -694,11 +720,17 @@ class _RecentActivityListState extends State<RecentActivityList> {
                             ),
                           ),
                           const SizedBox(height: 4),
-                          Text(
-                            TimeAgo.format(
-                              activity.timestamp.toDate().toIso8601String(),
+                          ImageFiltered(
+                            imageFilter: ImageFilter.blur(
+                              sigmaX: isPremium ? 0 : 9,
+                              sigmaY: isPremium ? 0 : 9,
                             ),
-                            style: Theme.of(context).textTheme.bodySmall,
+                            child: Text(
+                              TimeAgo.format(
+                                activity.timestamp.toDate().toIso8601String(),
+                              ),
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
                           ),
                         ],
                       ),

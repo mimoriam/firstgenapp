@@ -8,7 +8,8 @@ import 'package:hugeicons/hugeicons.dart';
 import 'package:provider/provider.dart';
 
 class SubscriptionScreen extends StatefulWidget {
-  const SubscriptionScreen({super.key});
+  final int initialPage;
+  const SubscriptionScreen({super.key, this.initialPage = 1});
 
   @override
   State<SubscriptionScreen> createState() => _SubscriptionScreenState();
@@ -16,8 +17,8 @@ class SubscriptionScreen extends StatefulWidget {
 
 
 class _SubscriptionScreenState extends State<SubscriptionScreen> {
-  int _currentPage = 0;
-  final PageController _pageController = PageController(viewportFraction: 0.94);
+  late int _currentPage;
+  late PageController _pageController;
 
   // Define the plans shown in the PageView
   final List<Map<String, dynamic>> _plans = [
@@ -87,6 +88,16 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       'titleIcon': Icons.diamond,
     },
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _currentPage = widget.initialPage;
+    _pageController = PageController(
+      initialPage: widget.initialPage,
+      viewportFraction: 0.94,
+    );
+  }
 
   @override
   void dispose() {

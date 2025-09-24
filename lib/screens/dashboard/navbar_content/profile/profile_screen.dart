@@ -202,7 +202,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       onTap: () {
         PersistentNavBarNavigator.pushNewScreen(
           context,
-          screen: const SubscriptionScreen(),
+          screen: const SubscriptionScreen(initialPage: 1),
           withNavBar: false,
         );
       },
