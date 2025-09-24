@@ -109,7 +109,7 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
                   _buildBottomInfoCard2(context, viewedUserData),
                   _buildOverlayContent2(context, viewedUserData),
                   _buildTopBar(context, viewedUserData, isMatched: isMatched),
-                  _buildActionButtons(context, isMatched: isMatched),
+                  _buildActionButtons(context, viewedUserData, isMatched: isMatched),
                 ],
               );
             },
@@ -494,7 +494,7 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
     );
   }
 
-  Widget _buildActionButtons(BuildContext context, {required bool isMatched}) {
+  Widget _buildActionButtons(BuildContext context, Map<String, dynamic> detailedUserData, {required bool isMatched}) {
     final subscriptionProvider = Provider.of<SubscriptionProvider>(context);
     final firebaseService = Provider.of<FirebaseService>(
       context,
@@ -537,12 +537,18 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> {
                       iconColor: AppColors.primaryBackground,
                       size: 62,
                       onPressed: () {
+                        // Prefer the detailed document's name fields, fall back to the original widget.userProfile values.
                         final otherUser = ChatUser(
                           uid: widget.userProfile['uid'],
-                          name: widget.userProfile['name'] ?? 'No Name',
-                          avatarUrl:
+                          name: detailedUserData['fullName'] ??
+                              detailedUserData['name'] ??
+                              widget.userProfile['name'] ??
+                              widget.userProfile['fullName'] ??
+                              'No Name',
+                          avatarUrl: detailedUserData['imageUrl'] ??
+                              detailedUserData['profileImageUrl'] ??
                               widget.userProfile['imageUrl'] ??
-                              widget.userProfile["profileImageUrl"] ??
+                              widget.userProfile['profileImageUrl'] ??
                               'https://picsum.photos/seed/error/200/200',
                         );
                         PersistentNavBarNavigator.pushNewScreen(
