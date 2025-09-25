@@ -77,7 +77,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
         {'icon': TablerIcons.phone_call, 'text': 'Video & voice calling'},
         {'icon': TablerIcons.mail_opened, 'text': 'Read receipts'},
         {'icon': TablerIcons.crown, 'text': 'VIP badge on profile'},
-        {'icon': 'assets/icons/exclusive.svg', 'text': 'Exclusive VIP events'},
+        {'icon': TablerIcons.vip, 'text': 'Exclusive VIP events'},
         {'icon': TablerIcons.sort_ascending, 'text': 'Priority in match queue'},
       ],
       'buttonText': 'GO VIP',
@@ -139,22 +139,18 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),
-      body: Padding(
-        padding: const EdgeInsets.only(top: 20),
-        child: LayoutBuilder(
+      body: LayoutBuilder(
         builder: (context, constraints) {
-          return SingleChildScrollView(
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                minHeight: constraints.maxHeight,
-              ),
-              child: IntrinsicHeight(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Center(
-                      child: SizedBox(
-                        height: 450,
+          return Column(
+            children: [
+              // Main content area - flexible
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 20),
+                  child: Column(
+                    children: [
+                      // Responsive PageView - takes available space
+                      Expanded(
                         child: PageView.builder(
                           controller: _pageController,
                           itemCount: dynamicPlans.length,
@@ -163,44 +159,70 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                           },
                           itemBuilder: (context, index) {
                             final p = dynamicPlans[index];
+                            final isActive = index == _currentPage;
                             return Padding(
                               padding: const EdgeInsets.symmetric(horizontal: 6.0, vertical: 8.0),
-                              child: SubscriptionCard(
-                                title: p['title'] as String,
-                                subtitle: p['subtitle'] as String,
-                                price: p['price'] as String,
-                                priceSuffix: p['priceSuffix'] as String,
-                                features: List<Map<String, dynamic>>.from(p['features'] as List),
-                                isPopular: p['isPopular'] as bool,
-                                isBestValue: p['isBestValue'] as bool,
-                                cardColor: p['cardColor'] as Color,
-                                buttonGradient: p['buttonGradient'] as LinearGradient?,
-                                titleIcon: p['titleIcon'] as IconData?,
-                                // Disable internal card button; main action is the bottom button
+                              child: AnimatedScale(
+                                scale: isActive ? 1.0 : 0.96,
+                                duration: const Duration(milliseconds: 300),
+                                curve: Curves.easeOut,
+                                child: SubscriptionCard(
+                                  title: p['title'] as String,
+                                  subtitle: p['subtitle'] as String,
+                                  price: p['price'] as String,
+                                  priceSuffix: p['priceSuffix'] as String,
+                                  features: List<Map<String, dynamic>>.from(p['features'] as List),
+                                  isPopular: p['isPopular'] as bool,
+                                  isBestValue: p['isBestValue'] as bool,
+                                  cardColor: p['cardColor'] as Color,
+                                  buttonGradient: p['buttonGradient'] as LinearGradient?,
+                                  titleIcon: p['titleIcon'] as IconData?,
+                                  isActive: isActive,
+                                ),
                               ),
                             );
                           },
                         ),
                       ),
+                      // Page indicators
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: List.generate(dynamicPlans.length, (i) {
+                          final isActive = i == _currentPage;
+                          return AnimatedContainer(
+                            duration: const Duration(milliseconds: 250),
+                            margin: const EdgeInsets.symmetric(horizontal: 6.0),
+                            width: isActive ? 24 : 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: isActive ? AppColors.primaryRed : AppColors.dotInactive,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          );
+                        }),
+                      ),
+                      const SizedBox(height: 20),
+                    ],
+                  ),
+                ),
+              ),
+              // Bottom fixed area for buttons
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryBackground,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, -5),
                     ),
-                    const SizedBox(height: 12),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: List.generate(dynamicPlans.length, (i) {
-                        final isActive = i == _currentPage;
-                        return AnimatedContainer(
-                          duration: const Duration(milliseconds: 250),
-                          margin: const EdgeInsets.symmetric(horizontal: 6.0),
-                          width: isActive ? 24 : 8,
-                          height: 8,
-                          decoration: BoxDecoration(
-                            color: isActive ? AppColors.primaryRed : AppColors.dotInactive,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        );
-                      }),
-                    ),
-                    const SizedBox(height: 12),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
                     GradientButton(
                       text: dynamicPlans[_currentPage]['buttonText'] as String,
                       gradient: dynamicPlans[_currentPage]['buttonGradient'] as LinearGradient?,
@@ -249,24 +271,23 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                                   });
                                 },
                     ),
-                    Center(
-                      child: TextButton(
-                        onPressed: () {},
-                        child: Text(
-                          'Cancel anytime',
-                          style: Theme.of(
-                            context,
-                          ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w100),
+                    const SizedBox(height: 8),
+                    TextButton(
+                      onPressed: () {},
+                      child: Text(
+                        'Cancel anytime',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w400,
+                          color: AppColors.textSecondary,
                         ),
                       ),
                     ),
                   ],
                 ),
               ),
-            ),
+            ],
           );
         },
-        ),
       ),
     );
   }
